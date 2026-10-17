@@ -3,6 +3,7 @@ import { createServer } from "node:http";
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve, sep } from "node:path";
 import { createHash } from "node:crypto";
+import { drawIllustration } from "./illustrated-diagrams.mjs";
 
 // Rendering tools stay outside the app's dependencies. See docs/diagrams/README.md.
 const directory = resolve("docs/diagrams"),
@@ -11,7 +12,16 @@ const directory = resolve("docs/diagrams"),
       ".local/diagram-tools/node_modules/mermaid/dist",
   ),
   entries = JSON.parse(await readFile(directory + "/diagrams.json", "utf8")),
-  hash = (bytes) => createHash("sha256").update(bytes).digest("hex");
+  hash = (bytes) => createHash("sha256").update(bytes).digest("hex"),
+  iconLicense = await readFile("public/licenses/lucide.txt", "utf8"),
+  renderSources = await Promise.all(
+    [
+      "scripts/render-diagrams.mjs",
+      "scripts/illustrated-diagrams.mjs",
+      "public/licenses/lucide.txt",
+      "package-lock.json",
+    ].map(async (file) => ({ file, sha256: hash(await readFile(file)) })),
+  );
 await readFile(distribution + "/mermaid.esm.min.mjs");
 const server = createServer(async (request, response) => {
   try {
@@ -91,11 +101,17 @@ try {
   });
   for (const entry of entries) {
     const source = await readFile(directory + "/" + entry.source, "utf8");
+    const illustration =
+      entry.renderer === "illustrated"
+        ? drawIllustration(JSON.parse(source), iconLicense)
+        : null;
     const rendered = await page.evaluate(
-      async ({ id, title, source }) => {
+      async ({ id, title, source, illustration }) => {
         const host = document.getElementById("diagram");
         host.replaceChildren();
-        const { svg } = await mermaid.render("d-" + id, source);
+        host.style.padding = illustration ? "0" : "32px";
+        const svg =
+          illustration || (await mermaid.render("d-" + id, source)).svg;
         host.innerHTML = svg;
         await document.fonts.ready;
         const element = host.querySelector("svg"),
@@ -109,9 +125,36 @@ try {
         element.style.backgroundColor = "#ffffff";
         if (!width || !height || element.querySelector(".error-icon"))
           throw new Error("Invalid rendered diagram: " + id);
+        // Native diagrams use explicit text lines; reject labels outside their cards.
+        for (const card of element.querySelectorAll("[data-node]")) {
+          const [x, y, w, h] = card.dataset.bounds.split(" ").map(Number);
+          for (const label of card.querySelectorAll("text")) {
+            const box = label.getBBox();
+            if (
+              box.x < x + 5 ||
+              box.y < y + 4 ||
+              box.x + box.width > x + w - 5 ||
+              box.y + box.height > y + h - 5
+            )
+              throw new Error(
+                `${id}: text overflows ${card.dataset.node}: ${label.textContent}`,
+              );
+          }
+        }
+        for (const label of element.querySelectorAll("text")) {
+          const bounds = label.getBBox();
+          if (
+            illustration &&
+            (bounds.x < 0 ||
+              bounds.y < 0 ||
+              bounds.x + bounds.width > width ||
+              bounds.y + bounds.height > height)
+          )
+            throw new Error(`${id}: text outside canvas: ${label.textContent}`);
+        }
         return { svg: element.outerHTML, width, height };
       },
-      { ...entry, source },
+      { ...entry, source, illustration },
     );
     const svg = Buffer.from(rendered.svg + "\n"),
       png = await page.locator("#diagram").screenshot();
@@ -132,7 +175,8 @@ try {
     JSON.stringify(
       {
         renderer:
-          "Mermaid 11.17.2 + Chromium; pre-rendered PNG and standalone SVG",
+          "Lucide illustrated SVG / Mermaid 11.17.2 + Chromium; pre-rendered PNG and standalone SVG",
+        renderSources,
         diagrams,
       },
       null,

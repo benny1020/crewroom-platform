@@ -2,7 +2,7 @@
 
 크루룸의 애플리케이션 코드는 이 저장소의 MIT 라이선스로 제공한다. 의존 패키지의 라이선스는 각각의 권리자에게 있다.
 
-- **Lucide**: ISC License. 아이콘 패키지의 [라이선스와 고지](public/licenses/lucide.txt)를 소스와 정적 배포에 함께 포함한다. [Lucide source](https://github.com/lucide-icons/lucide).
+- **Lucide**: ISC License. 아이콘 패키지의 [라이선스와 고지](public/licenses/lucide.txt)를 소스와 정적 배포에 함께 포함한다. 아키텍처 도식에도 같은 아이콘을 사용하며 standalone SVG의 metadata에 전체 고지를 보존한다. [Lucide source](https://github.com/lucide-icons/lucide).
 - **캐릭터 atlas**: 크루룸 목업을 위해 생성한 AI 일러스트다. 열 가지 동물 캐릭터의 생성 명세는 [assets/gyeot-crew-generation.txt](assets/gyeot-crew-generation.txt)에 있다. 특정 오픈소스 프로젝트의 마스코트나 UI 이미지를 가져오지 않았다.
 - **제품·구조 연구**: Paperclip, LobeHub, Hermes, Letta Code, OpenHands SDK, Mastra, LangGraph, Dify, OpenClaw, Hindsight, Mem0의 공개 코드를 비교했다. 구현에 반영한 것은 자체 제품 계약과 인터페이스 패턴이다. 해당 프로젝트의 실행 코드를 이 앱에 복사하거나 연결한 상태가 아니다. 각 소스의 고정 커밋과 라이선스 차이는 [코드 조사 보고서](docs/OPEN_SOURCE_CODE_RESEARCH.md)에 있다.
 - 연구용 원문과 upstream Git 메타데이터는 이 공개 저장소에 포함하지 않는다. 보고서와 manifest의 원본 GitHub 링크로 추적할 수 있다.

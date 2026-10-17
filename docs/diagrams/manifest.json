@@ -1,80 +1,102 @@
 {
-  "renderer": "Mermaid 11.17.2 + Chromium; pre-rendered PNG and standalone SVG",
+  "renderer": "Lucide illustrated SVG / Mermaid 11.17.2 + Chromium; pre-rendered PNG and standalone SVG",
+  "renderSources": [
+    {
+      "file": "scripts/render-diagrams.mjs",
+      "sha256": "b66c7bffc586fee1167bda94ec8d07699b7a4afb463779588379691665914285"
+    },
+    {
+      "file": "scripts/illustrated-diagrams.mjs",
+      "sha256": "d0646eb700be5ea8bb539b073aa7ab5d70578d558320889a27da62669810931f"
+    },
+    {
+      "file": "public/licenses/lucide.txt",
+      "sha256": "b495047bd93a9b06913511076f504daba17d5bbeb3e0650f3bb53a4220329c57"
+    },
+    {
+      "file": "package-lock.json",
+      "sha256": "673eab35628a24581cd1cf18c46c3270882d6cfea95d2b196e8074bb49e87949"
+    }
+  ],
   "diagrams": [
     {
       "id": "team-agents",
       "document": "README.md",
       "title": "만드는 이유",
-      "source": "source/team-agents.mmd",
-      "width": 635,
-      "height": 771,
-      "sourceHash": "78320d39dd8977d5301758c0294d3d389a35afddf79b983fb489051b4cf2c960",
+      "source": "source/team-agents.json",
+      "renderer": "illustrated",
+      "width": 1280,
+      "height": 920,
+      "sourceHash": "38d54f754c400dcb61ef88432f0103b5f0c8cfbdd6fdccdb063d5ddeafc36e52",
       "svg": {
         "file": "team-agents.svg",
-        "bytes": 31405,
-        "sha256": "7ab8bb6e86f608f5f2eefd4282cb18967904bbecbe35b7dac80d8feeadbc0f89"
+        "bytes": 15891,
+        "sha256": "f5cecbac1eeb2e8289d0016605d65d12d8db58b86a2ab6770e048ea6a0eba26e"
       },
       "png": {
         "file": "team-agents.png",
-        "bytes": 92912,
-        "sha256": "af9766eafbcdd429b9281b3d21d5fff431756c43c3f1ca716a0bb67a0ae3b580"
+        "bytes": 181261,
+        "sha256": "64d97ac05a72f7e252291bfbf252b19bbf6b4bd62352d68f90b0c232e42c4768"
       }
     },
     {
       "id": "task-lifecycle",
       "document": "README.md",
       "title": "함께 일하는 흐름",
-      "source": "source/task-lifecycle.mmd",
-      "width": 711,
-      "height": 498,
-      "sourceHash": "e69aa7f567353abb9baca42af6973b52103b61d9aad6d30e74a3e0432de0904d",
+      "source": "source/task-lifecycle.json",
+      "renderer": "illustrated",
+      "width": 1280,
+      "height": 840,
+      "sourceHash": "c90074518ba174a7d8225a832b39f3d7d3a64d5f54ce8e5f2b7f598a076d0af5",
       "svg": {
         "file": "task-lifecycle.svg",
-        "bytes": 24965,
-        "sha256": "421aa000b0f778669a137b7f27737a506431af866e5c7e656c90285035f92cc4"
+        "bytes": 14539,
+        "sha256": "f48094fb2a7dbaf2369cc8411f784a2b7887850ef6086691b2353a70062ac1eb"
       },
       "png": {
         "file": "task-lifecycle.png",
-        "bytes": 120209,
-        "sha256": "935eddf8f658382db8cbf4f4e4041975d0a732b56e5c87a0e3132516ba217153"
+        "bytes": 198551,
+        "sha256": "8f469299f3f7600afcfbdee69c299474908cc2bd9e4f303f05d2a90bbbee7865"
       }
     },
     {
       "id": "platform-architecture",
       "document": "README.md",
       "title": "구현 구조",
-      "source": "source/platform-architecture.mmd",
-      "width": 1019,
-      "height": 996,
-      "sourceHash": "a8b313429ca956d0da013b956d9cfa638f319faf40a6e97180f3e27e1e7d1376",
+      "source": "source/platform-architecture.json",
+      "renderer": "illustrated",
+      "width": 1280,
+      "height": 940,
+      "sourceHash": "f0740b070f64e4b22634d3e0d79bb0c33d9247e945babdbac152e16a82040397",
       "svg": {
         "file": "platform-architecture.svg",
-        "bytes": 37210,
-        "sha256": "a67a7e74d0888157c890b7fe531a13f388e24beece821c02d8b2bea220c92366"
+        "bytes": 19345,
+        "sha256": "64a3530c3363e4e9db7e7ddf76eb9a9bfaddb57ed3a8535ae842fd43b028d284"
       },
       "png": {
         "file": "platform-architecture.png",
-        "bytes": 158196,
-        "sha256": "a1b0fe45fb82f336f9d4fd033715a23a81566a4ddce38dd7b64d8a8779b871ea"
+        "bytes": 269966,
+        "sha256": "95867c4fd1a807f3e2701029611d3c6fe9256cb330151ae18384fb717ebd93c5"
       }
     },
     {
       "id": "agent-context",
       "document": "README.md",
       "title": "기억·스킬·권한",
-      "source": "source/agent-context.mmd",
-      "width": 983,
-      "height": 747,
-      "sourceHash": "671c449bd3c4a4d7e63354b8c1ed59ba0ca61d11d95a71ef350e9a87c6e940e5",
+      "source": "source/agent-context.json",
+      "renderer": "illustrated",
+      "width": 1280,
+      "height": 970,
+      "sourceHash": "6857e9a352089f09ba75dfa03a1b06de9a6bcdcda1a231eefdb25601f50b170a",
       "svg": {
         "file": "agent-context.svg",
-        "bytes": 28279,
-        "sha256": "5e12684bd1319878a1fa00a24b5debc20c9de60e8a0d031e12086a30dd95137e"
+        "bytes": 16709,
+        "sha256": "af1f1851d5bdb6ccfdb2ddf5b2b6b1933e6bc9e5755f386447a631b5431f9106"
       },
       "png": {
         "file": "agent-context.png",
-        "bytes": 95170,
-        "sha256": "e1cde1b791ebfece4c8bba3c396efda1c533397a6b1b168b7f051dd44c3dd348"
+        "bytes": 251266,
+        "sha256": "c12487163092033d7b8f3316d9dc38a84c9591b424723d72a8a38f2944ab16fa"
       }
     },
     {
@@ -233,19 +255,20 @@
       "id": "execution-architecture",
       "document": "docs/CODE_EXECUTION.md",
       "title": "전체 구조",
-      "source": "source/execution-architecture.mmd",
-      "width": 1400,
-      "height": 1026,
-      "sourceHash": "9d911b593033cf50327c85a95985261c52a04d281e7afb8ef8c8d4a935720723",
+      "source": "source/execution-architecture.json",
+      "renderer": "illustrated",
+      "width": 1280,
+      "height": 940,
+      "sourceHash": "f69f22f48f1d80f8e943623f9b239df23d0fa4c86ad50c1b888cd017bb95fee8",
       "svg": {
         "file": "execution-architecture.svg",
-        "bytes": 41852,
-        "sha256": "bdcc63dce8b6deda10f79234985107e0bf4f212d67811c33f7ea962efc990f8d"
+        "bytes": 15766,
+        "sha256": "90a2c815e3f83e50d8dfa46dd30ec3f1fd677f965c6726a02e32a8d4b4804c27"
       },
       "png": {
         "file": "execution-architecture.png",
-        "bytes": 254834,
-        "sha256": "1ebac3c01738c425981b918a764233c1db76f0d31f703b8a5c60c1c81ecb8264"
+        "bytes": 263758,
+        "sha256": "7e5a4ab7231ef96262a14cc8be3f8cbefbcc6c65c4df8b5d7a029b35d1069a33"
       }
     },
     {
@@ -271,38 +294,40 @@
       "id": "verification-gates",
       "document": "docs/CODE_EXECUTION.md",
       "title": "검사 결과를 믿는 기준",
-      "source": "source/verification-gates.mmd",
-      "width": 534,
-      "height": 1079,
-      "sourceHash": "84ba7f42ba5864be4a7bde3af38d8610eb8ad0fdd4bc761d1ca618ce2e11f833",
+      "source": "source/verification-gates.json",
+      "renderer": "illustrated",
+      "width": 1280,
+      "height": 640,
+      "sourceHash": "66d10cbfad9014a5c323bb3f6c7d5f950c3c1a32a9b25bb06814e7d7c0ffb740",
       "svg": {
         "file": "verification-gates.svg",
-        "bytes": 25969,
-        "sha256": "729ee88810bf9501543427953cda8f65e13b7c9c9194f45dfdb39b9ff74847bf"
+        "bytes": 9929,
+        "sha256": "ef3e79689ac67d7dcc8af5aa9c97df1bfbd6cad57f585fc755f9538ba448e372"
       },
       "png": {
         "file": "verification-gates.png",
-        "bytes": 85585,
-        "sha256": "8dafef523feb2cf69ef904cff1f03e40a020a7d7ace26791b074c230d7fa9afc"
+        "bytes": 143345,
+        "sha256": "eb9fb08fc91655783778e002dfa2f6ec86ccde3b28fd8fc73cc638237fdf46bd"
       }
     },
     {
       "id": "custom-endpoints",
       "document": "docs/CONFIGURATION.md",
       "title": "커스텀 모델·저장소 연결",
-      "source": "source/custom-endpoints.mmd",
-      "width": 994,
-      "height": 298,
-      "sourceHash": "63df636fa080618b87cb7b93233e979de145aaf4943b614610c40c73063c704f",
+      "source": "source/custom-endpoints.json",
+      "renderer": "illustrated",
+      "width": 1280,
+      "height": 810,
+      "sourceHash": "07fa88010b157f47511bd2ee35ad179f5b67e5cfa51ccbd8d0efadbd8ef143a5",
       "svg": {
         "file": "custom-endpoints.svg",
-        "bytes": 21976,
-        "sha256": "2fd02cf3d2e2c0bad3a3e5b445db49f2f68b83feb0980c80ed0f7a0e3127383e"
+        "bytes": 13938,
+        "sha256": "87fc5c7accd299dc7ca404bac34f9ea8253ead3e21502ab877d1498c17e14f39"
       },
       "png": {
         "file": "custom-endpoints.png",
-        "bytes": 64853,
-        "sha256": "c85bc84b245b73d2e95dd5b7acb463b88899380dfb776fae57c1103289adb8fd"
+        "bytes": 204642,
+        "sha256": "c7e63d3cc1c43cf90e7f83c3e44221e2e2eed5b9e404e34facb43d3e73f72566"
       }
     },
     {
@@ -461,19 +486,20 @@
       "id": "server-components",
       "document": "docs/SERVER_ARCHITECTURE.md",
       "title": "구성과 데이터 소유권",
-      "source": "source/server-components.mmd",
-      "width": 724,
-      "height": 685,
-      "sourceHash": "79a9a116605ec0d6f9f8db02ef7aa98bb9ea29e42be0cd707e1f79a688b970af",
+      "source": "source/platform-architecture.json",
+      "renderer": "illustrated",
+      "width": 1280,
+      "height": 940,
+      "sourceHash": "f0740b070f64e4b22634d3e0d79bb0c33d9247e945babdbac152e16a82040397",
       "svg": {
         "file": "server-components.svg",
-        "bytes": 27601,
-        "sha256": "d2c4e0a55a1a80df3b1bbbaa2c3aa4fa9c2fe8c2f195ebbfd1b61d8356c9ce77"
+        "bytes": 19361,
+        "sha256": "cf1014cfb38d0288b5174b27b10f97ba1689bfaa5044755b1b5931b042b2e65a"
       },
       "png": {
         "file": "server-components.png",
-        "bytes": 91390,
-        "sha256": "2b82e9cbffa053808ba042240d1aff25c383059e19000eb145ca5906e06de87d"
+        "bytes": 269966,
+        "sha256": "95867c4fd1a807f3e2701029611d3c6fe9256cb330151ae18384fb717ebd93c5"
       }
     },
     {

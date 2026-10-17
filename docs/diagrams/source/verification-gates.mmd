@@ -1,9 +1,0 @@
-flowchart TB
-  B[원본 SHA] --> P[최종 patch]
-  P --> H[정렬 경로/모드/내용의 stateHash]
-  H --> C[검사 직전과 직후 hash 비교]
-  C --> L[check ID별 마지막 receipt]
-  L --> F{현재 코드에서 모두 통과?}
-  F -->|아니오| X[인계·수용 거절 · 재작업]
-  F -->|예| Q[새 QA 환경 · 같은 patch hash]
-  Q --> U[사람의 수용]

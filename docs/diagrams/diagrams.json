@@ -3,25 +3,29 @@
     "id": "team-agents",
     "document": "README.md",
     "title": "만드는 이유",
-    "source": "source/team-agents.mmd"
+    "source": "source/team-agents.json",
+    "renderer": "illustrated"
   },
   {
     "id": "task-lifecycle",
     "document": "README.md",
     "title": "함께 일하는 흐름",
-    "source": "source/task-lifecycle.mmd"
+    "source": "source/task-lifecycle.json",
+    "renderer": "illustrated"
   },
   {
     "id": "platform-architecture",
     "document": "README.md",
     "title": "구현 구조",
-    "source": "source/platform-architecture.mmd"
+    "source": "source/platform-architecture.json",
+    "renderer": "illustrated"
   },
   {
     "id": "agent-context",
     "document": "README.md",
     "title": "기억·스킬·권한",
-    "source": "source/agent-context.mmd"
+    "source": "source/agent-context.json",
+    "renderer": "illustrated"
   },
   {
     "id": "architecture-1",
@@ -75,7 +79,8 @@
     "id": "execution-architecture",
     "document": "docs/CODE_EXECUTION.md",
     "title": "전체 구조",
-    "source": "source/execution-architecture.mmd"
+    "source": "source/execution-architecture.json",
+    "renderer": "illustrated"
   },
   {
     "id": "development-qa-sequence",
@@ -87,13 +92,15 @@
     "id": "verification-gates",
     "document": "docs/CODE_EXECUTION.md",
     "title": "검사 결과를 믿는 기준",
-    "source": "source/verification-gates.mmd"
+    "source": "source/verification-gates.json",
+    "renderer": "illustrated"
   },
   {
     "id": "custom-endpoints",
     "document": "docs/CONFIGURATION.md",
     "title": "커스텀 모델·저장소 연결",
-    "source": "source/custom-endpoints.mmd"
+    "source": "source/custom-endpoints.json",
+    "renderer": "illustrated"
   },
   {
     "id": "deployment-1",
@@ -147,7 +154,8 @@
     "id": "server-components",
     "document": "docs/SERVER_ARCHITECTURE.md",
     "title": "구성과 데이터 소유권",
-    "source": "source/server-components.mmd"
+    "source": "source/platform-architecture.json",
+    "renderer": "illustrated"
   },
   {
     "id": "server-data-model",

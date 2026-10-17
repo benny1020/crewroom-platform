@@ -1,0 +1,294 @@
+{
+  "width": 1280,
+  "height": 940,
+  "title": "공유 에이전트가 일하는 구조",
+  "subtitle": "기억과 업무는 DB에 보관하고, Worker가 모델과 격리 실행 환경을 연결합니다.",
+  "groups": [
+    {
+      "x": 620,
+      "y": 110,
+      "w": 624,
+      "h": 184,
+      "title": "설정한 외부 연결",
+      "icon": "Plug",
+      "color": "external"
+    },
+    {
+      "x": 308,
+      "y": 318,
+      "w": 936,
+      "h": 470,
+      "title": "Crewroom 서버",
+      "icon": "Server",
+      "color": "neutral",
+      "note": "App · Worker · Runner는 상주"
+    },
+    {
+      "x": 960,
+      "y": 588,
+      "w": 270,
+      "h": 176,
+      "title": "Run별 격리 Job",
+      "icon": "Container",
+      "color": "job"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "browser",
+      "x": 32,
+      "y": 396,
+      "w": 220,
+      "h": 148,
+      "title": "웹 브라우저",
+      "icon": "Monitor",
+      "color": "neutral",
+      "tech": "데스크톱 웹",
+      "lines": ["팀원 · 관리자", "공유 업무방"]
+    },
+    {
+      "id": "app",
+      "x": 336,
+      "y": 396,
+      "w": 240,
+      "h": 148,
+      "title": "App · API",
+      "icon": "AppWindow",
+      "color": "service",
+      "tech": "Fastify 5 · Node 24",
+      "lines": ["로그인 · 권한 · 업무방", "API · 실시간 갱신"]
+    },
+    {
+      "id": "worker",
+      "x": 656,
+      "y": 396,
+      "w": 240,
+      "h": 148,
+      "title": "Worker",
+      "icon": "Workflow",
+      "color": "service",
+      "tech": "상주 프로세스",
+      "lines": ["작업 점유 · 문맥 고정", "모델 · 도구 호출"]
+    },
+    {
+      "id": "runner",
+      "x": 976,
+      "y": 396,
+      "w": 240,
+      "h": 148,
+      "title": "Runner",
+      "icon": "Container",
+      "color": "job",
+      "tech": "Docker broker",
+      "lines": ["격리 Job 생성", "종료 · 수정본 검증"]
+    },
+    {
+      "id": "model",
+      "x": 656,
+      "y": 170,
+      "w": 240,
+      "h": 110,
+      "title": "모델 API",
+      "icon": "Sparkles",
+      "color": "external",
+      "lines": ["커스텀 URL · 인증"]
+    },
+    {
+      "id": "repo",
+      "x": 976,
+      "y": 170,
+      "w": 240,
+      "h": 110,
+      "title": "저장소 API",
+      "icon": "GitBranch",
+      "color": "external",
+      "tech": "GitLab · 공개 GitHub PR",
+      "lines": []
+    },
+    {
+      "id": "db",
+      "x": 336,
+      "y": 632,
+      "w": 240,
+      "h": 132,
+      "title": "PostgreSQL 18",
+      "icon": "Database",
+      "color": "data",
+      "lines": ["업무 · 기억 · 스킬", "대화 · 상태 · 실행 큐"],
+      "titleSize": 20
+    },
+    {
+      "id": "files",
+      "x": 656,
+      "y": 632,
+      "w": 240,
+      "h": 132,
+      "title": "영속 파일",
+      "icon": "Files",
+      "color": "data",
+      "lines": ["Run별 input.json", "DB와 함께 백업"]
+    },
+    {
+      "id": "dev-job",
+      "x": 978,
+      "y": 644,
+      "w": 108,
+      "h": 100,
+      "title": "개발",
+      "icon": "Terminal",
+      "color": "job",
+      "lines": [],
+      "mini": true
+    },
+    {
+      "id": "qa-job",
+      "x": 1104,
+      "y": 644,
+      "w": 108,
+      "h": 100,
+      "title": "QA",
+      "icon": "ShieldCheck",
+      "color": "job",
+      "lines": [],
+      "mini": true
+    }
+  ],
+  "edges": [
+    {
+      "points": [
+        [252, 430],
+        [336, 430]
+      ],
+      "label": {
+        "text": "HTTP(S)",
+        "x": 294,
+        "y": 418
+      }
+    },
+    {
+      "points": [
+        [336, 502],
+        [252, 502]
+      ],
+      "label": {
+        "text": "SSE",
+        "x": 294,
+        "y": 490
+      },
+      "dashed": true
+    },
+    {
+      "points": [
+        [456, 544],
+        [456, 632]
+      ],
+      "label": {
+        "text": "SQL",
+        "x": 478,
+        "y": 590
+      }
+    },
+    {
+      "points": [
+        [656, 480],
+        [616, 480],
+        [616, 700],
+        [576, 700]
+      ],
+      "label": {
+        "text": "작업 큐",
+        "x": 615,
+        "y": 592
+      }
+    },
+    {
+      "points": [
+        [776, 544],
+        [776, 632]
+      ],
+      "label": {
+        "text": "Run 입력",
+        "x": 816,
+        "y": 592
+      }
+    },
+    {
+      "points": [
+        [776, 396],
+        [776, 280]
+      ],
+      "label": {
+        "text": "JSON · HTTP(S)",
+        "x": 820,
+        "y": 312
+      }
+    },
+    {
+      "points": [
+        [896, 430],
+        [936, 430],
+        [936, 225],
+        [976, 225]
+      ],
+      "label": {
+        "text": "고정 SHA",
+        "x": 940,
+        "y": 312
+      }
+    },
+    {
+      "points": [
+        [896, 466],
+        [976, 466]
+      ],
+      "label": {
+        "text": "HTTP",
+        "x": 936,
+        "y": 454
+      }
+    },
+    {
+      "points": [
+        [1096, 544],
+        [1096, 588]
+      ],
+      "label": {
+        "text": "생성",
+        "x": 1124,
+        "y": 572
+      }
+    }
+  ],
+  "notes": [
+    {
+      "x": 40,
+      "y": 816,
+      "w": 1200,
+      "h": 60,
+      "lines": [
+        "에이전트는 DB의 ID·설정·기억으로 유지되고, Job은 코드 실행 때 생성됩니다."
+      ],
+      "icon": "Bot",
+      "color": "neutral"
+    }
+  ],
+  "legend": [
+    {
+      "label": "업무 처리",
+      "color": "service"
+    },
+    {
+      "label": "영속 저장",
+      "color": "data"
+    },
+    {
+      "label": "외부 연결",
+      "color": "external"
+    },
+    {
+      "label": "코드 실행 · 검증",
+      "color": "job"
+    }
+  ],
+  "footer": "점선: SSE 알림 · Job: network none"
+}

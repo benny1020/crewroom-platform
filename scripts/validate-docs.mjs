@@ -10,6 +10,7 @@ const files = [
     .map((name) => "docs/" + name),
   "docs/research/2026-10-16-code-audit/README.md",
   "docs/diagrams/README.md",
+  "docs/diagrams/DESIGN_NOTES.md",
 ];
 let links = 0;
 for (const file of files) {
@@ -51,15 +52,34 @@ for (const directory of [
   media += manifest.files.length;
 }
 const diagramDirectory = "docs/diagrams",
-  diagrams = JSON.parse(
+  diagramManifest = JSON.parse(
     await readFile(diagramDirectory + "/manifest.json", "utf8"),
-  ).diagrams,
+  ),
+  diagrams = diagramManifest.diagrams,
   definitions = JSON.parse(
     await readFile(diagramDirectory + "/diagrams.json", "utf8"),
   );
 if (diagrams.length !== definitions.length)
   throw new Error("Diagram manifest does not match the source list");
+for (const receipt of diagramManifest.renderSources) {
+  if (
+    createHash("sha256")
+      .update(await readFile(receipt.file))
+      .digest("hex") !== receipt.sha256
+  )
+    throw new Error(
+      "Diagram renderer changed; regenerate images: " + receipt.file,
+    );
+}
 for (const diagram of diagrams) {
+  const definition = definitions.find((entry) => entry.id === diagram.id);
+  if (
+    !definition ||
+    Object.entries(definition).some(([key, value]) => diagram[key] !== value)
+  )
+    throw new Error(
+      "Diagram definition changed; regenerate images: " + diagram.id,
+    );
   const source = await readFile(diagramDirectory + "/" + diagram.source);
   if (createHash("sha256").update(source).digest("hex") !== diagram.sourceHash)
     throw new Error("Diagram needs regeneration: " + diagram.id);

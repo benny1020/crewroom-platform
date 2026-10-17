@@ -11,11 +11,31 @@
 
 </div>
 
-![네 부서의 캐릭터 동료](docs/media/office.png)
-
 **0.6은 로그인·공유 업무방·영속 기억·스킬 관리에 실제 코드 수정과 Docker 검사·독립 QA를 추가했습니다.** GitHub Pages는 API 없는 0.4 화면 데모입니다. 실제 공동 사용은 아래 서버를 실행해야 합니다. 모델 키는 포함하지 않습니다. 외부 모델 추론과 실제 팀의 업무 절감 효과는 아직 검증하지 않았습니다. [배포별 시범 운영 가이드](docs/PILOT_GUIDE.md)를 별도로 관리합니다.
 
 OpenAI 호환 또는 Claude Messages API의 **URL·모델 ID·인증 방식**을 직접 지정합니다. 제공자 API, 게이트웨이, 자체 호스팅 endpoint를 같은 설정 방식으로 연결하고, GitLab URL과 사용할 프로젝트도 선택합니다. [커스텀 연결 설정](docs/CONFIGURATION.md)
+
+## 구현 구조
+
+[![구현 구조](docs/diagrams/platform-architecture.png)](docs/diagrams/platform-architecture.svg)
+
+그림을 누르면 확대할 수 있습니다. [아키텍처 그림 모음](docs/diagrams/README.md)에서 실행 흐름·DB 관계·개발/QA 격리 구조를 함께 볼 수 있습니다. [조사 근거와 도식 디자인 규칙](docs/diagrams/DESIGN_NOTES.md)도 정리했습니다.
+
+| 구성   | 실제 구현                                                                                                                              |
+| ------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| 웹     | Vite + Vanilla JS + Lucide + CSS 캐릭터 모션. 서버 모드와 정적 데모 진입점 분리                                                        |
+| App    | Fastify 5, Zod 입력 검사, 로그인·CSRF·범위 검사·업무/스킬/기억 API·SSE                                                                 |
+| DB     | PostgreSQL 18, SQL migration 4개, 단일 Task/Run 큐, 영속 이벤트·메시지·버전별 결과                                                     |
+| Worker | 별도 Node 프로세스. 전체 2개·같은 에이전트 1개 동시 실행, 임대와 generation으로 오래된 결과 차단                                       |
+| Runner | 별도 HTTP broker. Docker socket 전담, 고정 이미지·등록 검사·Run별 개발/QA Job 생성과 종료 검증                                         |
+| 모델   | Claude Messages / OpenAI 호환 HTTP adapter. 커스텀 URL·인증 설정, endpoint/model profile 고정, 제한된 JSON 행동 루프, 구조화 결과 검사 |
+| 파일   | Docker named volume에 Run별 `input.json`. 본문·결과·스킬·기억의 기준 저장소는 DB                                                       |
+| 배포   | Node 24 이미지 + App / Worker / Runner / PostgreSQL, 운영 시 Caddy HTTPS. 비밀 파일 별도 마운트                                        |
+| 복구   | 자동 재발송 없이 종료 확인. 암호화 백업·빈 DB 복원·세션 폐기·미완료 Run 격리                                                           |
+
+**에이전트는 DB에 상주하고, 코드 실행 업무마다 Docker Job을 띄웁니다.** 에이전트는 DB의 고유 ID·설정·장착 스킬·범위별 기억입니다. 상주 Worker가 요청마다 이 문맥을 고정해서 모델 API를 호출합니다. App과 Worker는 웹 접속 여부와 무관하게 실행됩니다. 읽기 전용 분석은 API 호출만 사용합니다. 코드 수정과 등록 검사는 별도 Runner의 격리 환경에서 수행하며 최종 patch를 다운로드합니다. 자동 GitLab push/MR/배포는 제공하지 않습니다.
+
+LangChain/LangGraph는 사용하지 않습니다. Paperclip 내부 큐를 별도 SDK처럼 재사용하면 인증·서비스 의존성과 기존 Hermes adapter의 실행 권한이 함께 따라오는 문제가 있어 이번 구현에서는 채택을 유보했습니다. Crewroom DB가 업무와 실행의 유일한 소유자입니다. [코드 근거와 결정](docs/ADR_001_RUNTIME.md)
 
 ## 만드는 이유
 
@@ -46,27 +66,6 @@ OpenAI 호환 또는 Claude Messages API의 **URL·모델 ID·인증 방식**을
 
 ![대상부터 시작하는 업무](docs/media/intake.png)
 ![요약·책임·근거를 이어가는 업무방](docs/media/work-brief.png)
-
-## 구현 구조
-
-[![구현 구조](docs/diagrams/platform-architecture.png)](docs/diagrams/platform-architecture.svg)
-
-그림을 누르면 확대할 수 있습니다. [아키텍처 그림 모음](docs/diagrams/README.md)에서 실행 흐름·DB 관계·개발/QA 격리 구조를 함께 볼 수 있습니다.
-
-| 구성   | 실제 구현                                                                                                                                   |
-| ------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| 웹     | Vite + Vanilla JS + Lucide + CSS 캐릭터 모션. 서버 모드와 정적 데모 진입점 분리                                                             |
-| App    | Fastify 5, Zod 입력 검사, 로그인·CSRF·범위 검사·업무/스킬/기억 API·SSE                                                                      |
-| DB     | PostgreSQL 18, SQL migration 4개, 단일 Task/Run 큐, 영속 이벤트·메시지·버전별 결과                                                          |
-| Worker | 별도 Node 프로세스. 전체 2개·같은 에이전트 1개 동시 실행, 임대와 generation으로 오래된 결과 차단                                            |
-| 모델   | Claude Messages / OpenAI 호환 HTTP adapter. 커스텀 URL·인증 설정, endpoint/model profile 고정, 제한된 JSON 행동 루프, 구조화 결과 검사 |
-| 파일   | Docker named volume에 Run별 `input.json`. 본문·결과·스킬·기억의 기준 저장소는 DB                                                            |
-| 배포   | Node 24 이미지 + App / Worker / PostgreSQL, 운영 시 Caddy HTTPS. 비밀 파일 별도 마운트                                                      |
-| 복구   | 자동 재발송 없이 종료 확인. 암호화 백업·빈 DB 복원·세션 폐기·미완료 Run 격리                                                                |
-
-**에이전트는 DB에 상주하고, 코드 실행 업무마다 Docker Job을 띄웁니다.** 에이전트는 DB의 고유 ID·설정·장착 스킬·범위별 기억입니다. 상주 Worker가 요청마다 이 문맥을 고정해서 모델 API를 호출합니다. App과 Worker는 웹 접속 여부와 무관하게 실행됩니다. 읽기 전용 분석은 API 호출만 사용합니다. 코드 수정과 등록 검사는 별도 Runner의 격리 환경에서 수행하며 최종 patch를 다운로드합니다. 자동 GitLab push/MR/배포는 제공하지 않습니다.
-
-LangChain/LangGraph는 사용하지 않습니다. Paperclip 내부 큐를 별도 SDK처럼 재사용하면 인증·서비스 의존성과 기존 Hermes adapter의 실행 권한이 함께 따라오는 문제가 있어 이번 구현에서는 채택을 유보했습니다. Crewroom DB가 업무와 실행의 유일한 소유자입니다. [코드 근거와 결정](docs/ADR_001_RUNTIME.md)
 
 ## 기억·스킬·권한
 
@@ -123,6 +122,8 @@ TEST_DATABASE_URL=postgresql://crewroom@127.0.0.1:5448/crewroom npm run test:ser
 
 ## 동작 시연
 
+![네 부서의 캐릭터 동료](docs/media/office.png)
+
 아래 GIF는 API 없는 정적 목업입니다. 서버 화면 증거는 [검증 보고서](docs/SERVER_VERIFICATION.md)에 별도로 표시합니다.
 
 ![업무 접수와 인계 목업](docs/media/workflow.gif)
@@ -132,7 +133,8 @@ TEST_DATABASE_URL=postgresql://crewroom@127.0.0.1:5448/crewroom npm run test:ser
 | 문서                                                                  | 내용                                               |
 | --------------------------------------------------------------------- | -------------------------------------------------- |
 | [실제 코드 수정·독립 QA](docs/CODE_EXECUTION.md)                      | native 루프·Docker 격리·검사·이미지·복구 계약      |
-| [커스텀 모델·저장소 연결](docs/CONFIGURATION.md)             | 모델·GitLab URL·인증·프록시·소스 패키지  |
+| [커스텀 모델·저장소 연결](docs/CONFIGURATION.md)                      | 모델·GitLab URL·인증·프록시·소스 패키지            |
+| [아키텍처 그림·디자인 근거](docs/diagrams/DESIGN_NOTES.md)            | 아이콘·경계·흐름·읽는 순서와 조사 출처             |
 | [현재 서버 아키텍처](docs/SERVER_ARCHITECTURE.md)                     | 데이터 관계·API·실행·경쟁·권한·기억·실패 처리      |
 | [런타임 채택 결정](docs/ADR_001_RUNTIME.md)                           | Paperclip/Hermes 코드 검토와 독립 큐 선택 근거     |
 | [운영 안내](docs/SERVER_OPERATIONS.md)                                | Compose·계정·모델 설정·백업·복원·종료 확인         |

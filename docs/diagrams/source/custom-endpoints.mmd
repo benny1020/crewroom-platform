@@ -1,7 +1,0 @@
-flowchart LR
-  USER[팀원 웹] --> APP[Crewroom App]
-  APP --> DB[(PostgreSQL)]
-  WORKER[상주 Worker] --> DB
-  WORKER --> MODEL[설정한 모델 endpoint]
-  WORKER --> GIT[설정한 GitLab URL · 고정 SHA]
-  MODEL --> API[직접 제공자 · 게이트웨이 · 자체 호스팅 API]
