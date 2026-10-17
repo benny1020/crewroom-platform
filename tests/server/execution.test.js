@@ -62,7 +62,10 @@ test(
           nextActions: [],
         };
       let action;
-      if (!actions.length) action = { action: "read_file", path: "sum.js" };
+      if (!actions.length)
+        action = { action: "search_memory", query: "합계 함수 개발 규칙" };
+      else if (!actions.some((a) => a.action === "read_file"))
+        action = { action: "read_file", path: "sum.js" };
       else if (
         context.mode === "edit" &&
         !actions.some((a) => a.action === "write_file")
@@ -131,6 +134,17 @@ test(
     let detail = (await lead.request("GET", `/api/tasks/${task.id}`)).json()
       .task;
     assert.equal(detail.status, "result_ready", JSON.stringify(detail.runs));
+    assert.equal(
+      Number(
+        (
+          await h.pool.query(
+            "SELECT count(*) FROM cr_memory_reads WHERE run_id=$1",
+            [run.id],
+          )
+        ).rows[0].count,
+      ),
+      1,
+    );
     const dev = detail.artifacts[0].result.execution;
     assert.equal(dev.passed, true);
     assert.match(dev.patch, /a\+b/);

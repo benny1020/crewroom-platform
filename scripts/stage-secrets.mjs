@@ -10,7 +10,17 @@ import {
 } from "node:fs/promises";
 const groups = [
   ["app", 1000, ["db_url"]],
-  ["worker", 1000, ["db_url", "model_api_key", "gitlab_token", "runner_token"]],
+  [
+    "worker",
+    1000,
+    [
+      "db_url",
+      "model_api_key",
+      "embedding_api_key",
+      "gitlab_token",
+      "runner_token",
+    ],
+  ],
   ["runner", 0, ["runner_token"]],
 ];
 for (const [name, uid, files] of groups) {

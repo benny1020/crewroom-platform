@@ -14,8 +14,9 @@ for (const [name, value] of [
   ["db_password", password],
   ["db_url", `postgresql://crewroom:${password}@db:5432/crewroom`],
   ["model_api_key", ""],
+  ["embedding_api_key", ""],
   ["gitlab_token", ""],
-  ["runner_token",randomBytes(32).toString("hex")],
+  ["runner_token", randomBytes(32).toString("hex")],
   ["backup_key", randomBytes(32).toString("hex")],
 ]) {
   try {

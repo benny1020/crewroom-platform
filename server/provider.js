@@ -32,11 +32,14 @@ export function modelMessages(snapshot) {
         brief: snapshot.brief,
         messages: snapshot.messages,
         example: snapshot.example,
-        memories: snapshot.memories.map((m) => ({
-          title: m.title,
-          body: m.body,
-          source: m.source,
-        })),
+        memoryContext: snapshot.memoryContext?.items,
+        memories: (snapshot.memoryContext ? [] : snapshot.memories).map(
+          (m) => ({
+            title: m.title,
+            body: m.body,
+            source: m.source,
+          }),
+        ),
       }),
     },
   ];

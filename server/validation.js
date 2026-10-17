@@ -74,5 +74,10 @@ export const memoryInput = z
     body: z.string().trim().min(1).max(10000),
     source: z.string().trim().min(1).max(500),
     sourceTaskId: id.optional(),
+    kind: z
+      .enum(["fact", "decision", "preference", "procedure"])
+      .default("fact"),
+    pinned: z.boolean().default(false),
+    project: z.string().trim().max(80).default(""),
   })
   .strict();

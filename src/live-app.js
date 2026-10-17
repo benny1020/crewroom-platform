@@ -38,6 +38,12 @@ const statusName = {
   cancelled: "중단됨",
 };
 const scopeName = { private: "나만", department: "부서 공유", team: "팀 공유" };
+const memoryKindName = {
+  fact: "사실",
+  decision: "결정",
+  preference: "선호",
+  procedure: "업무 규칙",
+};
 const stamp = (v) =>
   new Date(v).toLocaleString("ko-KR", {
     month: "numeric",
@@ -47,6 +53,7 @@ const stamp = (v) =>
   });
 const pill = (t) =>
   `<span class="g-pill ${t.status === "running" ? "blue" : ["failed", "paused", "result_ready"].includes(t.status) ? "amber" : t.status === "done" ? "green" : ""}"><span class="g-dot"></span>${statusName[t.status] || esc(t.status)}</span>`;
+let archiveResults = [];
 let workspace = null,
   session = null,
   task = null,
@@ -80,6 +87,7 @@ function clearSession() {
   pendingRefresh = false;
   deferred = false;
   drafts.clear();
+  archiveResults = [];
   modal.innerHTML = "";
   frame.removeAttribute("inert");
 }
@@ -410,7 +418,7 @@ function taskView() {
         m.id === t.owner_id ||
         (t.visibility === "department" && m.department === t.department)),
   );
-  return `<div class="cr-workroom-head"><a href="#/work" class="g-text-button">${icon("arrow-left")} 전체 업무</a><span>W-${t.number} · ${scopeName[t.visibility]}</span>${button("업무 링크 복사", "copy", "", false, "link")}</div>${heading(esc(t.title), `${esc(t.project)} · ${esc(person(t.owner_id))} 요청 / ${esc(person(t.responsible_id))} 책임`, pill(t))}<section class="cr-task-target"><span>대상</span><strong>${esc(t.target)}</strong><code>${esc(t.target_version)}</code></section><div class="cw-step-track">${t.steps.map((s, i) => `<div class="cw-step ${i === t.step_index ? "current" : ""}">${portrait(agent(s.agent_id))}<span><strong>${esc(s.agent_name)}</strong><small>${esc(s.name)} · ${i < t.step_index ? "인계됨" : i === t.step_index ? "현재 단계" : "대기"}</small></span>${i < t.steps.length - 1 ? icon("arrow-right") : ""}</div>`).join("")}</div><section class="cw-next"><div><span class="cw-small-label">다음 행동</span><strong>${t.status === "result_ready" ? (final ? "결과를 확인하고 수용 또는 재작업" : "검토 결과를 확인하고 QA로 인계") : t.status === "done" ? "수용한 결과를 다음 업무의 기준으로" : t.status === "failed" ? "실행 기록의 확인 필요 사항을 해결해주세요" : t.status === "running" ? "동료가 결과를 정리하고 있어요" : "요청한 입력으로 업무를 이어가세요"}</strong><span>${esc(person(t.responsible_id))} 책임 · ${esc(step.agent_name)} 담당</span></div><div class="cw-actions">${controls}</div></section>${run?.error_code ? `<div class="cr-run-error" role="status"><strong>${esc(run.error_message)}</strong><small>${esc(run.error_code)}</small>${run.lease_owner ? "<p>운영 담당자가 이전 Worker의 종료를 확인해야 새 실행이 가능합니다. 비공개 업무 본문을 공개할 필요는 없습니다.</p>" : ""}</div>` : ""}${
+  return `<div class="cr-workroom-head"><a href="#/work" class="g-text-button">${icon("arrow-left")} 전체 업무</a><span>W-${t.number} · ${scopeName[t.visibility]}</span>${button("업무 링크 복사", "copy", "", false, "link")}${task.runs.length ? button("참고한 기억", "used-memory", "", false, "bookmark") : ""}</div>${heading(esc(t.title), `${esc(t.project)} · ${esc(person(t.owner_id))} 요청 / ${esc(person(t.responsible_id))} 책임`, pill(t))}<section class="cr-task-target"><span>대상</span><strong>${esc(t.target)}</strong><code>${esc(t.target_version)}</code></section><div class="cw-step-track">${t.steps.map((s, i) => `<div class="cw-step ${i === t.step_index ? "current" : ""}">${portrait(agent(s.agent_id))}<span><strong>${esc(s.agent_name)}</strong><small>${esc(s.name)} · ${i < t.step_index ? "인계됨" : i === t.step_index ? "현재 단계" : "대기"}</small></span>${i < t.steps.length - 1 ? icon("arrow-right") : ""}</div>`).join("")}</div><section class="cw-next"><div><span class="cw-small-label">다음 행동</span><strong>${t.status === "result_ready" ? (final ? "결과를 확인하고 수용 또는 재작업" : "검토 결과를 확인하고 QA로 인계") : t.status === "done" ? "수용한 결과를 다음 업무의 기준으로" : t.status === "failed" ? "실행 기록의 확인 필요 사항을 해결해주세요" : t.status === "running" ? "동료가 결과를 정리하고 있어요" : "요청한 입력으로 업무를 이어가세요"}</strong><span>${esc(person(t.responsible_id))} 책임 · ${esc(step.agent_name)} 담당</span></div><div class="cw-actions">${controls}</div></section>${run?.error_code ? `<div class="cr-run-error" role="status"><strong>${esc(run.error_message)}</strong><small>${esc(run.error_code)}</small>${run.lease_owner ? "<p>운영 담당자가 이전 Worker의 종료를 확인해야 새 실행이 가능합니다. 비공개 업무 본문을 공개할 필요는 없습니다.</p>" : ""}</div>` : ""}${
     manage
       ? `<details class="cw-owner"><summary>책임자 변경 ${t.claims.length ? `· 인수 요청 ${t.claims.length}건` : ""}</summary><form class="cr-inline-form" data-form="assign" data-revision="${t.revision}">${select(
           "현재 책임자",
@@ -476,16 +484,17 @@ function agentView(id) {
 }
 function memoryView() {
   const query = drafts.get("memory-search")?.query || "",
-    rows = workspace.memories.filter(
-      (m) => !query || (m.title + " " + m.body).includes(query),
-    );
+    rows = workspace.memories;
   return (
     heading(
       "팀이 쌓아가는 기억",
-      "출처를 남기고, 잘못된 기억을 바로잡고, 다음 업무에서 이어가세요.",
+      "동료별 핵심 기억과 오래된 대화·업무 요약을 출처와 함께 찾아 이어가세요.",
       button("기억 추가", "new-memory", "", true, "plus"),
     ) +
-    `<form class="cr-search" data-form="memory-search">${field("기억 검색", "query", query, "search", 'maxlength="200" placeholder="제목 또는 내용 검색"')}<button class="g-button" type="submit">검색 ${icon("search")}</button></form><div class="cr-memory-grid">${rows.map((m) => `<article class="cw-paper cr-memory"><div class="cw-section-heading"><h2>${esc(m.title)}</h2><span class="g-pill">${scopeName[m.visibility]}</span></div><p class="cr-instructions">${esc(m.body)}</p><div class="cr-memory-meta">${esc(agent(m.agent_id)?.name)} · ${esc(m.source)}<br>v${m.revision} · ${stamp(m.updated_at)}</div><details class="cr-history"><summary>정정 이력 ${m.history.length}</summary>${m.history.map((h) => `<div><strong>v${h.revision} · ${esc(h.reason)}</strong><p>${esc(h.body)}</p></div>`).join("") || "<p>정정 이력이 없어요.</p>"}</details>${m.owner_id === workspace.user.id || (workspace.user.role === "lead" && m.visibility !== "private") ? `<div class="cw-actions">${button("바로잡기", "edit-memory", `data-id="${m.id}"`, false, "pencil")}${button("삭제", "delete-memory", `data-id="${m.id}"`, false, "trash-2")}</div>` : ""}</article>`).join("") || '<div class="cw-paper cr-empty-inline">검색할 수 있는 기억이 없어요.</div>'}</div>`
+    `<form class="cr-search" data-form="memory-search">${field("기억 검색", "query", query, "search", 'maxlength="200" placeholder="과거 결정이나 업무 내용을 검색"')}<button class="g-button" type="submit">검색 ${icon("search")}</button></form><div class="cr-memory-grid">${rows.map((m) => `<article class="cw-paper cr-memory"><div class="cw-section-heading"><h2>${esc(m.title)}</h2><span class="g-pill">${scopeName[m.visibility]}</span></div><div class="cr-bound-skills"><span class="g-pill">${memoryKindName[m.kind] || "사실"}</span>${m.pinned ? `<span class="g-pill">${icon("pin")} 핵심 기억</span>` : ""}${m.project ? `<span class="g-pill">${esc(m.project)}</span>` : ""}</div><p class="cr-instructions">${esc(m.body)}</p><div class="cr-memory-meta">${esc(agent(m.agent_id)?.name)} · ${esc(m.source)}<br>v${m.revision} · ${stamp(m.updated_at)}</div><details class="cr-history"><summary>정정 이력 ${m.history.length}</summary>${m.history.map((h) => `<div><strong>v${h.revision} · ${esc(h.reason)}</strong><p>${esc(h.body)}</p></div>`).join("") || "<p>정정 이력이 없어요.</p>"}</details>${m.owner_id === workspace.user.id || (workspace.user.role === "lead" && m.visibility !== "private") ? `<div class="cw-actions">${button("바로잡기", "edit-memory", `data-id="${m.id}"`, false, "pencil")}${button("삭제", "delete-memory", `data-id="${m.id}"`, false, "trash-2")}</div>` : ""}</article>`).join("") || '<div class="cw-paper cr-empty-inline">검색할 수 있는 기억이 없어요.</div>'}</div>` +
+    (query
+      ? `<section class="cw-paper"><div class="cw-section-heading"><h2>과거 대화·업무에서 찾은 기록</h2><span class="g-pill">관련성 검색</span></div><p class="cr-note">업무 요약은 원문을 발췌한 기록입니다. 현재 검사·승인 상태는 해당 업무에서 확인하세요.</p><div class="cr-memory-grid">${archiveResults.map((m) => `<article class="cw-paper"><h3>${esc(m.title)}</h3><span class="g-pill">${scopeName[m.visibility]}</span><p class="cr-instructions">${esc(m.body)}</p><small>${esc(m.project)} · ${esc(m.source)} · ${stamp(m.createdAt)}</small><div class="cw-actions">${button("출처 원문", "memory-source", `data-key="${esc(m.key)}"`)}${m.taskId ? `<a class="g-button" href="#/tasks/${esc(m.taskId)}">업무방 열기</a>` : ""}</div></article>`).join("") || '<p class="cr-empty-inline">관련된 과거 기록이 없어요.</p>'}</div></section>`
+      : "")
   );
 }
 function skillsView() {
@@ -771,6 +780,35 @@ function openDialog(type, data = {}) {
         ) + scopes(type === "remember" ? task.visibility : "private")
       : "";
     body +=
+      select(
+        "기억 종류",
+        "kind",
+        [
+          ["fact", "사실"],
+          ["decision", "결정"],
+          ["preference", "선호"],
+          ["procedure", "업무 규칙"],
+        ],
+        m?.kind || "fact",
+      ) +
+      select(
+        "기본 문맥에 우선 포함",
+        "pinned",
+        [
+          ["false", "관련될 때 검색"],
+          ["true", "핵심 기억으로 고정"],
+        ],
+        String(m?.pinned || false),
+      );
+    if (!m && type !== "remember")
+      body += field(
+        "프로젝트 (비우면 공통)",
+        "project",
+        "",
+        "text",
+        'maxlength="80"',
+      );
+    body +=
       field(
         "기억 제목",
         "title",
@@ -790,6 +828,18 @@ function openDialog(type, data = {}) {
           ));
     if (type === "remember")
       body += '<p class="cr-note">원본 업무와 같은 공개 범위로 저장합니다.</p>';
+  }
+  if (type === "used-memory") {
+    title = "이번 실행이 참고한 기억";
+    form = "memory-source";
+    submit = "닫기";
+    body = `<p class="cr-note">원본의 현재 버전과 접근 범위가 유효한 기록입니다. 변경·삭제된 출처 ${data.unavailable}개.</p>${data.items.map((m) => `<article class="cw-paper"><h3>${esc(m.title)}</h3><p class="cr-instructions">${esc(m.body)}</p><small>${esc(m.source)}</small></article>`).join("") || "<p>참고한 장기 기억이 없습니다.</p>"}`;
+  }
+  if (type === "memory-source") {
+    title = data.item.title;
+    form = "memory-source";
+    submit = "닫기";
+    body = `<p class="cr-note">${esc(data.item.source)} · ${esc(data.item.targetVersion || "버전 미기록")}</p><p class="cr-instructions">${esc(data.item.body)}</p>`;
   }
   if (type === "delete-memory") {
     title = "기억을 검색에서 제외할까요?";
@@ -828,6 +878,18 @@ root.addEventListener("click", async (e) => {
     if (action === "navigate") navigate(el.dataset.path);
     if (action === "close") {
       closeDialog();
+      return;
+    }
+    if (action === "used-memory") {
+      const response = await api(`/tasks/${task.id}/memory`);
+      openDialog("used-memory", response);
+      return;
+    }
+    if (action === "memory-source") {
+      const response = await api(
+        "/memory/sources/" + encodeURIComponent(el.dataset.key),
+      );
+      openDialog("memory-source", { item: response.item });
       return;
     }
     if (action === "password") openDialog("password");
@@ -1022,14 +1084,26 @@ root.addEventListener("submit", async (e) => {
       await load(true);
       toast("다음 실행부터 새 설정을 적용해요.");
     }
+    if (kind === "memory-source") {
+      closeDialog();
+      return;
+    }
     if (kind === "memory-search") {
       drafts.set(kind, values);
       const response = await api(
         `/memories?q=${encodeURIComponent(values.query)}`,
       );
       workspace.memories = response.memories;
+      const recalled = await api(
+        `/memory/search?q=${encodeURIComponent(values.query)}`,
+      );
+      archiveResults = recalled.items.filter(
+        (m) => !m.key.startsWith("memory:"),
+      );
       render();
     }
+    if (kind === "memory-create" || kind === "memory-edit")
+      values.pinned = values.pinned === "true";
     if (kind === "memory-create") {
       await api("/memories", {
         method: "POST",

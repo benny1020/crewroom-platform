@@ -143,7 +143,7 @@ try {
     JSON.stringify(
       {
         format: 1,
-        release: "0.6.0",
+        release: "0.7.0",
         createdAt: new Date().toISOString(),
         migrations,
         nativeSessions:
@@ -160,7 +160,14 @@ try {
   await unlink(rawDb).catch(() => {});
   await unlink(rawFiles).catch(() => {});
   if (running.includes("runner"))
-    await command(["up", "-d", "--wait", "--no-deps", "--no-recreate", "runner"]);
+    await command([
+      "up",
+      "-d",
+      "--wait",
+      "--no-deps",
+      "--no-recreate",
+      "runner",
+    ]);
   const front = running.filter((s) => s !== "runner");
   if (front.length) await command(["start", ...front]);
 }

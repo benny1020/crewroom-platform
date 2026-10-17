@@ -268,7 +268,7 @@ export async function createMemory(pool, user, input) {
       );
     const id = randomUUID();
     await db.query(
-      "INSERT INTO cr_memories(id,agent_id,owner_id,visibility,department,source_task_id,title,body,source) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)",
+      "INSERT INTO cr_memories(id,agent_id,owner_id,visibility,department,source_task_id,title,body,source,kind,pinned,project) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)",
       [
         id,
         v.agentId,
@@ -279,6 +279,9 @@ export async function createMemory(pool, user, input) {
         v.title,
         v.body,
         v.source,
+        v.kind,
+        v.pinned,
+        source?.project || v.project,
       ],
     );
     // Private content is intentionally absent from global activity payloads.
@@ -301,6 +304,10 @@ export async function changeMemory(pool, user, id, input, deleting = false) {
           title: z.string().trim().min(1).max(120),
           body: z.string().trim().min(1).max(10000),
           reason: z.string().trim().min(1).max(300),
+          pinned: z.boolean().optional(),
+          kind: z
+            .enum(["fact", "decision", "preference", "procedure"])
+            .optional(),
         })
         .strict()
         .parse(input);
@@ -337,8 +344,23 @@ export async function changeMemory(pool, user, id, input, deleting = false) {
       },
     ]);
     await db.query(
-      "UPDATE cr_memories SET title=$2,body=$3,history=history || $4::jsonb,revision=revision+1,updated_at=now(),deleted_at=CASE WHEN $5 THEN now() ELSE NULL END WHERE id=$1",
-      [id, v.title || m.title, v.body || m.body, history, deleting],
+      "UPDATE cr_memories SET title=$2,body=$3,history=history || $4::jsonb,revision=revision+1,updated_at=now(),deleted_at=CASE WHEN $5 THEN now() ELSE NULL END,pinned=$6,kind=$7 WHERE id=$1",
+      [
+        id,
+        v.title || m.title,
+        v.body || m.body,
+        history,
+        deleting,
+        v.pinned ?? m.pinned,
+        v.kind || m.kind,
+      ],
+    );
+    await db.query(
+      "DELETE FROM cr_memory_embeddings WHERE source_key=$1 OR source_key IN (SELECT key FROM cr_recall_documents WHERE dependencies @>jsonb_build_array(jsonb_build_object('key',$1::text)))",
+      ["memory:" + id],
+    );
+    await db.query(
+      "DELETE FROM cr_memory_embeddings e WHERE NOT EXISTS(SELECT 1 FROM cr_recall_documents d WHERE d.key=e.source_key AND d.revision=e.source_revision)",
     );
     await event(
       db,

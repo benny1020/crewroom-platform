@@ -326,3 +326,87 @@ test("password change revokes the browser session and new password can log in", 
     page.getByRole("heading", { name: "우리 팀으로 들어가기", exact: true }),
   ).toBeVisible();
 });
+
+test("archive search opens an old conversation source and preserves core-memory settings", async ({
+  page,
+}) => {
+  await login(page);
+  await page.getByRole("button", { name: "새 업무 시작", exact: true }).click();
+  await page
+    .getByLabel("업무 대상 링크 또는 이름")
+    .fill("회상 검색 브라우저 검증");
+  await page.getByLabel("대상 커밋 또는 관측 버전").fill("memory-browser-v1");
+  await page.getByLabel("요청할 내용").fill("장기기억 브라우저 인계");
+  await page
+    .getByRole("button", { name: "공개 내용 확인", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "업무 접수하기", exact: true })
+    .click();
+  await expect(page).toHaveURL(/#\/tasks\//);
+  const taskUrl = page.url();
+  await page
+    .getByLabel("추가 조건 또는 업무 대화")
+    .fill("결정: 보라별회상키의 담당자는 다연입니다.");
+  await page.getByRole("button", { name: "맥락 남기기", exact: true }).click();
+  await page.locator('.cr-nav[href="#/memory"]').click();
+  await page.getByLabel("기억 검색", { exact: true }).fill("보라별회상키");
+  await page.getByRole("button", { name: "검색", exact: true }).click();
+  await expect(
+    page.getByRole("heading", {
+      name: "과거 대화·업무에서 찾은 기록",
+      exact: true,
+    }),
+  ).toBeVisible();
+  const section = page
+    .locator(".cw-paper")
+    .filter({
+      has: page.getByRole("heading", {
+        name: "과거 대화·업무에서 찾은 기록",
+        exact: true,
+      }),
+    })
+    .first();
+  await expect(section).toContainText("다연");
+  await page
+    .getByRole("button", { name: "출처 원문", exact: true })
+    .first()
+    .click();
+  await expect(page.getByRole("dialog")).toContainText("보라별회상키");
+  await expect(page.getByRole("dialog")).toContainText("memory-browser-v1");
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "닫기", exact: true })
+    .first()
+    .click();
+  await page.getByRole("button", { name: "기억 추가", exact: true }).click();
+  await page.getByLabel("기억할 동료").selectOption("review");
+  await page.getByLabel("공개 범위", { exact: true }).selectOption("team");
+  await page.getByLabel("기억 종류").selectOption("decision");
+  await page.getByLabel("기본 문맥에 우선 포함").selectOption("true");
+  await page.getByLabel("기억 제목").fill("고정 결정 · 브라우저");
+  await page.getByLabel("기억할 내용").fill("회상 검색에는 출처를 표시합니다.");
+  await page.getByLabel("출처", { exact: true }).fill("검증 기록");
+  await page.getByRole("button", { name: "저장", exact: true }).click();
+  await page.reload();
+  const card = page
+    .locator(".cr-memory")
+    .filter({ hasText: "고정 결정 · 브라우저" });
+  await expect(card).toContainText("핵심 기억");
+  await card.getByRole("button", { name: "바로잡기", exact: true }).click();
+  await expect(page.getByLabel("기억 종류")).toHaveValue("decision");
+  await expect(page.getByLabel("기본 문맥에 우선 포함")).toHaveValue("true");
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "닫기", exact: true })
+    .click();
+  await page.goto(taskUrl);
+  await page.getByRole("button", { name: "실행 시작", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "이 결과로 QA에 넘기기", exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "참고한 기억", exact: true }).click();
+  await expect(page.getByRole("dialog")).toContainText(
+    "회상 검색에는 출처를 표시합니다.",
+  );
+});

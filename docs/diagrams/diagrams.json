@@ -174,5 +174,12 @@
     "document": "docs/TEAM_STANDARDIZATION_REVIEW.md",
     "title": "권장하는 최소 실행 계약",
     "source": "source/team-standardization-review-1.mmd"
+  },
+  {
+    "id": "memory-retrieval",
+    "document": "docs/MEMORY_ARCHITECTURE.md",
+    "title": "장기 기억 흐름",
+    "source": "source/memory-retrieval.json",
+    "renderer": "illustrated"
   }
 ]

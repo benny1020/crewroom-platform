@@ -48,7 +48,11 @@ export function configuration(env = process.env) {
     maxOutputTokens: Number(env.MODEL_MAX_OUTPUT_TOKENS || 4096),
     workerLeaseSeconds: 60,
     workerHeartbeatMs: 15000,
-    release: "0.6.0",
+    release: "0.7.0",
+    embeddingUrl: env.EMBEDDING_ENDPOINT_URL || "",
+    embeddingModel: env.EMBEDDING_MODEL || "",
+    embeddingAuthHeader: env.EMBEDDING_AUTH_HEADER || "",
+    embeddingAuthScheme: env.EMBEDDING_AUTH_SCHEME || "auto",
     allowFixture: env.CREWROOM_TEST_FIXTURE === "1" && !production,
     serveDist: env.SERVE_DIST !== "0",
   };

@@ -1,0 +1,17 @@
+{
+  "date": "2026-10-17T22:43:27.664Z",
+  "release": "0.7.0",
+  "elapsedSeconds": 66,
+  "checks": [
+    "DB Task/Artifact hashes/Memory identical",
+    "memory kinds/pins, source read ledger, vector cache and recall view fingerprints identical",
+    "active Docker Job edit checkpointed to DB before backup and restored with identical patch hash",
+    "operator CLI confirmation then new Run restores patch and passes actual test requiring the edited value",
+    "immutable runtime input file SHA-256 identical",
+    "old sessions revoked",
+    "unfinished Run quarantined",
+    "runtime extraction failure keeps restore blocked",
+    "incomplete restore rejects App and Worker startup"
+  ],
+  "actualExternalModelCalls": 0
+}

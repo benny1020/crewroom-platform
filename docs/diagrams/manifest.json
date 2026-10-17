@@ -15,7 +15,7 @@
     },
     {
       "file": "package-lock.json",
-      "sha256": "673eab35628a24581cd1cf18c46c3270882d6cfea95d2b196e8074bb49e87949"
+      "sha256": "3fefc84f1ebe03fb6f5de5554cc2bb3abc13053d4621cab3653c1011f566cef2"
     }
   ],
   "diagrams": [
@@ -87,16 +87,16 @@
       "renderer": "illustrated",
       "width": 1280,
       "height": 970,
-      "sourceHash": "6857e9a352089f09ba75dfa03a1b06de9a6bcdcda1a231eefdb25601f50b170a",
+      "sourceHash": "4301d015d9bb98068064a4210a601943ef2f79a52cea0f564460d1eb7e30e9ce",
       "svg": {
         "file": "agent-context.svg",
-        "bytes": 16709,
-        "sha256": "af1f1851d5bdb6ccfdb2ddf5b2b6b1933e6bc9e5755f386447a631b5431f9106"
+        "bytes": 16727,
+        "sha256": "e5ffb4bef8031bed9638102e4bf2920d9040d3d1b71cc29cebca4759af2a5ad6"
       },
       "png": {
         "file": "agent-context.png",
-        "bytes": 251266,
-        "sha256": "c12487163092033d7b8f3316d9dc38a84c9591b424723d72a8a38f2944ab16fa"
+        "bytes": 252670,
+        "sha256": "d08fd06d6ea40f2249426b6e565e0365f9d5b380282899cba4f2e0fa539ef3e2"
       }
     },
     {
@@ -557,6 +557,26 @@
         "file": "team-standardization-review-1.png",
         "bytes": 95774,
         "sha256": "b977bf45fbcfe6eff5e62044125fd9de9e8335ebe6707b70003b31466a386730"
+      }
+    },
+    {
+      "id": "memory-retrieval",
+      "document": "docs/MEMORY_ARCHITECTURE.md",
+      "title": "장기 기억 흐름",
+      "source": "source/memory-retrieval.json",
+      "renderer": "illustrated",
+      "width": 1280,
+      "height": 1030,
+      "sourceHash": "753cbb63a619298049b572594e59293a0d309b1bd0b68be2db833f24bace784d",
+      "svg": {
+        "file": "memory-retrieval.svg",
+        "bytes": 17850,
+        "sha256": "7ce28080f905a520ca56aabe0202e714ad5b99f1f2875e5354ecd2c074731623"
+      },
+      "png": {
+        "file": "memory-retrieval.png",
+        "bytes": 305679,
+        "sha256": "86a49ab724512d60017d28571ab9c533a01baa13e01c6930d1175cf09495475e"
       }
     }
   ]

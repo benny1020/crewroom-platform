@@ -11,7 +11,7 @@
 
 </div>
 
-**0.6은 로그인·공유 업무방·영속 기억·스킬 관리에 실제 코드 수정과 Docker 검사·독립 QA를 추가했습니다.** GitHub Pages는 API 없는 0.4 화면 데모입니다. 실제 공동 사용은 아래 서버를 실행해야 합니다. 모델 키는 포함하지 않습니다. 외부 모델 추론과 실제 팀의 업무 절감 효과는 아직 검증하지 않았습니다. [배포별 시범 운영 가이드](docs/PILOT_GUIDE.md)를 별도로 관리합니다.
+**0.7은 장기 기억의 관련성 검색·과거 대화/업무 요약 회상·출처 조회와 선택적 의미 검색을 추가했습니다.** GitHub Pages는 API 없는 0.4 화면 데모입니다. 실제 공동 사용은 아래 서버를 실행해야 합니다. 모델 키는 포함하지 않습니다. 외부 모델 추론과 실제 팀의 업무 절감 효과는 아직 검증하지 않았습니다. [배포별 시범 운영 가이드](docs/PILOT_GUIDE.md)를 별도로 관리합니다.
 
 OpenAI 호환 또는 Claude Messages API의 **URL·모델 ID·인증 방식**을 직접 지정합니다. 제공자 API, 게이트웨이, 자체 호스팅 endpoint를 같은 설정 방식으로 연결하고, GitLab URL과 사용할 프로젝트도 선택합니다. [커스텀 연결 설정](docs/CONFIGURATION.md)
 
@@ -25,7 +25,7 @@ OpenAI 호환 또는 Claude Messages API의 **URL·모델 ID·인증 방식**을
 | ------ | -------------------------------------------------------------------------------------------------------------------------------------- |
 | 웹     | Vite + Vanilla JS + Lucide + CSS 캐릭터 모션. 서버 모드와 정적 데모 진입점 분리                                                        |
 | App    | Fastify 5, Zod 입력 검사, 로그인·CSRF·범위 검사·업무/스킬/기억 API·SSE                                                                 |
-| DB     | PostgreSQL 18, SQL migration 4개, 단일 Task/Run 큐, 영속 이벤트·메시지·버전별 결과                                                     |
+| DB     | PostgreSQL 18, SQL migration 5개, 단일 Task/Run 큐, 영속 이벤트·메시지·버전별 결과                                                     |
 | Worker | 별도 Node 프로세스. 전체 2개·같은 에이전트 1개 동시 실행, 임대와 generation으로 오래된 결과 차단                                       |
 | Runner | 별도 HTTP broker. Docker socket 전담, 고정 이미지·등록 검사·Run별 개발/QA Job 생성과 종료 검증                                         |
 | 모델   | Claude Messages / OpenAI 호환 HTTP adapter. 커스텀 URL·인증 설정, endpoint/model profile 고정, 제한된 JSON 행동 루프, 구조화 결과 검사 |
@@ -73,7 +73,7 @@ LangChain/LangGraph는 사용하지 않습니다. Paperclip 내부 큐를 별도
 
 - **나만 / 같은 부서 / 팀 공유**를 API·목록·상세·산출물·기억·SSE에서 검사합니다. 팀장도 다른 사람의 개인 비서 본문을 읽지 못합니다.
 - 기억은 동료별로 저장하고 출처·정정 이력을 남깁니다. 삭제한 기억은 새 검색·발송에서 제외합니다. 이미 저장한 실행 이력·백업까지 지워지는 것은 아닙니다.
-- 원문을 장기 보관하지만 한 호출에 모든 과거를 넣지는 않습니다. 현재는 허용된 최근 기억 최대 8개와 시작 전 대화 최대 20개를 고정합니다. 검색 화면은 DB 텍스트 검색입니다. 의미 검색·자동 기억 추출·완벽한 무제한 회상은 구현하지 않았습니다.
+- 기억·과거 대화·자동 업무 요약을 관련성으로 검색합니다. **최근 기억 8개 제한을 제거**하고 16,000자 문맥 예산과 최대 4회 추가 조회를 사용합니다. 핵심 기억 고정, 출처 원문, 정정·삭제의 파생 요약 반영을 지원합니다. 별도 embedding URL을 설정하면 에이전트 실행에서 의미 검색을 결합합니다. 자동 요약은 원문 발췌이며 완벽한 무제한 회상을 보장하지 않습니다. [장기 기억 설계·조사·한도](docs/MEMORY_ARCHITECTURE.md)
 - 스킬의 **새 버전 게시**와 **에이전트에 적용**을 분리합니다. 진행 중 Run의 버전은 바뀌지 않습니다. 팀장은 스킬 관리 담당을 위임할 수 있습니다.
 - 계정과 소속은 운영자가 사전 발급합니다. 이메일만 아는 사람이 가입해 동료를 사칭하지 못하도록 공개 회원가입은 막았습니다. 팀장 여부는 요청 후 기존 팀장이 승인합니다.
 
@@ -130,17 +130,18 @@ TEST_DATABASE_URL=postgresql://crewroom@127.0.0.1:5448/crewroom npm run test:ser
 
 ## 문서
 
-| 문서                                                                  | 내용                                               |
-| --------------------------------------------------------------------- | -------------------------------------------------- |
-| [실제 코드 수정·독립 QA](docs/CODE_EXECUTION.md)                      | native 루프·Docker 격리·검사·이미지·복구 계약      |
-| [커스텀 모델·저장소 연결](docs/CONFIGURATION.md)                      | 모델·GitLab URL·인증·프록시·소스 패키지            |
-| [아키텍처 그림·디자인 근거](docs/diagrams/DESIGN_NOTES.md)            | 아이콘·경계·흐름·읽는 순서와 조사 출처             |
-| [현재 서버 아키텍처](docs/SERVER_ARCHITECTURE.md)                     | 데이터 관계·API·실행·경쟁·권한·기억·실패 처리      |
-| [런타임 채택 결정](docs/ADR_001_RUNTIME.md)                           | Paperclip/Hermes 코드 검토와 독립 큐 선택 근거     |
-| [운영 안내](docs/SERVER_OPERATIONS.md)                                | Compose·계정·모델 설정·백업·복원·종료 확인         |
-| [검증과 리뷰](docs/SERVER_VERIFICATION.md)                            | 실행한 검사·실제 증거·남은 범위                    |
-| [개발 계획](docs/DEVELOPMENT_PLAN.md)                                 | 이번 릴리스의 완료 기준과 진행 결과                |
-| [0.4 기획·화면 설계 기록](docs/DESIGN_IMPLEMENTATION.md)              | 이전 설계·Astra 피드백. 서버 구현은 현재 문서 우선 |
-| [오픈소스 코드 리서치](docs/research/2026-10-16-code-audit/README.md) | 고정 소스와 비교 근거                              |
-| [제품 효용 검증](docs/PRODUCT_REVIEW.md)                              | 실제 팀에서 측정할 사람 시간·품질·반복 사용        |
-| [서드파티 고지](THIRD_PARTY_NOTICES.md)                               | 참고 자료·라이선스                                 |
+| 문서                                                                  | 내용                                                          |
+| --------------------------------------------------------------------- | ------------------------------------------------------------- |
+| [실제 코드 수정·독립 QA](docs/CODE_EXECUTION.md)                      | native 루프·Docker 격리·검사·이미지·복구 계약                 |
+| [커스텀 모델·저장소 연결](docs/CONFIGURATION.md)                      | 모델·GitLab URL·인증·프록시·소스 패키지                       |
+| [장기 기억 구조·조사·검증](docs/MEMORY_ARCHITECTURE.md)               | 핵심 기억·원문 검색·자동 업무 요약·추가 조회·선택적 의미 검색 |
+| [아키텍처 그림·디자인 근거](docs/diagrams/DESIGN_NOTES.md)            | 아이콘·경계·흐름·읽는 순서와 조사 출처                        |
+| [현재 서버 아키텍처](docs/SERVER_ARCHITECTURE.md)                     | 데이터 관계·API·실행·경쟁·권한·기억·실패 처리                 |
+| [런타임 채택 결정](docs/ADR_001_RUNTIME.md)                           | Paperclip/Hermes 코드 검토와 독립 큐 선택 근거                |
+| [운영 안내](docs/SERVER_OPERATIONS.md)                                | Compose·계정·모델 설정·백업·복원·종료 확인                    |
+| [검증과 리뷰](docs/SERVER_VERIFICATION.md)                            | 실행한 검사·실제 증거·남은 범위                               |
+| [개발 계획](docs/DEVELOPMENT_PLAN.md)                                 | 이번 릴리스의 완료 기준과 진행 결과                           |
+| [0.4 기획·화면 설계 기록](docs/DESIGN_IMPLEMENTATION.md)              | 이전 설계·Astra 피드백. 서버 구현은 현재 문서 우선            |
+| [오픈소스 코드 리서치](docs/research/2026-10-16-code-audit/README.md) | 고정 소스와 비교 근거                                         |
+| [제품 효용 검증](docs/PRODUCT_REVIEW.md)                              | 실제 팀에서 측정할 사람 시간·품질·반복 사용                   |
+| [서드파티 고지](THIRD_PARTY_NOTICES.md)                               | 참고 자료·라이선스                                            |

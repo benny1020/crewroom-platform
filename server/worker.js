@@ -13,6 +13,18 @@ import { configuration } from "./config.js";
 import { canRead } from "./permissions.js";
 import { collectInput, collectCodeInput } from "./inputs.js";
 import { runModel } from "./provider.js";
+import { runMemoryAgent } from "./memory-agent.js";
+import {
+  searchMemory,
+  contextFromDocuments,
+  validReferences,
+  documentsByKeys,
+} from "./memory.js";
+import {
+  embeddingProfile,
+  embedTexts,
+  indexNextMemoryDocument,
+} from "./memory-embedding.js";
 import { runCodeAgent } from "./runner-client.js";
 import { insertArtifact } from "./tasks.js";
 import { HttpError } from "./errors.js";
@@ -29,6 +41,15 @@ export async function contextAllowed(db, run, task) {
     ])
   ).rows[0];
   if (!canRead(user, task)) return false;
+  const reads = (
+    await db.query("SELECT refs FROM cr_memory_reads WHERE run_id=$1", [run.id])
+  ).rows;
+  const refs = [
+    ...(run.snapshot.memoryContext?.refs || []),
+    ...reads.flatMap((r) => r.refs),
+  ];
+  if (!(await validReferences(db, user, task, refs, { lock: true })))
+    return false;
   for (const pinned of [...run.snapshot.memories].sort((a, b) =>
     a.id.localeCompare(b.id),
   )) {
@@ -369,6 +390,165 @@ export async function dispatchRun(pool, run, owner, send) {
     throw error;
   }
 }
+export async function recallForRun(pool, run, owner, action, semantic = {}) {
+  return transaction(pool, async (db) => {
+    const locked = await lockedRun(db, run.id);
+    if (
+      !owns(locked.run, owner, run.generation) ||
+      !(await contextAllowed(db, locked.run, locked.task))
+    )
+      throw new HttpError(
+        409,
+        "CONTEXT_REVOKED",
+        "실행 또는 기억의 접근 범위가 변경됐어요.",
+      );
+    const user = (
+      await db.query("SELECT * FROM cr_members WHERE id=$1", [run.requested_by])
+    ).rows[0];
+    const count = Number(
+      (
+        await db.query(
+          "SELECT count(*) FROM cr_memory_reads WHERE run_id=$1 AND generation=$2",
+          [run.id, run.generation],
+        )
+      ).rows[0].count,
+    );
+    if (count >= 4)
+      throw new HttpError(
+        409,
+        "MEMORY_LOOKUP_LIMIT",
+        "이번 실행의 기억 조회 한도에 도달했어요.",
+      );
+    const docs = await searchMemory(db, user, locked.task, {
+      query: action.query || "",
+      keys: action.action === "read_memory" ? [action.key] : null,
+      agentId: run.agent_id,
+      project:
+        action.action === "read_memory" || action.project === "*"
+          ? ""
+          : action.project || locked.task.project,
+      ...semantic,
+      before: run.created_at,
+      limit: action.action === "read_memory" ? 1 : 10,
+    });
+    if (action.action === "read_memory")
+      for (const d of docs)
+        d.excerpt = d.body.slice(
+          action.offset || 0,
+          (action.offset || 0) + 7000,
+        );
+    const context = contextFromDocuments(
+      docs.filter(
+        (d) =>
+          !(d.kind === "episode" && d.task_id === run.task_id) &&
+          !d.dependencies?.some((r) => r.key === "episode:" + run.task_id),
+      ),
+      action.action === "read_memory" ? 10000 : 6000,
+    );
+    if (
+      !(await validReferences(db, user, locked.task, context.refs, {
+        lock: true,
+      }))
+    )
+      throw new HttpError(409, "CONTEXT_REVOKED", "기억의 원본이 변경됐어요.");
+    await db.query(
+      "INSERT INTO cr_memory_reads(run_id,generation,sequence,query,refs) VALUES($1,$2,$3,$4,$5)",
+      [
+        run.id,
+        run.generation,
+        count + 1,
+        action.query || action.key,
+        JSON.stringify(context.refs),
+      ],
+    );
+    return {
+      items: context.items,
+      found: context.items.length,
+      method: "keyword",
+      nextOffset:
+        action.action === "read_memory" &&
+        docs[0] &&
+        (action.offset || 0) + 7000 < docs[0].body.length
+          ? (action.offset || 0) + 7000
+          : null,
+      notice: "과거 기록입니다. 검사·승인·진행 상태는 현재 원본을 확인하세요.",
+    };
+  });
+}
+async function semanticContext(pool, run, owner, config, options) {
+  const profile = embeddingProfile(config);
+  if (!profile) return;
+  if (profile.id !== run.snapshot.embeddingProfile?.id)
+    throw new HttpError(
+      409,
+      "EMBEDDING_PROFILE_CHANGED",
+      "의미 검색 연결이 변경됐어요. 새 실행을 시작해주세요.",
+    );
+  const query = [run.snapshot.messages?.at(-1)?.body, run.snapshot.goal]
+    .filter(Boolean)
+    .join(" ")
+    .slice(0, 2400);
+  let vector;
+  try {
+    [vector] = await embedTexts([query], config, {
+      ...options,
+      dispatch: (send) => dispatchRun(pool, run, owner, send),
+    });
+  } catch (error) {
+    if (error.code === "DISPATCH_UNKNOWN" || error.code === "DISPATCH_REVOKED")
+      throw error;
+    run.snapshot.memoryContext.semanticStatus = "unavailable";
+    return;
+  }
+  await transaction(pool, async (db) => {
+    const locked = await lockedRun(db, run.id),
+      user = (
+        await db.query("SELECT * FROM cr_members WHERE id=$1", [
+          run.requested_by,
+        ])
+      ).rows[0];
+    if (
+      !owns(locked.run, owner, run.generation) ||
+      !(await contextAllowed(db, locked.run, locked.task))
+    )
+      throw new HttpError(409, "CONTEXT_REVOKED", "실행 문맥이 변경됐어요.");
+    const docs = await searchMemory(db, user, locked.task, {
+      query,
+      vector,
+      profileId: profile.id,
+      agentId: run.agent_id,
+      project: locked.task.project,
+      before: run.created_at,
+      limit: 60,
+    });
+    const base = await documentsByKeys(
+      db,
+      run.snapshot.memoryContext.items.map((i) => i.key),
+    );
+    for (const d of base.values())
+      if (!docs.some((s) => s.key === d.key)) docs.push(d);
+    const context = contextFromDocuments(
+      docs.filter(
+        (d) =>
+          !(d.kind === "episode" && d.task_id === run.task_id) &&
+          !d.dependencies?.some((r) => r.key === "episode:" + run.task_id),
+      ),
+    );
+    if (
+      !(await validReferences(db, user, locked.task, context.refs, {
+        lock: true,
+      }))
+    )
+      throw new HttpError(409, "CONTEXT_REVOKED", "기억의 원본이 변경됐어요.");
+    run.snapshot.memoryContext = {
+      ...context,
+      method: docs.some((d) => d.semantic > 0) ? "hybrid" : "keyword",
+      semanticStatus: docs.some((d) => d.semantic > 0)
+        ? "matched"
+        : "no_matches",
+    };
+  });
+}
 export async function processRun(pool, run, owner, config, dependencies = {}) {
   const controller = new AbortController();
   const onShutdown = () => controller.abort();
@@ -398,6 +578,11 @@ export async function processRun(pool, run, owner, config, dependencies = {}) {
       signal: controller.signal,
       ...dependencies,
     });
+    if (!run.snapshot.inputHash && run.snapshot.memoryContext)
+      await semanticContext(pool, run, owner, config, {
+        signal: controller.signal,
+        ...dependencies,
+      });
     run.snapshot = {
       ...run.snapshot,
       source,
@@ -414,6 +599,21 @@ export async function processRun(pool, run, owner, config, dependencies = {}) {
         run.snapshot = locked.run.snapshot;
         return true;
       }
+      const actor = (
+        await db.query("SELECT * FROM cr_members WHERE id=$1", [
+          run.requested_by,
+        ])
+      ).rows[0];
+      if (
+        !(await validReferences(
+          db,
+          actor,
+          locked.task,
+          run.snapshot.memoryContext?.refs || [],
+          { lock: true },
+        ))
+      )
+        return false;
       await db.query("UPDATE cr_runs SET snapshot=$2 WHERE id=$1", [
         run.id,
         run.snapshot,
@@ -449,10 +649,30 @@ export async function processRun(pool, run, owner, config, dependencies = {}) {
       signal: controller.signal,
       ...dependencies,
       dispatch: (send) => dispatchRun(pool, run, owner, send),
+      memoryTools: async (action) => {
+        let semantic = {};
+        if (action.action === "search_memory" && config.embeddingUrl) {
+          try {
+            const [vector] = await embedTexts([action.query], config, {
+              signal: controller.signal,
+              ...dependencies,
+              dispatch: (send) => dispatchRun(pool, run, owner, send),
+            });
+            semantic = { vector, profileId: embeddingProfile(config).id };
+          } catch (error) {
+            if (
+              error.code === "DISPATCH_UNKNOWN" ||
+              error.code === "DISPATCH_REVOKED"
+            )
+              throw error;
+          }
+        }
+        return recallForRun(pool, run, owner, action, semantic);
+      },
     };
     const value = run.snapshot.execution
       ? await runCodeAgent(pool, run, config, modelOptions)
-      : await (dependencies.runModel || runModel)(
+      : await (dependencies.runModel || runMemoryAgent)(
           run.snapshot,
           config,
           modelOptions,
@@ -481,6 +701,8 @@ export async function startWorker(
   const owner = `worker-${randomUUID()}`,
     pending = new Set(),
     shutdown = new AbortController();
+  let indexing = null,
+    lastIndex = 0;
   let stopping = false,
     ticking = false,
     tickPromise = Promise.resolve();
@@ -497,6 +719,17 @@ export async function startWorker(
         [owner],
       );
       await expireRuns(pool);
+      if (config.embeddingUrl && !indexing && Date.now() - lastIndex >= 5000) {
+        lastIndex = Date.now();
+        indexing = indexNextMemoryDocument(pool, config, {
+          signal: shutdown.signal,
+          ...dependencies,
+        })
+          .catch(() => {})
+          .finally(() => {
+            indexing = null;
+          });
+      }
       if (!stopping && pending.size < 2) {
         const run = await claimRun(pool, owner, config);
         if (run && stopping) {
@@ -541,7 +774,7 @@ export async function startWorker(
       clearInterval(interval);
       shutdown.abort();
       await tickPromise;
-      await Promise.allSettled([...pending]);
+      await Promise.allSettled([...pending, ...(indexing ? [indexing] : [])]);
       await pool.query(
         "UPDATE cr_workers SET state='stopped',heartbeat_at=now() WHERE id=$1",
         [owner],

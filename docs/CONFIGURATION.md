@@ -15,14 +15,14 @@ cp deploy/custom.env.example .env
 node scripts/init-secrets.mjs
 ```
 
-| 항목 | 설정 |
-| --- | --- |
-| API 형식 | `MODEL_PROVIDER=openai-compatible` 또는 `anthropic` |
-| 최종 요청 URL | `MODEL_ENDPOINT_URL` — 경로를 포함한 전체 URL |
-| API root | `MODEL_BASE_URL` — 전체 URL을 지정하지 않을 때 기본 경로 조합에 사용 |
-| 모델 ID | `MODEL_NAME` — 연결한 endpoint에서 제공하는 모델 ID |
-| 인증 | `MODEL_AUTH_HEADER`, `MODEL_AUTH_SCHEME=auto/raw/bearer` |
-| API 키 | `.local/secrets/model_api_key` 파일 |
+| 항목          | 설정                                                                 |
+| ------------- | -------------------------------------------------------------------- |
+| API 형식      | `MODEL_PROVIDER=openai-compatible` 또는 `anthropic`                  |
+| 최종 요청 URL | `MODEL_ENDPOINT_URL` — 경로를 포함한 전체 URL                        |
+| API root      | `MODEL_BASE_URL` — 전체 URL을 지정하지 않을 때 기본 경로 조합에 사용 |
+| 모델 ID       | `MODEL_NAME` — 연결한 endpoint에서 제공하는 모델 ID                  |
+| 인증          | `MODEL_AUTH_HEADER`, `MODEL_AUTH_SCHEME=auto/raw/bearer`             |
+| API 키        | `.local/secrets/model_api_key` 파일                                  |
 
 OpenAI 호환 Chat Completions 예제:
 
@@ -104,3 +104,7 @@ GitHub Actions는 단위·PostgreSQL·Docker·브라우저·복원 검사를 수
 로컬 HTTP endpoint와 실제 PostgreSQL Worker를 사용해 커스텀 URL·인증·MR 수집·고정 SHA·공유 제한·결과 저장을 검증했다. 실제 배포에서는 endpoint의 API 계약·인증·CA·모델 ID, GitLab 접근권, 프로젝트 이미지와 검사, 결과 품질을 확인한다. [시범 운영 가이드](PILOT_GUIDE.md) · [검증 보고서](SERVER_VERIFICATION.md)
 
 통신 계약: [Claude Messages API](https://platform.claude.com/docs/en/api/messages/create), [GitLab MR API](https://docs.gitlab.com/api/merge_requests/), [GitLab Repository Compare](https://docs.gitlab.com/api/repositories/#compare-branches-tags-or-commits).
+
+## 선택적 의미 검색
+
+`EMBEDDING_ENDPOINT_URL`, `EMBEDDING_MODEL`과 선택적 인증 헤더를 별도로 설정한다. 키 파일은 `.local/secrets/embedding_api_key`이고 Worker에만 전달한다. 미설정이면 로컬 키워드 검색이 동작한다. 모델 추론 URL을 embedding URL로 자동 재사용하지 않는다. [캐시·재시도·정정·운영 한도](MEMORY_ARCHITECTURE.md)를 확인한다.

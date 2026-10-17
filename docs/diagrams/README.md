@@ -1,6 +1,6 @@
 # 아키텍처 그림 모음
 
-README와 구조 문서에는 미리 렌더링한 PNG를 표시한다. 그림을 누르면 확대 가능한 SVG를 연다. [읽는 순서·조사 근거·디자인 규칙](DESIGN_NOTES.md)에서 핵심 도식 7종을 먼저 볼 수 있다. 아래 도표는 실행 중인 0.6 구조와 이전 설계 기록을 해당 문서의 범위에 따라 구분한다.
+README와 구조 문서에는 미리 렌더링한 PNG를 표시한다. 그림을 누르면 확대 가능한 SVG를 연다. [읽는 순서·조사 근거·디자인 규칙](DESIGN_NOTES.md)에서 핵심 도식 8종을 먼저 볼 수 있다. 아래 도표는 실행 중인 0.7 구조와 이전 설계 기록을 해당 문서의 범위에 따라 구분한다.
 
 | 그림                                                                           | 설명 문서                                                                | 확대                                     |
 | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------ | ---------------------------------------- |
@@ -32,6 +32,7 @@ README와 구조 문서에는 미리 렌더링한 PNG를 표시한다. 그림을
 | [구성과 데이터 소유권](server-data-model.png)                                  | [docs/SERVER_ARCHITECTURE.md](../SERVER_ARCHITECTURE.md)                 | [SVG](server-data-model.svg)             |
 | [실행 계약](run-sequence.png)                                                  | [docs/SERVER_ARCHITECTURE.md](../SERVER_ARCHITECTURE.md)                 | [SVG](run-sequence.svg)                  |
 | [권장하는 최소 실행 계약](team-standardization-review-1.png)                   | [docs/TEAM_STANDARDIZATION_REVIEW.md](../TEAM_STANDARDIZATION_REVIEW.md) | [SVG](team-standardization-review-1.svg) |
+| [장기 기억 흐름](memory-retrieval.png)                                         | [docs/MEMORY_ARCHITECTURE.md](../MEMORY_ARCHITECTURE.md)                 | [SVG](memory-retrieval.svg)              |
 
 ## 도표 수정
 

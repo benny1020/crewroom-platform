@@ -9,6 +9,8 @@ import {
 } from "./permissions.js";
 import { fail, conflict } from "./errors.js";
 import { modelProfile, sourceProfile } from "./config.js";
+import { buildMemoryContext } from "./memory.js";
+import { embeddingProfile } from "./memory-embedding.js";
 import { WORK_TYPES } from "./work-types.js";
 
 export async function getTask(db, user, id, lock = false) {
@@ -66,6 +68,14 @@ export async function taskDetail(db, user, id) {
         model: r.snapshot.model,
         outputSchema: r.snapshot.outputSchema,
         inputHash: r.snapshot.inputHash,
+        memoryContext: r.snapshot.memoryContext
+          ? {
+              version: r.snapshot.memoryContext.version,
+              count: r.snapshot.memoryContext.items.length,
+              method: r.snapshot.memoryContext.method,
+              characters: r.snapshot.memoryContext.characters,
+            }
+          : null,
         execution: r.snapshot.execution,
         source: r.snapshot.source
           ? {
@@ -378,24 +388,36 @@ export async function executeCommand(pool, user, id, values, config) {
             "MISSING_BINDING",
             "필요한 동료와 스킬 적용 버전을 확인해주세요.",
           );
-        const memories = (
+        const allMessages = (
           await db.query(
-            `SELECT m.id,m.revision,m.title,m.body,m.source FROM cr_memories m WHERE m.agent_id=$1 AND m.deleted_at IS NULL AND (m.visibility='team' OR (m.visibility='department' AND m.department=$5 AND ($2='private' OR ($2='department' AND m.department=$3))) OR (m.visibility='private' AND $2='private' AND m.owner_id=$4)) ORDER BY m.updated_at DESC LIMIT 8`,
-            [
-              agent.id,
-              task.visibility,
-              task.department,
-              user.id,
-              user.department,
-            ],
-          )
-        ).rows;
-        const messages = (
-          await db.query(
-            "SELECT m.body,u.name AS author FROM cr_messages m JOIN cr_members u ON u.id=m.user_id WHERE m.task_id=$1 ORDER BY m.id DESC LIMIT 20",
+            "SELECT m.id,m.body,m.created_at,m.target_version,u.name AS author FROM cr_messages m JOIN cr_members u ON u.id=m.user_id WHERE m.task_id=$1 ORDER BY m.id DESC LIMIT 20",
             [id],
           )
         ).rows.reverse();
+        let messageChars = 0;
+        const messages = allMessages
+          .slice()
+          .reverse()
+          .filter((m) => {
+            messageChars += m.body.length;
+            return messageChars <= 12000;
+          })
+          .reverse();
+        const memoryContext = await buildMemoryContext(
+          db,
+          user,
+          { ...task, recallQuery: allMessages.at(-1)?.body },
+          agent.id,
+        );
+        const memories = memoryContext.items
+          .filter((m) => m.key.startsWith("memory:"))
+          .map((m) => ({
+            id: m.key.slice(7),
+            revision: m.recordRevision,
+            title: m.title,
+            body: m.body,
+            source: m.source,
+          }));
         const input = step.input_artifact_id
           ? (
               await db.query("SELECT * FROM cr_artifacts WHERE id=$1", [
@@ -466,6 +488,9 @@ export async function executeCommand(pool, user, id, values, config) {
               }
             : null,
           memories,
+          memoryContext,
+          embeddingProfile: embeddingProfile(config),
+          project: task.project,
           providerProfile: modelProfile(config),
           sourceProfile: sourceProfile(config),
           provider: config.provider,

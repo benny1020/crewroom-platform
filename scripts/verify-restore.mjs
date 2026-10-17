@@ -134,8 +134,10 @@ try {
     await api("/auth/login", { email: "drill@example.invalid", password })
   ).csrfToken;
   await api("/memories", {
-    agentId: "review",
+    agentId: "dev",
     visibility: "private",
+    pinned: true,
+    kind: "decision",
     title: "복원 고유 기억",
     body: "지속 저장 확인",
     source: "합성 운영 훈련",
@@ -202,8 +204,16 @@ try {
     runId,
     archive: sourceArchive.toString("base64"),
   });
+  await sql(
+    source,
+    `INSERT INTO cr_memory_reads(run_id,generation,sequence,query,refs) SELECT '${runId}',1,1,'synthetic restore recall',jsonb_build_array(jsonb_build_object('key',key,'revision',revision)) FROM cr_recall_documents WHERE kind='decision' LIMIT 1`,
+  );
+  await sql(
+    source,
+    `INSERT INTO cr_memory_embeddings(source_key,source_revision,profile_id,status,vectors,lease_until) SELECT key,revision,'restore-test-profile','ready','[{"text":"synthetic memory vector","vector":[1,0]}]'::jsonb,now() FROM cr_recall_documents WHERE kind='decision' LIMIT 1`,
+  );
   const comparison =
-    "SELECT json_build_object('tasks',(SELECT json_agg(id ORDER BY id) FROM cr_tasks),'artifacts',(SELECT json_agg(content_hash ORDER BY id) FROM cr_artifacts),'memories',(SELECT json_agg(body ORDER BY id) FROM cr_memories))";
+    "SELECT json_build_object('tasks',(SELECT json_agg(id ORDER BY id) FROM cr_tasks),'artifacts',(SELECT json_agg(content_hash ORDER BY id) FROM cr_artifacts),'memories',(SELECT json_agg(json_build_object('body',body,'kind',kind,'pinned',pinned) ORDER BY id) FROM cr_memories),'reads',(SELECT json_agg(refs ORDER BY run_id,generation,sequence) FROM cr_memory_reads),'vectors',(SELECT json_agg(json_build_object('key',source_key,'revision',source_revision,'profile',profile_id,'vectors',vectors) ORDER BY source_key) FROM cr_memory_embeddings),'documents',(SELECT json_agg(key||revision ORDER BY key) FROM cr_recall_documents))";
   const before = (await sql(source, comparison)).trim();
   const runtimePath = "/data/runs/restore-drill/input.json";
   await compose(source, [
@@ -364,10 +374,11 @@ try {
   );
   const receipt = {
     date: new Date().toISOString(),
-    release: "0.6.0",
+    release: "0.7.0",
     elapsedSeconds: Math.round((Date.now() - started) / 1000),
     checks: [
       "DB Task/Artifact hashes/Memory identical",
+      "memory kinds/pins, source read ledger, vector cache and recall view fingerprints identical",
       "active Docker Job edit checkpointed to DB before backup and restored with identical patch hash",
       "operator CLI confirmation then new Run restores patch and passes actual test requiring the edited value",
       "immutable runtime input file SHA-256 identical",

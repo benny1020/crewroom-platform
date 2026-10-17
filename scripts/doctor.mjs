@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-const script = `const cfg={provider:process.env.MODEL_PROVIDER,model:!!process.env.MODEL_NAME,endpoint:!!(process.env.MODEL_ENDPOINT_URL||process.env.MODEL_BASE_URL),gitlab:!!process.env.GITLAB_BASE_URL,projects:(process.env.GITLAB_PROJECTS||'').split(',').filter(Boolean).length};console.log(JSON.stringify(cfg))`;
+const script = `const cfg={embeddingConfigured:!!(process.env.EMBEDDING_ENDPOINT_URL&&process.env.EMBEDDING_MODEL),provider:process.env.MODEL_PROVIDER,model:!!process.env.MODEL_NAME,endpoint:!!(process.env.MODEL_ENDPOINT_URL||process.env.MODEL_BASE_URL),gitlab:!!process.env.GITLAB_BASE_URL,projects:(process.env.GITLAB_PROJECTS||'').split(',').filter(Boolean).length};console.log(JSON.stringify(cfg))`;
 const runtime = JSON.parse(
   execFileSync(
     "docker",
@@ -43,6 +43,9 @@ console.log(
       app: ready.ok,
       runner,
       modelConfigured: runtime.model && runtime.endpoint,
+      memorySearch: runtime.embeddingConfigured
+        ? "keyword + optional vector index"
+        : "local keyword; embeddings disabled",
       gitlabConfigured: runtime.gitlab && runtime.projects > 0,
       actualModelInference:
         "not checked; run a small real task with the configured endpoint",

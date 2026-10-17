@@ -10,3 +10,5 @@
 0.6 Runner 이미지는 Docker CLI, Git, Alpine/BusyBox를 각각의 upstream 라이선스에 따라 컨테이너 실행 도구로 사용한다. 이 도구의 소스를 Crewroom MIT 코드로 재라이선스하지 않는다. 이미지 재배포 시 사용하는 base image의 고지와 소스 제공 조건도 함께 보존한다.
 
 스크린샷·GIF는 Chromium에서 UI를 조작해 캡처했다. `docs/media`는 정적 목업, `docs/media/server`는 실제 서버의 결정적 fixture, `docs/media/execution`은 실제 PostgreSQL/Docker 검사와 합성 모델 프로토콜 응답을 사용한다. 실제 모델 추론으로 표시하지 않는다.
+
+0.7 장기 기억 설계는 Muse/Grok Bot의 공개 문서와 고정 버전 Hindsight·Mem0·Letta Code의 선택 파일을 비교했다. 자체 검색·출처 검사·캐시 구현이며 해당 런타임의 실행 코드를 복사하거나 의존성으로 추가하지 않았다. [조사 근거와 원문 manifest](docs/MEMORY_ARCHITECTURE.md)를 제공한다.

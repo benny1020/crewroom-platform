@@ -22,4 +22,8 @@ test("upgrading secret files adds the optional GitLab token without replacing ex
   for (const [name, value] of Object.entries(existing))
     assert.equal(await readFile(join(directory, name), "utf8"), value);
   assert.equal(await readFile(join(directory, "gitlab_token"), "utf8"), "");
+  assert.equal(
+    await readFile(join(directory, "embedding_api_key"), "utf8"),
+    "",
+  );
 });

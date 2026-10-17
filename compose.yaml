@@ -1,7 +1,7 @@
 name: crewroom
 x-app: &app
   build: .
-  image: crewroom:0.6.0
+  image: crewroom:0.7.0
   environment: &environment
     NODE_ENV: ${NODE_ENV:-development}
     PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:4180}
@@ -16,6 +16,10 @@ x-app: &app
     MODEL_AUTH_HEADER: ${MODEL_AUTH_HEADER:-}
     MODEL_AUTH_SCHEME: ${MODEL_AUTH_SCHEME:-auto}
     MODEL_API_VERSION: ${MODEL_API_VERSION:-2023-06-01}
+    EMBEDDING_ENDPOINT_URL: ${EMBEDDING_ENDPOINT_URL:-}
+    EMBEDDING_MODEL: ${EMBEDDING_MODEL:-}
+    EMBEDDING_AUTH_HEADER: ${EMBEDDING_AUTH_HEADER:-}
+    EMBEDDING_AUTH_SCHEME: ${EMBEDDING_AUTH_SCHEME:-auto}
     RUNNER_URL: ${RUNNER_URL:-http://runner:4191}
     MODEL_MAX_OUTPUT_TOKENS: ${MODEL_MAX_OUTPUT_TOKENS:-8192}
     MODEL_TIMEOUT_MS: ${MODEL_TIMEOUT_MS:-120000}
@@ -47,7 +51,7 @@ services:
     user: root
     cap_add: [CHOWN, FOWNER, DAC_OVERRIDE]
     command: [node, scripts/stage-secrets.mjs]
-    secrets: [db_url, model_api_key, gitlab_token, runner_token]
+    secrets: [db_url, model_api_key, embedding_api_key, gitlab_token, runner_token]
     volumes:
       [
         "app-secrets:/out/app",
@@ -90,6 +94,7 @@ services:
     command: [node, server/worker.js]
     environment:
       <<: *environment
+      EMBEDDING_API_KEY_FILE: /run/crewroom-secrets/embedding_api_key
       MODEL_API_KEY_FILE: /run/crewroom-secrets/model_api_key
       GITLAB_TOKEN_FILE: /run/crewroom-secrets/gitlab_token
       RUNNER_TOKEN_FILE: /run/crewroom-secrets/runner_token
@@ -101,7 +106,7 @@ services:
     restart: unless-stopped
   runner:
     build: { context: ., dockerfile: Dockerfile.runner }
-    image: crewroom-runner:0.6.0
+    image: crewroom-runner:0.7.0
     environment:
       HOST: 0.0.0.0
       PORT: 4191
@@ -146,6 +151,8 @@ secrets:
   db_password: { file: "${CREWROOM_SECRETS_DIR:-./.local/secrets}/db_password" }
   gitlab_token:
     { file: "${CREWROOM_SECRETS_DIR:-./.local/secrets}/gitlab_token" }
+  embedding_api_key:
+    { file: "${CREWROOM_SECRETS_DIR:-./.local/secrets}/embedding_api_key" }
   model_api_key:
     { file: "${CREWROOM_SECRETS_DIR:-./.local/secrets}/model_api_key" }
 volumes:

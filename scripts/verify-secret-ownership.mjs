@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { command } from "../runner/broker.mjs";
 const namespace = "crewroom-secret-test-" + Date.now(),
   names = ["source", "app", "worker", "runner"].map((n) => namespace + "-" + n),
-  image = "crewroom:0.6.0";
+  image = "crewroom:0.7.0";
 const mount = (name, path, ro = false) => [
   "--mount",
   `type=volume,source=${name},target=${path}${ro ? ",readonly" : ""}`,
@@ -27,7 +27,7 @@ try {
     image,
     "node",
     "-e",
-    "const fs=require('fs');for(const key of ['db_url','model_api_key','gitlab_token','runner_token']){fs.writeFileSync('/source/'+key,'synthetic-test-secret',{mode:384});fs.chownSync('/source/'+key,1001,1001);}fs.chownSync('/source',1001,1001);fs.chmodSync('/source',448);",
+    "const fs=require('fs');for(const key of ['db_url','model_api_key','embedding_api_key','gitlab_token','runner_token']){fs.writeFileSync('/source/'+key,'synthetic-test-secret',{mode:384});fs.chownSync('/source/'+key,1001,1001);}fs.chownSync('/source',1001,1001);fs.chmodSync('/source',448);",
   ]);
   await assert.rejects(
     command("docker", [
@@ -71,7 +71,17 @@ try {
   await command("docker", stage);
   for (const [index, uid, expected] of [
     [1, "1000", ["db_url"]],
-    [2, "1000", ["db_url", "gitlab_token", "model_api_key", "runner_token"]],
+    [
+      2,
+      "1000",
+      [
+        "db_url",
+        "embedding_api_key",
+        "gitlab_token",
+        "model_api_key",
+        "runner_token",
+      ],
+    ],
     [3, "0", ["runner_token"]],
   ])
     await command("docker", [

@@ -25,6 +25,12 @@ import {
   getTask,
   listTasks,
 } from "./tasks.js";
+import {
+  searchMemory,
+  readMemorySource,
+  documentsByKeys,
+  sourceAllowed,
+} from "./memory.js";
 import * as resources from "./resources.js";
 
 export function buildApp(pool, config = configuration()) {
@@ -283,11 +289,11 @@ export function buildApp(pool, config = configuration()) {
         .strict()
         .parse(req.body);
     return transaction(pool, async (db) => {
-      await getTask(db, req.member, taskId, true);
+      const sourceTask = await getTask(db, req.member, taskId, true);
       const message = (
         await db.query(
-          "INSERT INTO cr_messages(task_id,user_id,body) VALUES($1,$2,$3) RETURNING *",
-          [taskId, req.member.id, body.body],
+          "INSERT INTO cr_messages(task_id,user_id,body,target_version) VALUES($1,$2,$3,$4) RETURNING *",
+          [taskId, req.member.id, body.body, sourceTask.target_version],
         )
       ).rows[0];
       await db.query("UPDATE cr_tasks SET updated_at=now() WHERE id=$1", [
@@ -366,6 +372,96 @@ export function buildApp(pool, config = configuration()) {
   app.patch("/api/members/:id", async (req) =>
     resources.updateMember(pool, req.member, id.parse(req.params.id), req.body),
   );
+  const publicMemory = (d) => ({
+    key: d.key,
+    kind: d.kind,
+    title: d.title,
+    body: d.excerpt || d.body,
+    source: d.source,
+    taskId: d.task_id,
+    project: d.project,
+    visibility: d.visibility,
+    targetVersion: d.target_version,
+    createdAt: d.created_at,
+  });
+  app.get("/api/tasks/:id/memory", async (req) => {
+    const task = await getTask(pool, req.member, id.parse(req.params.id));
+    const run = (
+      await pool.query("SELECT * FROM cr_runs WHERE id=$1", [
+        task.current_run_id,
+      ])
+    ).rows[0];
+    if (!run) return { items: [], unavailable: 0 };
+    const reads = (
+      await pool.query("SELECT refs FROM cr_memory_reads WHERE run_id=$1", [
+        run.id,
+      ])
+    ).rows;
+    const refs = [
+      ...(run.snapshot.memoryContext?.refs || []),
+      ...reads.flatMap((r) => r.refs),
+    ];
+    const docs = await documentsByKeys(pool, [
+      ...new Set(refs.map((r) => r.key)),
+    ]);
+    const items = [...docs.values()]
+      .filter(
+        (d) =>
+          sourceAllowed(req.member, task, d) &&
+          refs.some(
+            (r) =>
+              r.key === d.key &&
+              (r.revision === d.revision ||
+                r.legacyRevision === d.record_revision),
+          ) &&
+          (d.dependencies || []).every((r) => {
+            const source = docs.get(r.key);
+            return (
+              source &&
+              sourceAllowed(req.member, task, source) &&
+              (r.revision === source.revision ||
+                r.legacyRevision === source.record_revision)
+            );
+          }),
+      )
+      .map(publicMemory);
+    return {
+      items,
+      unavailable: new Set(refs.map((r) => r.key)).size - items.length,
+      method: run.snapshot.memoryContext?.method || "legacy",
+    };
+  });
+  app.get("/api/memory/search", async (req) => {
+    const v = z
+      .object({
+        q: z.string().max(300).default(""),
+        agentId: z.string().max(80).default(""),
+        project: z.string().max(80).default(""),
+      })
+      .strict()
+      .parse(req.query);
+    const docs = await searchMemory(
+      pool,
+      req.member,
+      { visibility: "private", department: req.member.department },
+      { query: v.q, agentId: v.agentId, project: v.project, limit: 30 },
+    );
+    return {
+      items: docs.map(publicMemory),
+      method: "keyword",
+      automaticSummaries: "extractive",
+    };
+  });
+  app.get("/api/memory/sources/:key", async (req) => {
+    const key = z.string().max(100).parse(req.params.key),
+      doc = await readMemorySource(
+        pool,
+        req.member,
+        { visibility: "private", department: req.member.department },
+        key,
+      );
+    return { item: publicMemory({ ...doc, excerpt: doc.body }) };
+  });
   app.get("/api/memories", async (req) => ({
     memories: await resources.listMemories(
       pool,
