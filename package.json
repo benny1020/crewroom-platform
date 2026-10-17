@@ -11,6 +11,7 @@
     "test": "node --test tests/*.test.js",
     "test:e2e": "playwright test",
     "capture": "node scripts/capture.mjs",
+    "docs:diagrams": "node scripts/render-diagrams.mjs",
     "research:fetch": "node scripts/fetch-research.mjs",
     "check": "node scripts/check-source.mjs && node scripts/validate-docs.mjs && npm test && npm run build",
     "server": "node server/index.js",

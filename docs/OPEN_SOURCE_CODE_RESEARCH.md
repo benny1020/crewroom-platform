@@ -220,32 +220,7 @@ PostgreSQL 검색 코드에 dense와 BM25 검색을 결합하는 SQL, bank 범�
 
 아래는 조사 결과에 근거한 **우리 설계안**이다. 구현 완료를 뜻하지 않는다.
 
-```mermaid
-flowchart TB
-    UI["데스크톱 웹 · 부서별 동료 / 업무 / 대화 / 기억"]
-    API["크루룸 API · 로그인 / 권한 / 요청 식별 / 공유"]
-    CP["Paperclip 기반 제어 영역 PoC\nAgent / Task / Run / Skills / 책임자"]
-    DB[("PostgreSQL\n업무 · 메시지 · 이벤트 · 접근 정책")]
-    MEM["Memory Service\n출처 / 정정 / 삭제 / 검색 / 컨텍스트 예산"]
-    STORE[("원문 · 결과물 · 스킬 버전 저장소")]
-    WORK["Worker · 실행 소유권 / 재시도 / 재개"]
-    ADAPTER["Harness Adapter · 지원 기능 명시"]
-    H["Hermes · 에이전트별 실행 환경"]
-    T["Letta Code · 비교 검증"]
-    O["OpenHands · 개발 작업 후속 검증"]
-    TOOL["Tool Broker\n권한 / 승인 / idempotency / 결과 확인"]
-    UI --> API --> CP
-    CP <--> DB
-    CP --> WORK --> ADAPTER
-    ADAPTER --> H & T & O
-    API --> MEM
-    MEM <--> DB
-    MEM <--> STORE
-    H & T & O --> TOOL
-    TOOL --> DB
-    CP --> STORE
-    DB -->|"저장된 상태와 이벤트 / 재접속 보완"| API
-```
+[![9. 크루룸에 제안하는 실제 구조](diagrams/open-source-code-research-1.png)](diagrams/open-source-code-research-1.svg)
 
 Paperclip 재사용 시 그 기존 Task/Run과 같은 정보를 별도 엔진 DB에 이중으로 소유하지 않는다. 크루룸 확장 테이블과 기존 데이터의 기준 관계를 정한다. UI가 Paperclip의 미필터 API·로그·파일 URL로 우회 접근하지 못하도록 인증 경계도 함께 검증한다.
 

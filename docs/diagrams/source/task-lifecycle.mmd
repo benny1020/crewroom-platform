@@ -1,0 +1,17 @@
+stateDiagram-v2
+  state "실행 대기" as queued
+  state "실행 중" as running
+  state "결과 검토" as result_ready
+  state "일시정지" as paused
+  state "실패·복구 확인" as failed
+  state "업무 완료" as done
+  [*] --> queued: 업무 접수
+  queued --> running: 책임자 실행
+  running --> result_ready: 결과 저장
+  running --> paused: 일시정지
+  paused --> queued: 종료 확인 후 재개
+  running --> failed: 오류·임대 만료
+  failed --> queued: 확인 후 새 실행
+  result_ready --> queued: QA 등 다음 단계 인계
+  result_ready --> done: 사람의 최종 수용
+  done --> queued: 이유·대상 버전을 남겨 재작업

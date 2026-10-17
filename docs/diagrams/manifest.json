@@ -1,0 +1,537 @@
+{
+  "renderer": "Mermaid 11.17.2 + Chromium; pre-rendered PNG and standalone SVG",
+  "diagrams": [
+    {
+      "id": "team-agents",
+      "document": "README.md",
+      "title": "만드는 이유",
+      "source": "source/team-agents.mmd",
+      "width": 635,
+      "height": 771,
+      "sourceHash": "78320d39dd8977d5301758c0294d3d389a35afddf79b983fb489051b4cf2c960",
+      "svg": {
+        "file": "team-agents.svg",
+        "bytes": 31405,
+        "sha256": "7ab8bb6e86f608f5f2eefd4282cb18967904bbecbe35b7dac80d8feeadbc0f89"
+      },
+      "png": {
+        "file": "team-agents.png",
+        "bytes": 92912,
+        "sha256": "af9766eafbcdd429b9281b3d21d5fff431756c43c3f1ca716a0bb67a0ae3b580"
+      }
+    },
+    {
+      "id": "task-lifecycle",
+      "document": "README.md",
+      "title": "함께 일하는 흐름",
+      "source": "source/task-lifecycle.mmd",
+      "width": 711,
+      "height": 498,
+      "sourceHash": "e69aa7f567353abb9baca42af6973b52103b61d9aad6d30e74a3e0432de0904d",
+      "svg": {
+        "file": "task-lifecycle.svg",
+        "bytes": 24965,
+        "sha256": "421aa000b0f778669a137b7f27737a506431af866e5c7e656c90285035f92cc4"
+      },
+      "png": {
+        "file": "task-lifecycle.png",
+        "bytes": 120209,
+        "sha256": "935eddf8f658382db8cbf4f4e4041975d0a732b56e5c87a0e3132516ba217153"
+      }
+    },
+    {
+      "id": "platform-architecture",
+      "document": "README.md",
+      "title": "구현 구조",
+      "source": "source/platform-architecture.mmd",
+      "width": 1019,
+      "height": 996,
+      "sourceHash": "a8b313429ca956d0da013b956d9cfa638f319faf40a6e97180f3e27e1e7d1376",
+      "svg": {
+        "file": "platform-architecture.svg",
+        "bytes": 37210,
+        "sha256": "a67a7e74d0888157c890b7fe531a13f388e24beece821c02d8b2bea220c92366"
+      },
+      "png": {
+        "file": "platform-architecture.png",
+        "bytes": 158196,
+        "sha256": "a1b0fe45fb82f336f9d4fd033715a23a81566a4ddce38dd7b64d8a8779b871ea"
+      }
+    },
+    {
+      "id": "agent-context",
+      "document": "README.md",
+      "title": "기억·스킬·권한",
+      "source": "source/agent-context.mmd",
+      "width": 983,
+      "height": 747,
+      "sourceHash": "671c449bd3c4a4d7e63354b8c1ed59ba0ca61d11d95a71ef350e9a87c6e940e5",
+      "svg": {
+        "file": "agent-context.svg",
+        "bytes": 28279,
+        "sha256": "5e12684bd1319878a1fa00a24b5debc20c9de60e8a0d031e12086a30dd95137e"
+      },
+      "png": {
+        "file": "agent-context.png",
+        "bytes": 95170,
+        "sha256": "e1cde1b791ebfece4c8bba3c396efda1c533397a6b1b168b7f051dd44c3dd348"
+      }
+    },
+    {
+      "id": "architecture-1",
+      "document": "docs/ARCHITECTURE.md",
+      "title": "2. 현재 실행 구조와 소스 지도",
+      "source": "source/architecture-1.mmd",
+      "width": 1151,
+      "height": 901,
+      "sourceHash": "bc85cf760a58e2facf05955558c74120d435d219a3dd70ecbef0a6f205b8af37",
+      "svg": {
+        "file": "architecture-1.svg",
+        "bytes": 30556,
+        "sha256": "994094185b9abbbcc5df74d37c6a52b69ce92561ca644d2059d5bb2c2c3347a7"
+      },
+      "png": {
+        "file": "architecture-1.png",
+        "bytes": 137757,
+        "sha256": "e133e2e6c1b0a5746b3753d7394f7d2af3a1e227a389da62769ac8a5873e2934"
+      }
+    },
+    {
+      "id": "architecture-2",
+      "document": "docs/ARCHITECTURE.md",
+      "title": "3. 현재 데이터 모델",
+      "source": "source/architecture-2.mmd",
+      "width": 1147,
+      "height": 723,
+      "sourceHash": "09ccab48d47eccd0660b7a8cfa72e70f86de59c7273e53db57aeda9c832a116c",
+      "svg": {
+        "file": "architecture-2.svg",
+        "bytes": 31768,
+        "sha256": "7f6c9ae40b57085fcbb983bf032a9904e9a4908b93b2f049e91134f12563db7e"
+      },
+      "png": {
+        "file": "architecture-2.png",
+        "bytes": 130318,
+        "sha256": "9bac438847f8a794203aa9f7d57769b129956835e0423f245f866bfd89504093"
+      }
+    },
+    {
+      "id": "architecture-3",
+      "document": "docs/ARCHITECTURE.md",
+      "title": "입력과 렌더링",
+      "source": "source/architecture-3.mmd",
+      "width": 1142,
+      "height": 508,
+      "sourceHash": "8cb10a68665a82f5a85c3d14838ec7409f984acdc202e1029caa0bc1d31fd774",
+      "svg": {
+        "file": "architecture-3.svg",
+        "bytes": 30054,
+        "sha256": "c6a89bfaf0691e0a62056b0f720551a42f15e08a7ac587c7bf41fe919c2571e5"
+      },
+      "png": {
+        "file": "architecture-3.png",
+        "bytes": 88827,
+        "sha256": "d5dfa7af7803fa46167757be5965967c71743dd899c462de690a221efb65f7e1"
+      }
+    },
+    {
+      "id": "architecture-4",
+      "document": "docs/ARCHITECTURE.md",
+      "title": "일반 업무의 한 번의 흐름",
+      "source": "source/architecture-4.mmd",
+      "width": 569,
+      "height": 498,
+      "sourceHash": "4ac736fdc5cd09e6458af57b3f392839c3b67ae7955645d90bbeafd8ffede313",
+      "svg": {
+        "file": "architecture-4.svg",
+        "bytes": 23229,
+        "sha256": "a42494f64d63da544156f9460d878e4006ad867c5e05a48b7699f93ee13067c8"
+      },
+      "png": {
+        "file": "architecture-4.png",
+        "bytes": 93026,
+        "sha256": "b303c6ef273dadbc6b6ad99dff0b2bbe7a9028aaa3f254469b9d6b3e207c8292"
+      }
+    },
+    {
+      "id": "architecture-5",
+      "document": "docs/ARCHITECTURE.md",
+      "title": "검사와 공개 배포",
+      "source": "source/architecture-5.mmd",
+      "width": 372,
+      "height": 921,
+      "sourceHash": "fc20c6ba03b1f50b9dfb386aebc469f59cb15b566d54b37a254e1e43adfd04cc",
+      "svg": {
+        "file": "architecture-5.svg",
+        "bytes": 24581,
+        "sha256": "1b6e1d877b2f6770af0392a575ebb1b846302f88d9f32b7df2412de0bc544e2a"
+      },
+      "png": {
+        "file": "architecture-5.png",
+        "bytes": 70145,
+        "sha256": "bdf77f5ad612702d10353eec9302c5d048876b9b8df3e6ffa6510f4884bf29b5"
+      }
+    },
+    {
+      "id": "architecture-6",
+      "document": "docs/ARCHITECTURE.md",
+      "title": "11. 다음 단계의 서버 아키텍처 — 설계안",
+      "source": "source/architecture-6.mmd",
+      "width": 961,
+      "height": 1246,
+      "sourceHash": "b8816ee6380c7656cd87c1adec60abd20d395464be3c4c2e52c9a1109a6b19bd",
+      "svg": {
+        "file": "architecture-6.svg",
+        "bytes": 46633,
+        "sha256": "bc90689dc58658b8e9bb9b300367e3ad2293b23b04cd985e20293e872baac1d1"
+      },
+      "png": {
+        "file": "architecture-6.png",
+        "bytes": 225796,
+        "sha256": "ec468a0f63df1103246dd337de24621f38f1ef6ffad4c1abe1c83c3a8dd105b7"
+      }
+    },
+    {
+      "id": "astra-product-ideas-1",
+      "document": "docs/ASTRA_PRODUCT_IDEAS.md",
+      "title": "1. 업무 대상을 넣으면 기존 업무와 담당을 안내한다",
+      "source": "source/astra-product-ideas-1.mmd",
+      "width": 577,
+      "height": 966,
+      "sourceHash": "bf3a7268e60186493757dc80957d3e27680e9ef26afcf92387729eb40d26ecab",
+      "svg": {
+        "file": "astra-product-ideas-1.svg",
+        "bytes": 27315,
+        "sha256": "563ba233211048d587c1629413cf572765eb22c8e4446842e4769bf585de4abd"
+      },
+      "png": {
+        "file": "astra-product-ideas-1.png",
+        "bytes": 85399,
+        "sha256": "7b01d2620ab948b4274c3ccbc42fdece6873ed9e3ef1f1d4112a772ebc94ec7b"
+      }
+    },
+    {
+      "id": "astra-review-1",
+      "document": "docs/ASTRA_REVIEW.md",
+      "title": "1. 첫 업무의 인계 관계를 명시한다",
+      "source": "source/astra-review-1.mmd",
+      "width": 500,
+      "height": 1153,
+      "sourceHash": "331b919d8088324a0b2f6c0e092998afc897b20bef1f4eedb085c76ad4a7433a",
+      "svg": {
+        "file": "astra-review-1.svg",
+        "bytes": 28850,
+        "sha256": "794707d760dc8624af1e95c4c7937b621c42460ed4f157d1ab3094782e61c241"
+      },
+      "png": {
+        "file": "astra-review-1.png",
+        "bytes": 92103,
+        "sha256": "5b2301038006c1ec45f118dc823c2b515eaee1b02ddc22119f822ea3e6328e34"
+      }
+    },
+    {
+      "id": "execution-architecture",
+      "document": "docs/CODE_EXECUTION.md",
+      "title": "전체 구조",
+      "source": "source/execution-architecture.mmd",
+      "width": 1400,
+      "height": 1026,
+      "sourceHash": "9d911b593033cf50327c85a95985261c52a04d281e7afb8ef8c8d4a935720723",
+      "svg": {
+        "file": "execution-architecture.svg",
+        "bytes": 41852,
+        "sha256": "bdcc63dce8b6deda10f79234985107e0bf4f212d67811c33f7ea962efc990f8d"
+      },
+      "png": {
+        "file": "execution-architecture.png",
+        "bytes": 254834,
+        "sha256": "1ebac3c01738c425981b918a764233c1db76f0d31f703b8a5c60c1c81ecb8264"
+      }
+    },
+    {
+      "id": "development-qa-sequence",
+      "document": "docs/CODE_EXECUTION.md",
+      "title": "실제 업무 흐름",
+      "source": "source/development-qa-sequence.mmd",
+      "width": 1581,
+      "height": 1620,
+      "sourceHash": "2598ab854f0ebe6e7f676f96e7c50e6f7df9bcefb17b54526146df0b2c692343",
+      "svg": {
+        "file": "development-qa-sequence.svg",
+        "bytes": 46170,
+        "sha256": "fe652a667a662f761f849e117d490cc6979a9aa2e7890f15b810258fad8c14cd"
+      },
+      "png": {
+        "file": "development-qa-sequence.png",
+        "bytes": 309995,
+        "sha256": "a9692da35a5185a8894ff67a294d82aeb5b55b9c7a73e6bdf5bf22a50838346a"
+      }
+    },
+    {
+      "id": "verification-gates",
+      "document": "docs/CODE_EXECUTION.md",
+      "title": "검사 결과를 믿는 기준",
+      "source": "source/verification-gates.mmd",
+      "width": 534,
+      "height": 1079,
+      "sourceHash": "84ba7f42ba5864be4a7bde3af38d8610eb8ad0fdd4bc761d1ca618ce2e11f833",
+      "svg": {
+        "file": "verification-gates.svg",
+        "bytes": 25969,
+        "sha256": "729ee88810bf9501543427953cda8f65e13b7c9c9194f45dfdb39b9ff74847bf"
+      },
+      "png": {
+        "file": "verification-gates.png",
+        "bytes": 85585,
+        "sha256": "8dafef523feb2cf69ef904cff1f03e40a020a7d7ace26791b074c230d7fa9afc"
+      }
+    },
+    {
+      "id": "custom-endpoints",
+      "document": "docs/CONFIGURATION.md",
+      "title": "커스텀 모델·저장소 연결",
+      "source": "source/custom-endpoints.mmd",
+      "width": 994,
+      "height": 298,
+      "sourceHash": "63df636fa080618b87cb7b93233e979de145aaf4943b614610c40c73063c704f",
+      "svg": {
+        "file": "custom-endpoints.svg",
+        "bytes": 21976,
+        "sha256": "2fd02cf3d2e2c0bad3a3e5b445db49f2f68b83feb0980c80ed0f7a0e3127383e"
+      },
+      "png": {
+        "file": "custom-endpoints.png",
+        "bytes": 64853,
+        "sha256": "c85bc84b245b73d2e95dd5b7acb463b88899380dfb776fae57c1103289adb8fd"
+      }
+    },
+    {
+      "id": "deployment-1",
+      "document": "docs/DEPLOYMENT.md",
+      "title": "첫 배포의 기본 구성",
+      "source": "source/deployment-1.mmd",
+      "width": 1176,
+      "height": 818,
+      "sourceHash": "f95f17d38aff6bfd3ee6c9bd0bdcf7b5a559093608ad1f4c936cbcc1e0ddeb5a",
+      "svg": {
+        "file": "deployment-1.svg",
+        "bytes": 36139,
+        "sha256": "37562f7ff5ce4d7d1c1d8a54f11b941bb713f3139f3711e03a0a586f8ba9f0a3"
+      },
+      "png": {
+        "file": "deployment-1.png",
+        "bytes": 157211,
+        "sha256": "79e82a4ea8a8c4ac763a2f6270002ad22e2a7277c78158711604c5a30fccd45f"
+      }
+    },
+    {
+      "id": "design-implementation-1",
+      "document": "docs/DESIGN_IMPLEMENTATION.md",
+      "title": "사용자 여정과 화면",
+      "source": "source/design-implementation-1.mmd",
+      "width": 615,
+      "height": 1084,
+      "sourceHash": "1f7d600788a1e03bd20c14de4523c7b06a977453398965cdb318f5ac396a21cc",
+      "svg": {
+        "file": "design-implementation-1.svg",
+        "bytes": 34349,
+        "sha256": "f4e7b78f3c360c8ae6428ffd0e336add2b4bc4b899aa225bf362b8aa26b82890"
+      },
+      "png": {
+        "file": "design-implementation-1.png",
+        "bytes": 121972,
+        "sha256": "66a1051daa712635cfe9e514a5efee9774f7b9b363d3957fa7098c29379f4779"
+      }
+    },
+    {
+      "id": "design-implementation-2",
+      "document": "docs/DESIGN_IMPLEMENTATION.md",
+      "title": "데이터와 기준 저장소",
+      "source": "source/design-implementation-2.mmd",
+      "width": 1597,
+      "height": 1027,
+      "sourceHash": "a851befd7bf37ac9f3489005bffb63c72da8dfd21711121ab10773e6e09269a7",
+      "svg": {
+        "file": "design-implementation-2.svg",
+        "bytes": 35445,
+        "sha256": "6bf6da8592104524da8529102cb096bad9263e7b4d1c7e05109477826deb714e"
+      },
+      "png": {
+        "file": "design-implementation-2.png",
+        "bytes": 213961,
+        "sha256": "a4be43c66f3379aa4f865221277944901fcb4906419f70f304c0fbc3529512ac"
+      }
+    },
+    {
+      "id": "design-implementation-3",
+      "document": "docs/DESIGN_IMPLEMENTATION.md",
+      "title": "상태 소유와 전이",
+      "source": "source/design-implementation-3.mmd",
+      "width": 864,
+      "height": 478,
+      "sourceHash": "a2ce010965b9a91d5f28bd48e29bad55afc808270ade1760f70ca1272d83d31e",
+      "svg": {
+        "file": "design-implementation-3.svg",
+        "bytes": 26489,
+        "sha256": "a9cab9e9f583c149527b335875372c48dd91bee6c0549960965662f510b20a5d"
+      },
+      "png": {
+        "file": "design-implementation-3.png",
+        "bytes": 126333,
+        "sha256": "973785a3ec75ebe9d2667d10b3cd9adcc2337fabc10fc18696ed26d04f7e294a"
+      }
+    },
+    {
+      "id": "design-implementation-4",
+      "document": "docs/DESIGN_IMPLEMENTATION.md",
+      "title": "Run 격리와 기억",
+      "source": "source/design-implementation-4.mmd",
+      "width": 801,
+      "height": 757,
+      "sourceHash": "db689c8ad904099719fce1cdf98fe67ba488d8b3d78fe5ae8f61fa0090492cac",
+      "svg": {
+        "file": "design-implementation-4.svg",
+        "bytes": 28809,
+        "sha256": "0e61471ba6ec88d5cd99dfd372e35c76f52c49ef8b52c551cd6b74fc456e3fb6"
+      },
+      "png": {
+        "file": "design-implementation-4.png",
+        "bytes": 112430,
+        "sha256": "9e12be5f5091ea90d8e22616a05257bebea9b2c60d0e2b66d511a82a90fc2ed4"
+      }
+    },
+    {
+      "id": "design-implementation-5",
+      "document": "docs/DESIGN_IMPLEMENTATION.md",
+      "title": "서버 배포와 복구의 확정 계약",
+      "source": "source/design-implementation-5.mmd",
+      "width": 1100,
+      "height": 713,
+      "sourceHash": "d8e184766a8426300ca82a9b5874fe2e7660746837cef161a50b6459037916f8",
+      "svg": {
+        "file": "design-implementation-5.svg",
+        "bytes": 35124,
+        "sha256": "9d94c82edf54530c6d3466c70e3a96af6b15c0316d64f7ad9352874252aae8ee"
+      },
+      "png": {
+        "file": "design-implementation-5.png",
+        "bytes": 154829,
+        "sha256": "ebbb0544c17ce27dea5fccf916f5b0aee729106f4796d3cb4b6ead66b3f11230"
+      }
+    },
+    {
+      "id": "open-source-code-research-1",
+      "document": "docs/OPEN_SOURCE_CODE_RESEARCH.md",
+      "title": "9. 크루룸에 제안하는 실제 구조",
+      "source": "source/open-source-code-research-1.mmd",
+      "width": 1136,
+      "height": 1128,
+      "sourceHash": "359716255b3042c1a60cd631b0f59fc5c71bac8fa2b1c8f1fc039b3cf09101b5",
+      "svg": {
+        "file": "open-source-code-research-1.svg",
+        "bytes": 48088,
+        "sha256": "04560e1e981954b0f313a5c02147c304bc04986763eb98234659375bd348661b"
+      },
+      "png": {
+        "file": "open-source-code-research-1.png",
+        "bytes": 255968,
+        "sha256": "4401aa13929124fcaef89b0b5d6f5c2c65230dedc974e0c766af1a3ba8702444"
+      }
+    },
+    {
+      "id": "pilot-workflow",
+      "document": "docs/PILOT_GUIDE.md",
+      "title": "설정과 확인 순서",
+      "source": "source/pilot-workflow.mmd",
+      "width": 264,
+      "height": 509,
+      "sourceHash": "8ccba7e9b655eaf0c0f211ec9eff7233a0d8f5fbaeffe1e99d3f243ac0f984eb",
+      "svg": {
+        "file": "pilot-workflow.svg",
+        "bytes": 17670,
+        "sha256": "1600a9ce5a5ab959c388ee367f89e2bdc70760e9e8e1af5c4772737cf76a4b19"
+      },
+      "png": {
+        "file": "pilot-workflow.png",
+        "bytes": 35379,
+        "sha256": "3f799113e675dac55861a442b9f5be3f0f8d234f12c4ff231b4394b92a66f727"
+      }
+    },
+    {
+      "id": "server-components",
+      "document": "docs/SERVER_ARCHITECTURE.md",
+      "title": "구성과 데이터 소유권",
+      "source": "source/server-components.mmd",
+      "width": 724,
+      "height": 685,
+      "sourceHash": "79a9a116605ec0d6f9f8db02ef7aa98bb9ea29e42be0cd707e1f79a688b970af",
+      "svg": {
+        "file": "server-components.svg",
+        "bytes": 27601,
+        "sha256": "d2c4e0a55a1a80df3b1bbbaa2c3aa4fa9c2fe8c2f195ebbfd1b61d8356c9ce77"
+      },
+      "png": {
+        "file": "server-components.png",
+        "bytes": 91390,
+        "sha256": "2b82e9cbffa053808ba042240d1aff25c383059e19000eb145ca5906e06de87d"
+      }
+    },
+    {
+      "id": "server-data-model",
+      "document": "docs/SERVER_ARCHITECTURE.md",
+      "title": "구성과 데이터 소유권",
+      "source": "source/server-data-model.mmd",
+      "width": 1481,
+      "height": 1027,
+      "sourceHash": "21d8fa0778ef0237cff583da2da890b487b5dd26a59f8cc4d39bfaa7a411c907",
+      "svg": {
+        "file": "server-data-model.svg",
+        "bytes": 32470,
+        "sha256": "fe09e8b72f0165de6749c9179685403043530971be34b0af35f936954524654d"
+      },
+      "png": {
+        "file": "server-data-model.png",
+        "bytes": 179368,
+        "sha256": "e16f68a0d3daacf8767ee41299014c7a743718941f6c805c045bb825526ab7f7"
+      }
+    },
+    {
+      "id": "run-sequence",
+      "document": "docs/SERVER_ARCHITECTURE.md",
+      "title": "실행 계약",
+      "source": "source/run-sequence.mmd",
+      "width": 1159,
+      "height": 949,
+      "sourceHash": "25855d022bae27b6bd8c441a9bc4fa46d2adb62cf9bd39bbf09270c414442e71",
+      "svg": {
+        "file": "run-sequence.svg",
+        "bytes": 35258,
+        "sha256": "381d4770eec18921595f49cc64c2afc03a6af4e43f5fa6c67fa075dea5addfbb"
+      },
+      "png": {
+        "file": "run-sequence.png",
+        "bytes": 166298,
+        "sha256": "f0f2aa5545133c070027a044c9cf9cbbc61be1ff7e827c6c161b807430b66837"
+      }
+    },
+    {
+      "id": "team-standardization-review-1",
+      "document": "docs/TEAM_STANDARDIZATION_REVIEW.md",
+      "title": "권장하는 최소 실행 계약",
+      "source": "source/team-standardization-review-1.mmd",
+      "width": 553,
+      "height": 851,
+      "sourceHash": "eb02c68335877c4fb5f3aab0195a977f42681e99e11f8f482ba0e83391f124f8",
+      "svg": {
+        "file": "team-standardization-review-1.svg",
+        "bytes": 30506,
+        "sha256": "b2628d5de9583c683465487ca1d6193d5492e8c95acbb9235d5ed6274430083c"
+      },
+      "png": {
+        "file": "team-standardization-review-1.png",
+        "bytes": 95774,
+        "sha256": "b977bf45fbcfe6eff5e62044125fd9de9e8335ebe6707b70003b31466a386730"
+      }
+    }
+  ]
+}

@@ -4,23 +4,7 @@
 
 ## 전체 구조
 
-```mermaid
-flowchart TB
-  B[팀원 브라우저 · 부서별 캐릭터] -->|HTTPS| P[HTTPS reverse proxy]
-  P --> A[App · 로그인/권한/API/SSE]
-  A --> D[(PostgreSQL 18 · 유일 업무 큐)]
-  W[상주 Worker · native 행동 루프] <-->|lease/generation/receipt| D
-  W --> I[(Run 입력 파일 · runtime volume)]
-  W -->|고정 전체 SHA · 읽기 token| G[설정한 GitLab API]
-  W -->|역할/스킬/허용 기억/도구 결과| M[커스텀 모델 endpoint]
-  W -->|HTTP · 인증 · 고정 실행 profile| R[Runner broker]
-  R -->|유일한 Docker socket 보유| E[전용 Docker Engine]
-  E --> J1[개발 Job · network none]
-  E --> J2[별도 QA Job · network none]
-  J1 --> V1[(업무별 크기 제한 tmpfs volume)]
-  J2 --> V2[(별도 tmpfs volume)]
-  R --> S[(종료 확인/행동 멱등성/임시 checkpoint)]
-```
+[![전체 구조](diagrams/execution-architecture.png)](diagrams/execution-architecture.svg)
 
 비밀 파일은 신뢰된 init-secrets 단계가 App/Worker/Runner별 소유권의 볼륨으로 준비한다. Linux 호스트 uid와 비루트 컨테이너 uid가 달라도 입력 파일을 0600으로 유지한다. App에는 DB 비밀만, Worker에는 모델/GitLab/Runner 비밀, Runner에는 Runner token만 전달한다.
 
@@ -30,37 +14,7 @@ App과 Worker는 Docker socket을 갖지 않는다. Job에는 모델/GitLab/DB/R
 
 ## 실제 업무 흐름
 
-```mermaid
-sequenceDiagram
-  actor H as 책임자
-  participant A as App/DB
-  participant W as Worker
-  participant M as 설정한 모델 endpoint
-  participant R as Runner
-  participant J as 개발 Job
-  participant Q as 새 QA Job
-  H->>A: 코드 수정·실제 QA 접수 (프로젝트 URL + 전체 SHA)
-  A->>A: 역할/스킬/기억/대화/실행 profile 고정
-  W->>A: claim · lease/generation
-  W->>W: GitLab 고정 SHA archive 검증
-  W->>R: Run/generation/profile + archive
-  R->>J: immutable image ID · 제한된 작업 공간 생성
-  loop 최대 30 행동
-    W->>M: 목표 + 지금까지의 실제 도구 결과
-    M-->>W: JSON 행동 1개
-    W->>A: 발송 intent 영속화 · 권한/lease 재확인
-    W->>R: list/read/write/등록 check ID
-    R->>J: 허용된 파일 작업 또는 등록 검사
-    J-->>W: 실제 결과/exit/log
-  end
-  R->>R: 최종 코드 hash · diff 재적용 검증 · 최신 검사 비교
-  R->>J: 종료 및 workspace 제거
-  W->>A: diff + 검사 receipt + 결과 버전 저장
-  H->>A: 고정 결과로 QA 인계 · 담당자 변경 가능
-  W->>Q: 원본 SHA + 동일 patch · 수정 API 금지
-  Q-->>A: 실제 검사 · 동일 patch hash · 종료 확인
-  H->>A: 결과 확인 후 최종 수용
-```
+[![실제 업무 흐름](diagrams/development-qa-sequence.png)](diagrams/development-qa-sequence.svg)
 
 모델이 실행할 수 있는 행동은 `list_files`, `read_file`, `write_file`, `run_check`, `finish`다. 임의 shell, Docker 옵션, 이미지, host mount, URL, command argv를 모델이 지정하지 않는다. `run_check`에는 운영자가 등록한 ID만 보낸다. 명령 배열·timeout은 실행 profile에서 결정한다.
 
@@ -68,17 +22,7 @@ sequenceDiagram
 
 ## 검사 결과를 믿는 기준
 
-```mermaid
-flowchart LR
-  B[원본 SHA] --> P[최종 patch]
-  P --> H[정렬 경로/모드/내용의 stateHash]
-  H --> C[검사 직전과 직후 hash 비교]
-  C --> L[check ID별 마지막 receipt]
-  L --> F{현재 코드에서 모두 통과?}
-  F -->|아니오| X[인계·수용 거절 · 재작업]
-  F -->|예| Q[새 QA 환경 · 같은 patch hash]
-  Q --> U[사람의 수용]
-```
+[![검사 결과를 믿는 기준](diagrams/verification-gates.png)](diagrams/verification-gates.svg)
 
 - 검사 후 수정하면 이전 receipt는 현재 코드에서 제외된다. 같은 check를 다시 실행해 실패하면 이전 성공을 재사용하지 않는다.
 - 검사 중 소스가 달라져도 통과하지 않는다. 정상 종료 코드 0만으로 충분하지 않다.

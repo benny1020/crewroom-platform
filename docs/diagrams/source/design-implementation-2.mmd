@@ -1,0 +1,17 @@
+erDiagram
+  MEMBER ||--o{ TASK : requests
+  MEMBER ||--o{ TASK : responsible
+  TASK ||--|| CONVERSATION : has
+  CONVERSATION ||--o{ MESSAGE : contains
+  TASK ||--|{ STEP : sequences
+  AGENT ||--o{ STEP : assigned
+  STEP ||--o{ RUN : attempts
+  RUN ||--o{ ARTIFACT : creates
+  STEP }o--o| ARTIFACT : input_version
+  TASK ||--o{ BRIEF_REVISION : summarizes
+  ARTIFACT ||--o{ ACCEPTANCE : judged
+  AGENT ||--o{ SKILL_BINDING : pins
+  SKILL_VERSION ||--o{ SKILL_BINDING : immutable
+  AGENT ||--o{ MEMORY : owns
+  TASK ||--o{ MEMORY : source_scope
+  MEMBER ||--o{ RESOURCE_GRANT : permitted

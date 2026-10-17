@@ -6,66 +6,17 @@
 
 ## 구성과 데이터 소유권
 
-```mermaid
-flowchart LR
-  WEB[웹 · 실제 로그인] --> APP[Fastify App]
-  APP --> DB[(PostgreSQL · 유일 기준)]
-  DB --> WORKER[독립 Worker]
-  WORKER --> DB
-  WORKER --> FILE[Run 입력 파일]
-  WORKER --> MODEL[설정한 모델 HTTP · 제한된 JSON 행동]
-  WORKER --> RUNNER[Runner broker]
-  RUNNER --> JOB[Run별 개발/독립 QA Docker]
-  APP --> SSE[권한별 SSE 갱신 ID]
-  SSE --> WEB
-```
+[![구성과 데이터 소유권](diagrams/server-components.png)](diagrams/server-components.svg)
 
 App과 Worker는 같은 릴리스를 사용하되 별도 프로세스다. 큐·세션·상태를 메모리/localStorage에 두지 않는다. API가 HTML에 서버 모드 메타 태그를 넣어 `src/live-app.js`를 선택한다. Pages는 기존 `src/app.js`로 동작한다.
 
-```mermaid
-erDiagram
-  MEMBER ||--o{ SESSION : authenticates
-  MEMBER ||--o{ AGENT : private_assistant
-  AGENT ||--o{ SKILL_BINDING : equips
-  SKILL_VERSION ||--o{ SKILL_BINDING : pins
-  MEMBER ||--o{ TASK : requests
-  TASK ||--|{ STEP : contains
-  TASK ||--o{ MESSAGE : shares
-  TASK ||--o{ EVENT : audits
-  STEP ||--o{ RUN : executes
-  RUN ||--o{ MODEL_DISPATCH : records
-  RUN ||--o{ EXECUTION_JOB : isolates
-  RUN o|--o{ ARTIFACT : produces
-  ARTIFACT ||--o{ ACCEPTANCE : accepted_by_human
-  AGENT ||--o{ MEMORY : remembers
-```
+[![구성과 데이터 소유권](diagrams/server-data-model.png)](diagrams/server-data-model.svg)
 
 실제 이름은 `cr_*` 테이블이다. UUID를 참조에 사용하며 W-number는 표시용이다. 메시지·산출물·수용은 서로 다른 기록이다. 외부 결과는 Run 없이도 Artifact가 될 수 있다. 결과 본문은 불변이며 새 실행은 새 버전을 생성한다.
 
 ## 실행 계약
 
-```mermaid
-sequenceDiagram
-  actor H as 책임자
-  participant A as API
-  participant D as PostgreSQL
-  participant W as Worker
-  participant M as 모델
-  H->>A: start · task revision
-  A->>D: Task lock · 권한/책임 확인
-  A->>D: 스킬/Agent/기억/대화/입력 결과 snapshot · queued Run
-  W->>D: 단일 claim lock · 슬롯 확인 · lease/generation 발급
-  W->>W: 대상 SHA 검증 · 고정 입력 파일 저장
-  W->>D: dispatch intent prepared · COMMIT
-  W->>D: Task/Run/자료 lock · 권한/lease 재검사
-  W->>M: 구조화 요청 발송
-  W->>D: 발송 상태 기록 · COMMIT
-  M-->>W: JSON 응답
-  W->>D: 동일 lease/generation/문맥 확인
-  W->>D: Artifact + result_ready 원자 저장
-  H->>A: 결과 확인 · accept
-  A->>D: Acceptance + done
-```
+[![실행 계약](diagrams/run-sequence.png)](diagrams/run-sequence.svg)
 
 - 큐는 PostgreSQL 하나다. 전체 2개, 같은 Agent 1개까지 실행한다. paused 중 이미 시작한 실행·해제 전 lease도 슬롯을 점유한다.
 - Task→Run 순으로 잠근다. claim은 advisory lock과 `FOR UPDATE SKIP LOCKED`를 사용한다. UI 수정에는 Task revision을 요구하여 늦은 덮어쓰기를 409로 거절한다.

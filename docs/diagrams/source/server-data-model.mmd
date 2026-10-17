@@ -1,0 +1,15 @@
+erDiagram
+  MEMBER ||--o{ SESSION : authenticates
+  MEMBER ||--o{ AGENT : private_assistant
+  AGENT ||--o{ SKILL_BINDING : equips
+  SKILL_VERSION ||--o{ SKILL_BINDING : pins
+  MEMBER ||--o{ TASK : requests
+  TASK ||--|{ STEP : contains
+  TASK ||--o{ MESSAGE : shares
+  TASK ||--o{ EVENT : audits
+  STEP ||--o{ RUN : executes
+  RUN ||--o{ MODEL_DISPATCH : records
+  RUN ||--o{ EXECUTION_JOB : isolates
+  RUN o|--o{ ARTIFACT : produces
+  ARTIFACT ||--o{ ACCEPTANCE : accepted_by_human
+  AGENT ||--o{ MEMORY : remembers

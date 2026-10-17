@@ -28,23 +28,7 @@
 
 배포 운영자가 서버 제공자·도메인·접근 경로를 선택한다. 공개 Pages는 샘플용이며 실제 팀 데이터는 직접 운영하는 서버에 둔다. 서버 사양과 동시 실행 수는 실제 저장소·도구·하네스 부하를 확인한 뒤 정한다.
 
-```mermaid
-flowchart TB
-    USERS["팀원들의 서로 다른 브라우저"] --> EDGE["팀 접근 경로 · HTTPS 프록시"]
-    subgraph HOST["하나의 Linux 서버"]
-        EDGE --> APP["크루룸 App: 웹 · API · 권한 · 이벤트"]
-        APP <--> DB[("PostgreSQL: 업무 · 메시지 · 실행 점유 · 기억 · 버전")]
-        WORKER["크루룸 Worker: 작업 점유 · 스케줄 · 복구"] <--> DB
-        WORKER --> EXEC["격리 실행 관리자: 하네스 · Run별 작업 환경"]
-        EXEC --> RUN["Run별 세션 · 작업 사본"]
-        APP --> STORE[("영속 파일: 산출물 · 원문 · 불변 스킬")]
-        WORKER --> STORE
-        RUN --> BROKER["허용된 모델 · 도구 연결 경로"]
-    end
-    BROKER --> EXTERNAL["모델 제공자 · 저장소 · 테스트 환경"]
-    DB --> BACKUP["호스트 밖의 백업 보관소"]
-    STORE --> BACKUP
-```
+[![첫 배포의 기본 구성](diagrams/deployment-1.png)](diagrams/deployment-1.svg)
 
 | 구성 요소 | 실행·배포 책임 |
 | --- | --- |

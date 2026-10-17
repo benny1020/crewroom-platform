@@ -83,17 +83,7 @@
 
 ## 권장하는 최소 실행 계약
 
-```mermaid
-flowchart TD
-    TEAM["팀원 A · B · C"] --> AGENT["같은 공용 에이전트"]
-    AGENT --> TASK["업무별 공유 대화 · Task"]
-    TASK --> RUN["Run: 버전 묶음 고정 · 실행 환경 분리"]
-    POLICY["공용 스킬 · 프로젝트 정책 · 결과 구조 · 템플릿"] --> RUN
-    RUN --> CHECK["결과 구조 검사 · 가능한 근거 검증"]
-    CHECK -->|"등록 가능"| ARTIFACT["버전 있는 공용 산출물"]
-    CHECK -->|"형식 오류 또는 미확인"| DRAFT["원본 보존 · 제한된 보정 · 검토 필요 표시"]
-    ARTIFACT --> VIEW["같은 템플릿의 웹 표시 · 내보내기 · 팀 검색"]
-```
+[![권장하는 최소 실행 계약](diagrams/team-standardization-review-1.png)](diagrams/team-standardization-review-1.svg)
 
 Run에는 공용 Agent·Task·대화·실행기 세션·요청자와 함께 **스킬 본문 버전/해시, 에이전트 설정 버전, 프로젝트 정책 버전, 결과 스키마 버전, 표시 템플릿 버전, 실행 모델·하네스 정보**를 기록하는 계약을 제안한다. 현재 목업의 Run에 이 필드가 모두 있다는 뜻은 아니다.
 

@@ -1,0 +1,11 @@
+flowchart TD
+    DEPT["Department: 직속 / 개발 / 운영 / QA"] --> AGENT["공용 Agent: 부서별 동료"]
+    USER["구성원: 시연 사용자와 가입자 / 역할 / 부서"] --> PERSONAL["개인 비서 Profile"]
+    AGENT --> CONV["Conversation: actorId + 공개 범위"]
+    PERSONAL --> CONV
+    CONV --> MSG["messages: 대화 ID별 배열"]
+    CONV --> TASK["Task: 목표 / 진행 / 결정 / 결과"]
+    TASK --> RUN["Run: 실행 ID / 세대 / 버전 스냅샷"]
+    RUN --> EVENT["RunEvent: 실행별 순번"]
+    SKILL["Skill + actor의 버전 장착 정보"] --> RUN
+    CONV -. "기억으로 저장" .-> MEMORY["MemoryItem: 범위 / 출처 / 버전 / 이력"]

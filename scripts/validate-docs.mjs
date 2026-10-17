@@ -9,10 +9,13 @@ const files = [
     .filter((name) => name.endsWith(".md"))
     .map((name) => "docs/" + name),
   "docs/research/2026-10-16-code-audit/README.md",
+  "docs/diagrams/README.md",
 ];
 let links = 0;
 for (const file of files) {
   const text = await readFile(file, "utf8");
+  if (/^```mermaid\s*$/m.test(text))
+    throw new Error(`Use a rendered diagram image in ${file}`);
   for (const [, value] of text.matchAll(/\]\(([^)]+)\)/g)) {
     if (value.includes("://") || value.startsWith("mailto:")) continue;
     const target = value.split("#")[0];
@@ -47,6 +50,34 @@ for (const directory of [
     throw new Error("Capture contains page errors");
   media += manifest.files.length;
 }
+const diagramDirectory = "docs/diagrams",
+  diagrams = JSON.parse(
+    await readFile(diagramDirectory + "/manifest.json", "utf8"),
+  ).diagrams,
+  definitions = JSON.parse(
+    await readFile(diagramDirectory + "/diagrams.json", "utf8"),
+  );
+if (diagrams.length !== definitions.length)
+  throw new Error("Diagram manifest does not match the source list");
+for (const diagram of diagrams) {
+  const source = await readFile(diagramDirectory + "/" + diagram.source);
+  if (createHash("sha256").update(source).digest("hex") !== diagram.sourceHash)
+    throw new Error("Diagram needs regeneration: " + diagram.id);
+  for (const format of ["png", "svg"]) {
+    const receipt = diagram[format],
+      data = await readFile(diagramDirectory + "/" + receipt.file);
+    if (
+      data.length !== receipt.bytes ||
+      createHash("sha256").update(data).digest("hex") !== receipt.sha256
+    )
+      throw new Error("Diagram image mismatch: " + receipt.file);
+    if (
+      format === "png" &&
+      data.subarray(0, 8).toString("hex") !== "89504e470d0a1a0a"
+    )
+      throw new Error("Invalid diagram PNG: " + receipt.file);
+  }
+}
 console.log(
-  `Document links: ${links}; captured media: ${media}; hashes and GIF signatures verified.`,
+  `Document links: ${links}; captured media: ${media}; rendered diagrams: ${diagrams.length}; image/source hashes verified.`,
 );

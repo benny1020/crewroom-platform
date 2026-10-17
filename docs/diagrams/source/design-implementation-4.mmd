@@ -1,0 +1,9 @@
+flowchart TB
+  Agent["영속 Agent 정체성<br/>부서 · 설정 · 스킬 binding"] --> Pin["Run 시작: 불변 묶음 고정<br/>스킬 본문/해시 · 설정 · 정책 · 출력 형식"]
+  ACL["현재 사용자·업무 공개 범위"] --> Retrieval["권한 필터 후 관련 기억 검색"]
+  Retrieval --> Pin
+  Pin --> Run["Run 전용 환경<br/>read-only bundle + writable HOME/workspace"]
+  Run --> API["필요할 때 모델 API 호출"]
+  Run --> Broker["허가된 도구 broker"]
+  Run --> Result["산출물 · 세션 · checkpoint"]
+  Result --> Store["제품 원문/메타데이터 저장소"]

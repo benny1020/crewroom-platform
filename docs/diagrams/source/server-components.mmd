@@ -1,0 +1,11 @@
+flowchart TB
+  WEB[웹 · 실제 로그인] --> APP[Fastify App]
+  APP --> DB[(PostgreSQL · 유일 기준)]
+  DB --> WORKER[독립 Worker]
+  WORKER --> DB
+  WORKER --> FILE[Run 입력 파일]
+  WORKER --> MODEL[설정한 모델 HTTP · 제한된 JSON 행동]
+  WORKER --> RUNNER[Runner broker]
+  RUNNER --> JOB[Run별 개발/독립 QA Docker]
+  APP --> SSE[권한별 SSE 갱신 ID]
+  SSE --> WEB

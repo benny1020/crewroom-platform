@@ -1,0 +1,18 @@
+flowchart TB
+  U["팀원 · 관리자 브라우저"] -->|HTTPS| P["HTTPS 프록시"]
+  P --> A["App · Fastify API<br/>로그인 · 권한 · 실시간 갱신"]
+  A <-->|업무·세션·상태| D[("PostgreSQL 18<br/>대화 · 기억 · 스킬 · 실행 큐")]
+  D <-->|실행 점유·결과 저장| W["상주 Worker<br/>문맥 고정 · 실행 · 복구"]
+  W --> M["커스텀 모델 API<br/>URL · 모델 ID · 인증 설정"]
+  W --> G["저장소 API<br/>GitLab · 공개 GitHub PR"]
+  W --> F[("영속 파일<br/>Run별 고정 입력")]
+  W -->|인증 HTTP| R["Runner broker<br/>격리 환경 생성 · 종료 확인"]
+  R --> J["개발 Job → 새 QA Job<br/>Run별 생성 · network none"]
+  classDef app fill:#efedfb,stroke:#7770ba,color:#262537
+  classDef data fill:#eaf5f0,stroke:#73a18b,color:#243a31
+  classDef external fill:#edf3fc,stroke:#7292bc,color:#253a57
+  classDef execution fill:#fff5df,stroke:#b89b59,color:#4b4029
+  class A,W app
+  class D,F data
+  class M,G external
+  class R,J execution

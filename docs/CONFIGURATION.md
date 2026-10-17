@@ -2,15 +2,7 @@
 
 Crewroom은 원하는 모델 endpoint와 GitLab URL을 연결해 직접 호스팅하는 팀 에이전트 플랫폼이다. 모델 제공자에 직접 연결하거나 호환 API를 제공하는 게이트웨이·자체 호스팅 서버를 사용할 수 있다. 현재 지원하는 통신 형식은 **OpenAI 호환 Chat Completions**와 **Claude Messages**이며, URL만으로 다른 API 형식을 자동 변환하지는 않는다.
 
-```mermaid
-flowchart LR
-  USER[팀원 웹] --> APP[Crewroom App]
-  APP --> DB[(PostgreSQL)]
-  WORKER[상주 Worker] --> DB
-  WORKER --> MODEL[설정한 모델 endpoint]
-  WORKER --> GIT[설정한 GitLab URL · 고정 SHA]
-  MODEL --> API[직접 제공자 · 게이트웨이 · 자체 호스팅 API]
-```
+[![커스텀 모델·저장소 연결](diagrams/custom-endpoints.png)](diagrams/custom-endpoints.svg)
 
 설정한 주소로만 모델을 호출하며 다른 제공자로 자동 fallback하지 않는다. 별도 SDK 없이 Node HTTP를 사용한다. API 형식이 두 계약과 다르면 `server/provider.js`의 요청·응답 adapter와 계약 검사를 확장해야 한다.
 

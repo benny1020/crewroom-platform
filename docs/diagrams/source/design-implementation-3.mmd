@@ -1,0 +1,12 @@
+stateDiagram-v2
+  [*] --> Queued: 접수
+  Queued --> Running: 실행 점유 + 불변 묶음
+  Running --> Paused: 입력 대기 또는 재시작
+  Paused --> Running: 임대 재확인 + 같은 묶음
+  Running --> ResultReady: 산출물 저장
+  ResultReady --> Queued: 다음 단계 인계
+  ResultReady --> Accepted: 최종 결과를 책임자가 수용
+  ResultReady --> Queued: 재작업
+  Accepted --> Queued: 재작업 / 대상 revision 변경
+  Running --> Cancelled: 중단
+  Cancelled --> Queued: 새 실행 요청

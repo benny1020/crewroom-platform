@@ -52,21 +52,7 @@ React·Vue·Next.js·TypeScript·Redux·Zustand는 현재 의존성에 없다. L
 
 ## 2. 현재 실행 구조와 소스 지도
 
-```mermaid
-flowchart LR
-    DEV["소스와 고정된 의존성"] --> BUILD["Vite build"]
-    BUILD --> DIST["dist: HTML / JS / CSS / WebP"]
-    DIST --> PAGES["GitHub Pages"]
-    PAGES --> UI["사용자의 데스크톱 브라우저"]
-    subgraph Browser["브라우저 안에서 실행"]
-        UI --> APP["app.js: 입력 / state / 화면 / 타이머"]
-        DATA["data.js: 샘플과 초기 상태"] --> APP
-        DOMAIN["domain.js: 제품 규칙"] --> APP
-        TEAM["team-domain.js / team-views.js: 가입과 역할별 화면"] --> APP
-        APP --> DOM["화면과 CSS 작업 모션"]
-        APP <-->|"JSON 저장과 복원"| LOCAL[("localStorage")]
-    end
-```
+[![2. 현재 실행 구조와 소스 지도](diagrams/architecture-1.png)](diagrams/architecture-1.svg)
 
 배포 서버는 파일을 제공하며, 업무 상태를 계산하는 주체는 브라우저다. 서로 다른 컴퓨터에서 데모를 열면 각자의 샘플 데이터로 시작한다. API 요청이나 WebSocket으로 에이전트 서버와 통신하는 경로는 없다. 개발 중에는 Vite의 개발 서버와 HMR이 별도로 동작한다.
 
@@ -101,19 +87,7 @@ localStorage schema 10은 기존 8/9 기록을 유지하면서 artifacts, 단계
 
 핵심은 **동료의 정체성, 대화방, 맡긴 업무, 한 번의 실행을 서로 구분**하는 것이다. 아래는 현재 JavaScript 객체의 관계이며, DB 테이블이 생성되어 있다는 뜻은 아니다.
 
-```mermaid
-flowchart TD
-    DEPT["Department: 직속 / 개발 / 운영 / QA"] --> AGENT["공용 Agent: 부서별 동료"]
-    USER["구성원: 시연 사용자와 가입자 / 역할 / 부서"] --> PERSONAL["개인 비서 Profile"]
-    AGENT --> CONV["Conversation: actorId + 공개 범위"]
-    PERSONAL --> CONV
-    CONV --> MSG["messages: 대화 ID별 배열"]
-    CONV --> TASK["Task: 목표 / 진행 / 결정 / 결과"]
-    TASK --> RUN["Run: 실행 ID / 세대 / 버전 스냅샷"]
-    RUN --> EVENT["RunEvent: 실행별 순번"]
-    SKILL["Skill + actor의 버전 장착 정보"] --> RUN
-    CONV -. "기억으로 저장" .-> MEMORY["MemoryItem: 범위 / 출처 / 버전 / 이력"]
-```
+[![3. 현재 데이터 모델](diagrams/architecture-2.png)](diagrams/architecture-2.svg)
 
 | 객체·저장 위치 | 주요 필드 | 구현 의미 |
 | --- | --- | --- |
@@ -154,20 +128,7 @@ ID는 제품 내부 연결에 사용한다. 대화는 `crypto.randomUUID()`, 새
 
 ### 입력과 렌더링
 
-```mermaid
-sequenceDiagram
-    participant U as 사용자
-    participant H as 루트 이벤트 핸들러
-    participant S as state와 도메인 함수
-    participant V as 화면 함수
-    participant L as localStorage
-    U->>H: 버튼 클릭 또는 양식 제출
-    H->>H: data-action / data-form 확인, 입력 검증
-    H->>S: 상태 변경 또는 제품 규칙 호출
-    H->>V: render 또는 부분 화면 갱신
-    V-->>U: 변경된 업무·대화·스킬 화면
-    H->>L: persist로 JSON 저장
-```
+[![입력과 렌더링](diagrams/architecture-3.png)](diagrams/architecture-3.svg)
 
 [`render()`](../src/app.js#L1471)는 현재 `state.view`에 대응하는 화면 함수를 호출하고 `frame.innerHTML`을 교체한다. 문자열 출력에 사용하는 `esc()`가 사용자 입력을 HTML escape한다. 이는 현재 텍스트 표시 방식의 처리이며, Markdown·임의 HTML 렌더러를 붙일 경우 별도의 검토가 필요하다.
 
@@ -179,19 +140,7 @@ sequenceDiagram
 
 [`createTask()`](../src/app.js#L2174)는 실행 폼의 대상·프로젝트·환경·공유 여부를 받아 Task를 만들고, 현재 대화 ID를 연결한다. `ensureRun()`이 Run을 준비하고 `start()`가 시뮬레이션을 시작한다.
 
-```mermaid
-stateDiagram-v2
-    [*] --> queued: 업무 생성
-    queued --> running: start
-    running --> needs_input: 검증 범위 확인 필요
-    needs_input --> running: 답변 저장 후 재개
-    running --> paused: 사용자 일시정지 또는 새로고침
-    paused --> running: 재개
-    running --> done: 샘플 결과 준비
-    needs_input --> cancelled: 취소
-    running --> cancelled: 취소
-    paused --> cancelled: 취소
-```
+[![일반 업무의 한 번의 흐름](diagrams/architecture-4.png)](diagrams/architecture-4.svg)
 
 이 그림은 주요 일반 업무의 전이만 요약한다. 현재는 서버 오류·도구 실패·승인 만료를 처리하는 상태 머신 라이브러리나 `failed` 복구 흐름이 없다. 대기 업무도 사용자 취소의 대상이 될 수 있다.
 
@@ -311,16 +260,7 @@ stateDiagram-v2
 
 ### 검사와 공개 배포
 
-```mermaid
-flowchart LR
-    PUSH["main push 또는 PR"] --> INSTALL["Node 24 / npm ci --ignore-scripts"]
-    INSTALL --> CHECK["문법 / 문서 링크 / 미디어 해시 / 도메인 13건 / Vite build"]
-    CHECK --> E2E["Chromium 시나리오 23건"]
-    E2E --> MAIN{"main push인가"}
-    MAIN -->|"예"| UPLOAD["dist 업로드"]
-    UPLOAD --> DEPLOY["GitHub Pages 배포"]
-    MAIN -->|"PR"| STOP["검증 완료"]
-```
+[![검사와 공개 배포](diagrams/architecture-5.png)](diagrams/architecture-5.svg)
 
 실제 설정은 [워크플로](../.github/workflows/verify-and-deploy.yml)에 있다. 수동 실행도 지원하며, 배포 단계는 `main`의 비-PR 실행에만 열린다. 검사 작업은 저장소 읽기 권한, 배포 작업만 Pages 쓰기와 OIDC 권한을 가진다. 외부 Actions는 커밋 SHA로 고정한다. 미디어는 매 CI마다 재녹화하지 않고 체크인된 파일의 해시를 확인한다.
 
@@ -340,26 +280,7 @@ flowchart LR
 
 초기 배포 설계는 웹/API와 실행 제어를 한 코드베이스·배포 단위에서 시작하고, 공용 PostgreSQL에 업무·대화·권한·실행 상태를 영속 보관하는 범위로 잡는다. Worker·Memory Service·Tool Broker는 우선 그 안의 모듈 책임이며, 필요가 확인될 때 프로세스나 서비스를 분리한다. 에이전트별 파일·자격증명과 개인 데이터의 범위는 유지한다.
 
-```mermaid
-flowchart TB
-    WEB["크루룸 데스크톱 웹"] --> API["크루룸 인증·권한 API"]
-    API --> CONTROL["제품 제어: Workspace / Agent / Task / Run / Skill"]
-    CONTROL <--> DB[("PostgreSQL: 기준 상태 / 메시지 / 권한 / 이벤트")]
-    CONTROL --> QUEUE["영속 작업 큐와 실행 점유"]
-    QUEUE --> WORKER["Worker: 임대 / generation / 복구"]
-    WORKER --> ADAPTER["Harness Adapter: 지원 기능과 native session 매핑"]
-    ADAPTER --> RUNTIME["격리된 Hermes PoC / Letta·OpenHands 비교"]
-    RUNTIME --> TOOL["Tool Broker: 계정 권한 / 승인 / 중복 방지 / 결과 대조"]
-    RUNTIME --> MEMORY["Memory Service: 범위 / 검색 / 컨텍스트 예산"]
-    API --> MEMORY
-    MEMORY <--> DB
-    MEMORY <--> FILE[("원문 / 결과물 / 불변 스킬 본문 저장소")]
-    CONTROL --> FILE
-    TOOL --> EXTERNAL["허용된 외부 서비스"]
-    TOOL --> DB
-    DB --> EVENTS["저장 이벤트와 상태 스냅샷"]
-    EVENTS -->|"권한 필터 후 SSE 또는 WebSocket"| WEB
-```
+[![11. 다음 단계의 서버 아키텍처 — 설계안](diagrams/architecture-6.png)](diagrams/architecture-6.svg)
 
 ### 제안하는 서버 기술 선택과 책임
 

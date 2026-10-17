@@ -1,0 +1,170 @@
+[
+  {
+    "id": "team-agents",
+    "document": "README.md",
+    "title": "만드는 이유",
+    "source": "source/team-agents.mmd"
+  },
+  {
+    "id": "task-lifecycle",
+    "document": "README.md",
+    "title": "함께 일하는 흐름",
+    "source": "source/task-lifecycle.mmd"
+  },
+  {
+    "id": "platform-architecture",
+    "document": "README.md",
+    "title": "구현 구조",
+    "source": "source/platform-architecture.mmd"
+  },
+  {
+    "id": "agent-context",
+    "document": "README.md",
+    "title": "기억·스킬·권한",
+    "source": "source/agent-context.mmd"
+  },
+  {
+    "id": "architecture-1",
+    "document": "docs/ARCHITECTURE.md",
+    "title": "2. 현재 실행 구조와 소스 지도",
+    "source": "source/architecture-1.mmd"
+  },
+  {
+    "id": "architecture-2",
+    "document": "docs/ARCHITECTURE.md",
+    "title": "3. 현재 데이터 모델",
+    "source": "source/architecture-2.mmd"
+  },
+  {
+    "id": "architecture-3",
+    "document": "docs/ARCHITECTURE.md",
+    "title": "입력과 렌더링",
+    "source": "source/architecture-3.mmd"
+  },
+  {
+    "id": "architecture-4",
+    "document": "docs/ARCHITECTURE.md",
+    "title": "일반 업무의 한 번의 흐름",
+    "source": "source/architecture-4.mmd"
+  },
+  {
+    "id": "architecture-5",
+    "document": "docs/ARCHITECTURE.md",
+    "title": "검사와 공개 배포",
+    "source": "source/architecture-5.mmd"
+  },
+  {
+    "id": "architecture-6",
+    "document": "docs/ARCHITECTURE.md",
+    "title": "11. 다음 단계의 서버 아키텍처 — 설계안",
+    "source": "source/architecture-6.mmd"
+  },
+  {
+    "id": "astra-product-ideas-1",
+    "document": "docs/ASTRA_PRODUCT_IDEAS.md",
+    "title": "1. 업무 대상을 넣으면 기존 업무와 담당을 안내한다",
+    "source": "source/astra-product-ideas-1.mmd"
+  },
+  {
+    "id": "astra-review-1",
+    "document": "docs/ASTRA_REVIEW.md",
+    "title": "1. 첫 업무의 인계 관계를 명시한다",
+    "source": "source/astra-review-1.mmd"
+  },
+  {
+    "id": "execution-architecture",
+    "document": "docs/CODE_EXECUTION.md",
+    "title": "전체 구조",
+    "source": "source/execution-architecture.mmd"
+  },
+  {
+    "id": "development-qa-sequence",
+    "document": "docs/CODE_EXECUTION.md",
+    "title": "실제 업무 흐름",
+    "source": "source/development-qa-sequence.mmd"
+  },
+  {
+    "id": "verification-gates",
+    "document": "docs/CODE_EXECUTION.md",
+    "title": "검사 결과를 믿는 기준",
+    "source": "source/verification-gates.mmd"
+  },
+  {
+    "id": "custom-endpoints",
+    "document": "docs/CONFIGURATION.md",
+    "title": "커스텀 모델·저장소 연결",
+    "source": "source/custom-endpoints.mmd"
+  },
+  {
+    "id": "deployment-1",
+    "document": "docs/DEPLOYMENT.md",
+    "title": "첫 배포의 기본 구성",
+    "source": "source/deployment-1.mmd"
+  },
+  {
+    "id": "design-implementation-1",
+    "document": "docs/DESIGN_IMPLEMENTATION.md",
+    "title": "사용자 여정과 화면",
+    "source": "source/design-implementation-1.mmd"
+  },
+  {
+    "id": "design-implementation-2",
+    "document": "docs/DESIGN_IMPLEMENTATION.md",
+    "title": "데이터와 기준 저장소",
+    "source": "source/design-implementation-2.mmd"
+  },
+  {
+    "id": "design-implementation-3",
+    "document": "docs/DESIGN_IMPLEMENTATION.md",
+    "title": "상태 소유와 전이",
+    "source": "source/design-implementation-3.mmd"
+  },
+  {
+    "id": "design-implementation-4",
+    "document": "docs/DESIGN_IMPLEMENTATION.md",
+    "title": "Run 격리와 기억",
+    "source": "source/design-implementation-4.mmd"
+  },
+  {
+    "id": "design-implementation-5",
+    "document": "docs/DESIGN_IMPLEMENTATION.md",
+    "title": "서버 배포와 복구의 확정 계약",
+    "source": "source/design-implementation-5.mmd"
+  },
+  {
+    "id": "open-source-code-research-1",
+    "document": "docs/OPEN_SOURCE_CODE_RESEARCH.md",
+    "title": "9. 크루룸에 제안하는 실제 구조",
+    "source": "source/open-source-code-research-1.mmd"
+  },
+  {
+    "id": "pilot-workflow",
+    "document": "docs/PILOT_GUIDE.md",
+    "title": "설정과 확인 순서",
+    "source": "source/pilot-workflow.mmd"
+  },
+  {
+    "id": "server-components",
+    "document": "docs/SERVER_ARCHITECTURE.md",
+    "title": "구성과 데이터 소유권",
+    "source": "source/server-components.mmd"
+  },
+  {
+    "id": "server-data-model",
+    "document": "docs/SERVER_ARCHITECTURE.md",
+    "title": "구성과 데이터 소유권",
+    "source": "source/server-data-model.mmd"
+  },
+  {
+    "id": "run-sequence",
+    "document": "docs/SERVER_ARCHITECTURE.md",
+    "title": "실행 계약",
+    "source": "source/run-sequence.mmd"
+  },
+  {
+    "id": "team-standardization-review-1",
+    "document": "docs/TEAM_STANDARDIZATION_REVIEW.md",
+    "title": "권장하는 최소 실행 계약",
+    "source": "source/team-standardization-review-1.mmd"
+  }
+]

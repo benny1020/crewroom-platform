@@ -1,0 +1,10 @@
+flowchart TB
+    PEOPLE["팀원 A · B"] --> ROOM["공유 업무방 · 같은 URL"]
+    ROOM --> TASK["Task · 대상 commit SHA"]
+    TASK --> REVIEW["검토 단계<br/>검토 Agent · Run"]
+    REVIEW --> ART["검토 산출물 v1<br/>근거 · 대상 SHA"]
+    ART --> QA["QA 단계<br/>QA Agent · 별도 Run"]
+    QA --> RESULT["QA 산출물 v1"]
+    RESULT --> CHECK{"완료 기준 확인"}
+    CHECK -->|"수용"| DONE["수용한 버전 기록 · 완료"]
+    CHECK -->|"재작업"| AGAIN["같은 Task의 새 Run<br/>이전 결과 보존"]

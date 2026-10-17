@@ -16,13 +16,7 @@ Crewroom 0.6은 공용·개인 에이전트, 공유 업무방, 기억·스킬 �
 
 ## 설정과 확인 순서
 
-```mermaid
-flowchart LR
-  CONFIG[모델·저장소 URL 설정] --> TASK[작은 실제 업무 실행]
-  TASK --> SHARE[동료에게 인계·결과 수용]
-  SHARE --> RECOVER[중단·재개·백업 복원]
-  RECOVER --> MEASURE[효용 확인·사용 범위 확대]
-```
+[![설정과 확인 순서](diagrams/pilot-workflow.png)](diagrams/pilot-workflow.svg)
 
 | 순서 | 담당 | 완료 증거 |
 | --- | --- | --- |

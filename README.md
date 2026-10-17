@@ -23,22 +23,7 @@ OpenAI 호환 또는 Claude Messages API의 **URL·모델 ID·인증 방식**을
 
 **설치마다 독립 워크스페이스 하나**를 제공합니다. 개인 서버·공유 서버·클라우드의 Docker 환경에 배포하고, 모델 endpoint와 GitLab 저장소는 운영자가 선택합니다. 팀 생성·조직 전환·결제·모바일은 범위에 포함하지 않습니다. 데스크톱 1440 / 1280 / 1024 화면을 검증합니다.
 
-```mermaid
-flowchart LR
-  TEAM[우리 팀] --> D[직속]
-  TEAM --> DEV[개발]
-  TEAM --> OPS[운영]
-  TEAM --> QA[QA]
-  D --> A[아리 · 총괄]
-  D --> S[솔 · 리서치]
-  DEV --> K[카이 · 개발]
-  DEV --> N[노아 · 리뷰]
-  OPS --> O[온 · 운영 점검]
-  OPS --> T[테오 · 배포 준비]
-  QA --> L[린 · QA]
-  QA --> J[제이 · 테스트 설계]
-  USER[각 구성원] --> P[본인 전용 비서]
-```
+[![만드는 이유](docs/diagrams/team-agents.png)](docs/diagrams/team-agents.svg)
 
 역할·캐릭터로 동료를 찾고, 대화창에서 적용한 스킬을 선택해 실행합니다. 개발 업무는 **고정 GitLab 커밋의 코드 수정 → 실제 검사 → 같은 patch의 독립 QA → 사람의 수용**을 지원합니다. [실행 구조·한도·프로젝트 이미지 설정](docs/CODE_EXECUTION.md)
 
@@ -50,19 +35,7 @@ flowchart LR
 4. 결과 버전을 고정해 QA 계획 또는 독립 실제 검사로 넘깁니다. 사람이 결과를 수용해야 완료됩니다.
 5. 수용한 결과의 형식·완료 기준을 다음 업무에 참고합니다. 이전 검증·승인은 복사하지 않습니다.
 
-```mermaid
-stateDiagram-v2
-  [*] --> queued: 업무 접수
-  queued --> running: 책임자 실행 · Worker 점유
-  running --> result_ready: 산출물 원자 저장
-  running --> paused: 일시정지
-  paused --> queued: 종료 확인 후 재개
-  running --> failed: 오류 · 임대 만료
-  failed --> queued: 필요한 운영 확인 후 새 실행
-  result_ready --> queued: 고정 결과로 다음 단계 인계
-  result_ready --> done: 사람의 최종 수용
-  done --> queued: 이유 · 대상 버전을 남겨 재작업
-```
+[![함께 일하는 흐름](docs/diagrams/task-lifecycle.png)](docs/diagrams/task-lifecycle.svg)
 
 결과에는 요약·근거·미확인 사항·다음 행동과 출처를 남깁니다. `result_ready`와 `done`을 구분하고, 외부에서 가져온 결과·테스트 fixture·모델 응답을 표시합니다.
 
@@ -76,23 +49,9 @@ stateDiagram-v2
 
 ## 구현 구조
 
-```mermaid
-flowchart TB
-  U[팀원 브라우저] -->|HTTPS| C[Caddy · 운영 배포]
-  C --> API[Fastify App · API]
-  API -->|세션 · ACL · 업무 변경| DB[(PostgreSQL 18)]
-  API -->|범위별 갱신 알림| SSE[SSE]
-  SSE --> U
-  W[상주 Node Worker] -->|같은 유일 큐 · 임대 · 세대| DB
-  W --> F[(Run별 고정 입력 파일)]
-  W -->|고정 SHA diff · 설정한 저장소| GH[GitHub API]
-  W -->|역할·스킬·실제 도구 결과| M[설정한 모델 API]
-  W -->|인증 HTTP| R[Runner broker · 유일 Docker socket]
-  R --> J[Run별 개발/QA 컨테이너 · network none]
-  J --> V[(크기 제한 workspace)]
-  DB --> B[AES-256-GCM 암호화 백업]
-  F --> B
-```
+[![구현 구조](docs/diagrams/platform-architecture.png)](docs/diagrams/platform-architecture.svg)
+
+그림을 누르면 확대할 수 있습니다. [아키텍처 그림 모음](docs/diagrams/README.md)에서 실행 흐름·DB 관계·개발/QA 격리 구조를 함께 볼 수 있습니다.
 
 | 구성   | 실제 구현                                                                                                                                   |
 | ------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -111,18 +70,7 @@ LangChain/LangGraph는 사용하지 않습니다. Paperclip 내부 큐를 별도
 
 ## 기억·스킬·권한
 
-```mermaid
-flowchart LR
-  R[요청자 · 업무 공개 범위] --> ACL[서버 접근 검사]
-  A[Agent ID · 적용 스킬 버전] --> PIN[불변 실행 문맥]
-  ACL --> MEM[해당 동료의 허용된 기억]
-  MEM --> PIN
-  CHAT[실행 시작 전 대화 · 현재 요약] --> PIN
-  ART[고정 입력 산출물 · 대상 버전] --> PIN
-  PIN --> MODEL[모델 호출]
-  MODEL --> OUT[새 결과 버전]
-  OUT --> HUMAN[사람의 수용]
-```
+[![기억·스킬·권한](docs/diagrams/agent-context.png)](docs/diagrams/agent-context.svg)
 
 - **나만 / 같은 부서 / 팀 공유**를 API·목록·상세·산출물·기억·SSE에서 검사합니다. 팀장도 다른 사람의 개인 비서 본문을 읽지 못합니다.
 - 기억은 동료별로 저장하고 출처·정정 이력을 남깁니다. 삭제한 기억은 새 검색·발송에서 제외합니다. 이미 저장한 실행 이력·백업까지 지워지는 것은 아닙니다.

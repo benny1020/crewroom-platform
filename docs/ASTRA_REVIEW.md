@@ -32,18 +32,7 @@
 
 **최소 보완 권고:** 첫 흐름에는 공유 Conversation 하나 → Task 하나 → 명시된 검토/QA 단계 → 단계별 Agent·Run·Artifact로 고정한다. 인계에는 입력 Artifact 버전, 대상 commit SHA, 다음 담당, 완료 조건을 남긴다. native session은 Task·단계·Agent·하네스에 연결하고 Agent가 바뀌면 이전 Agent의 세션을 그대로 재사용하지 않는다. 범용 워크플로 엔진은 필요하지 않다.
 
-```mermaid
-flowchart LR
-    PEOPLE["팀원 A · B"] --> ROOM["공유 업무방 · 같은 URL"]
-    ROOM --> TASK["Task · 대상 commit SHA"]
-    TASK --> REVIEW["검토 단계<br/>검토 Agent · Run"]
-    REVIEW --> ART["검토 산출물 v1<br/>근거 · 대상 SHA"]
-    ART --> QA["QA 단계<br/>QA Agent · 별도 Run"]
-    QA --> RESULT["QA 산출물 v1"]
-    RESULT --> CHECK{"완료 기준 확인"}
-    CHECK -->|"수용"| DONE["수용한 버전 기록 · 완료"]
-    CHECK -->|"재작업"| AGAIN["같은 Task의 새 Run<br/>이전 결과 보존"]
-```
+[![1. 첫 업무의 인계 관계를 명시한다](diagrams/astra-review-1.png)](diagrams/astra-review-1.svg)
 
 이 그림은 첫 검증 흐름에 대한 권고이며 현재 구현된 관계가 아니다.
 

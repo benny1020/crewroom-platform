@@ -1,0 +1,34 @@
+sequenceDiagram
+  actor H as 책임자
+  participant A as App/DB
+  participant W as Worker
+  participant M as 설정한 모델 endpoint
+  participant R as Runner
+  participant J as 개발 Job
+  participant Q as 새 QA Job
+  H->>A: 코드 수정·실제 QA 접수 (프로젝트 URL + 전체 SHA)
+  A->>A: 역할/스킬/기억/대화/실행 profile 고정
+  W->>A: claim · lease/generation
+  W->>W: GitLab 고정 SHA archive 검증
+  W->>R: Run/generation/profile + archive
+  R->>J: immutable image ID · 제한된 작업 공간 생성
+  loop 최대 30 행동
+    W->>M: 목표 + 지금까지의 실제 도구 결과
+    M-->>W: JSON 행동 1개
+    W->>A: 발송 intent 영속화 · 권한/lease 재확인
+    W->>R: list/read/write/등록 check ID
+    R->>J: 허용된 파일 작업 또는 등록 검사
+    J-->>R: 실제 결과/exit/log
+  R-->>W: 등록 행동의 실제 결과
+  end
+  R->>R: 최종 코드 hash · diff 재적용 검증 · 최신 검사 비교
+  R->>J: 종료 및 workspace 제거
+  W->>A: diff + 검사 receipt + 결과 버전 저장
+  H->>A: 고정 결과로 QA 인계 · 담당자 변경 가능
+  W->>R: QA 실행 요청 · 원본 SHA + 동일 patch
+  R->>Q: 새 격리 Job 생성 · 수정 API 금지
+  Q-->>R: 실제 검사 · 동일 patch hash
+  R->>Q: 종료 및 workspace 제거
+  R-->>W: QA 검사 receipt · 종료 확인
+  W->>A: QA 결과 버전 저장
+  H->>A: 결과 확인 후 최종 수용

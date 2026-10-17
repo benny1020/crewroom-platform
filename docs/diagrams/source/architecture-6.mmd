@@ -1,0 +1,18 @@
+flowchart TB
+    WEB["크루룸 데스크톱 웹"] --> API["크루룸 인증·권한 API"]
+    API --> CONTROL["제품 제어: Workspace / Agent / Task / Run / Skill"]
+    CONTROL <--> DB[("PostgreSQL: 기준 상태 / 메시지 / 권한 / 이벤트")]
+    CONTROL --> QUEUE["영속 작업 큐와 실행 점유"]
+    QUEUE --> WORKER["Worker: 임대 / generation / 복구"]
+    WORKER --> ADAPTER["Harness Adapter: 지원 기능과 native session 매핑"]
+    ADAPTER --> RUNTIME["격리된 Hermes PoC / Letta·OpenHands 비교"]
+    RUNTIME --> TOOL["Tool Broker: 계정 권한 / 승인 / 중복 방지 / 결과 대조"]
+    RUNTIME --> MEMORY["Memory Service: 범위 / 검색 / 컨텍스트 예산"]
+    API --> MEMORY
+    MEMORY <--> DB
+    MEMORY <--> FILE[("원문 / 결과물 / 불변 스킬 본문 저장소")]
+    CONTROL --> FILE
+    TOOL --> EXTERNAL["허용된 외부 서비스"]
+    TOOL --> DB
+    DB --> EVENTS["저장 이벤트와 상태 스냅샷"]
+    EVENTS -->|"권한 필터 후 SSE 또는 WebSocket"| WEB

@@ -49,19 +49,7 @@
 
 ## 사용자 여정과 화면
 
-```mermaid
-flowchart LR
-  Office["부서별 오피스<br/>담당 · 작업 상태 · 다음 행동"] --> Intake["대상 중심 접수<br/>목적 · SHA · 공개 범위"]
-  Personal["개인 도구의 결과"] --> Import["선택한 텍스트와 출처만<br/>공유 전 미리보기"]
-  Intake --> Related["접근 가능한 관련 업무<br/>이어가기 또는 새 업무"]
-  Related --> Room["업무방 하나<br/>책임자 · 요약 · 근거 · 대화"]
-  Import --> Room
-  Room --> Review["검토 결과 버전"] --> QA["같은 SHA로 QA 인계"]
-  QA --> Human{"사람의 결과 판단"}
-  Human -->|수용| Reuse["완료 · 좋은 결과 재사용"]
-  Human -->|재작업| Room
-  Reuse --> Intake
-```
+[![사용자 여정과 화면](diagrams/design-implementation-1.png)](diagrams/design-implementation-1.svg)
 
 - 오피스: 캐릭터와 네 부서 배치를 유지한다. 상단 접수대에서 새 업무/외부 결과를 시작한다. 최근 공유 업무 행에는 책임자·대상 버전·다음 행동을 표시한다. 모션은 관측한 목업 상태를 표현하며 중지할 수 있다.
 - 접수: PR 검토→QA, PR 검토, 운영 점검 세 기본 경로. 사용자에게 하네스나 모델을 먼저 고르게 하지 않는다. 동일 대상의 업무도 목적·버전·공개 범위를 확인하고 직접 선택한다.
@@ -75,25 +63,7 @@ flowchart LR
 
 아래는 **서버 구현 계약**이다. 목업은 같은 개념을 localStorage 배열로 표현한다. Paperclip 채택은 아직 PoC 결정이며, 구현 검증 없이 기존 코드가 이 구조를 지원한다고 가정하지 않는다.
 
-```mermaid
-erDiagram
-  MEMBER ||--o{ TASK : requests
-  MEMBER ||--o{ TASK : responsible
-  TASK ||--|| CONVERSATION : has
-  CONVERSATION ||--o{ MESSAGE : contains
-  TASK ||--|{ STEP : sequences
-  AGENT ||--o{ STEP : assigned
-  STEP ||--o{ RUN : attempts
-  RUN ||--o{ ARTIFACT : creates
-  STEP }o--o| ARTIFACT : input_version
-  TASK ||--o{ BRIEF_REVISION : summarizes
-  ARTIFACT ||--o{ ACCEPTANCE : judged
-  AGENT ||--o{ SKILL_BINDING : pins
-  SKILL_VERSION ||--o{ SKILL_BINDING : immutable
-  AGENT ||--o{ MEMORY : owns
-  TASK ||--o{ MEMORY : source_scope
-  MEMBER ||--o{ RESOURCE_GRANT : permitted
-```
+[![데이터와 기준 저장소](diagrams/design-implementation-2.png)](diagrams/design-implementation-2.svg)
 
 | 대상               | 서버의 단일 기준                  | Crewroom 확장                                                          |
 | ------------------ | --------------------------------- | ---------------------------------------------------------------------- |
@@ -111,20 +81,7 @@ Paperclip의 특수 `conversationAgentId/conversationUserId` 필드는 사용하
 
 ### 상태 소유와 전이
 
-```mermaid
-stateDiagram-v2
-  [*] --> Queued: 접수
-  Queued --> Running: 실행 점유 + 불변 묶음
-  Running --> Paused: 입력 대기 또는 재시작
-  Paused --> Running: 임대 재확인 + 같은 묶음
-  Running --> ResultReady: 산출물 저장
-  ResultReady --> Queued: 다음 단계 인계
-  ResultReady --> Accepted: 최종 결과를 책임자가 수용
-  ResultReady --> Queued: 재작업
-  Accepted --> Queued: 재작업 / 대상 revision 변경
-  Running --> Cancelled: 중단
-  Cancelled --> Queued: 새 실행 요청
-```
+[![상태 소유와 전이](diagrams/design-implementation-3.png)](diagrams/design-implementation-3.svg)
 
 | 제품 상태           | issue 기준 상태 | 파생 근거                             |
 | ------------------- | --------------- | ------------------------------------- |
@@ -158,17 +115,7 @@ stateDiagram-v2
 
 ## Run 격리와 기억
 
-```mermaid
-flowchart TB
-  Agent["영속 Agent 정체성<br/>부서 · 설정 · 스킬 binding"] --> Pin["Run 시작: 불변 묶음 고정<br/>스킬 본문/해시 · 설정 · 정책 · 출력 형식"]
-  ACL["현재 사용자·업무 공개 범위"] --> Retrieval["권한 필터 후 관련 기억 검색"]
-  Retrieval --> Pin
-  Pin --> Run["Run 전용 환경<br/>read-only bundle + writable HOME/workspace"]
-  Run --> API["필요할 때 모델 API 호출"]
-  Run --> Broker["허가된 도구 broker"]
-  Run --> Result["산출물 · 세션 · checkpoint"]
-  Result --> Store["제품 원문/메타데이터 저장소"]
-```
+[![Run 격리와 기억](diagrams/design-implementation-4.png)](diagrams/design-implementation-4.svg)
 
 Agent별 상시 컨테이너 8개가 필수인 구조가 아니다. DB에 정체성을 유지하고 일이 있을 때 Worker가 Run 전용 환경을 만든다. 모델은 준비한 컨텍스트로 API를 호출하고 도구 루프를 이어간다. Docker는 실행 격리 수단이고 영속 기억 자체는 아니다.
 
@@ -182,23 +129,7 @@ Run 묶음에는 Agent 설정 revision, 모델/하네스 버전, 스킬 본문�
 
 ## 서버 배포와 복구의 확정 계약
 
-```mermaid
-flowchart LR
-  Browser["팀원의 데스크톱 웹"] -->|HTTPS| Proxy["Caddy"]
-  subgraph Host["Linux 호스트 · Docker Compose"]
-    Proxy --> App["App/API<br/>인증 · 명령 · 조회 · SSE"]
-    App --> DB[("PostgreSQL<br/>유일한 업무/실행 저장소")]
-    Worker["Worker<br/>기존 큐·임대·재시도"] --> DB
-    Worker --> Manager["실행 관리자<br/>허용 이미지·마운트·자원 한도"]
-    Manager --> Env["Run별 격리 환경<br/>하네스 + 모델/도구 루프"]
-    Env --> Broker["도구·모델 gateway<br/>발송 시 권한/세대 검사"]
-    App --> Files[("영속 원문·결과·스킬·세션")]
-    Env --> Files
-  end
-  Broker --> External["허용된 외부 API"]
-  DB --> Backup["암호화된 호스트 외부 백업"]
-  Files --> Backup
-```
+[![서버 배포와 복구의 확정 계약](diagrams/design-implementation-5.png)](diagrams/design-implementation-5.svg)
 
 App/Worker는 같은 릴리스의 논리 모듈을 별도 프로세스로 실행한다. 기존 Paperclip의 Worker 분리 가능성은 PoC에서 확인한다. 실행 관리자는 제한된 RPC를 받는 별도 권한 프로세스이며 App·Worker·하네스에 Docker 소켓을 전달하지 않는다. 초기 구현 산출물은 `compose.yaml`, 이미지, 마이그레이션, 설정 명세, health/readiness, 백업/복원 명령이 필요하다. **이 저장소에는 아직 존재하지 않는다.**
 
