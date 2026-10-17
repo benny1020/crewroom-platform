@@ -1,0 +1,16 @@
+{
+  "checks": [
+    {
+      "id": "test",
+      "label": "등록된 단위 검사",
+      "argv": ["node", "--test"],
+      "timeoutMs": 60000
+    }
+  ],
+  "preparedDependencies": false,
+  "expectedLocks": {},
+  "ignore": ["node_modules", "coverage", ".cache"],
+  "memory": "512m",
+  "cpus": "1",
+  "workspaceMb": 256
+}

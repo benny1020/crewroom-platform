@@ -1,0 +1,11 @@
+.git
+.local
+.capture
+node_modules
+dist
+test-results
+playwright-report
+docs/media
+docs/research
+.env*
+**/*.log

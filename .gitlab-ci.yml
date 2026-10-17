@@ -1,0 +1,20 @@
+# Override image variables and the npm registry for your CI environment.
+# This baseline uses local fixtures and does not call remote models or repositories.
+variables:
+  CREWROOM_NODE_IMAGE: node:24-bookworm
+  CREWROOM_POSTGRES_IMAGE: postgres:18-alpine
+  POSTGRES_USER: crewroom
+  POSTGRES_DB: crewroom
+  POSTGRES_PASSWORD: test-only-ci-password
+  TEST_DATABASE_URL: postgresql://crewroom:test-only-ci-password@db:5432/crewroom
+stages: [verify]
+verify:
+  stage: verify
+  image: $CREWROOM_NODE_IMAGE
+  services:
+    - name: $CREWROOM_POSTGRES_IMAGE
+      alias: db
+  script:
+    - npm ci --ignore-scripts
+    - npm run check
+    - npm run test:server

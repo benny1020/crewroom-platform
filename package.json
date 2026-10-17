@@ -1,0 +1,46 @@
+{
+  "name": "crewroom",
+  "version": "0.6.0",
+  "private": true,
+  "type": "module",
+  "description": "Crewroom — shared agents, durable team workrooms, skills and scoped memory.",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "node --test tests/*.test.js",
+    "test:e2e": "playwright test",
+    "capture": "node scripts/capture.mjs",
+    "research:fetch": "node scripts/fetch-research.mjs",
+    "check": "node scripts/check-source.mjs && node scripts/validate-docs.mjs && npm test && npm run build",
+    "server": "node server/index.js",
+    "migrate": "node server/cli.js migrate",
+    "worker": "node server/worker.js",
+    "test:server": "node --test --test-concurrency=1 tests/server/*.test.js",
+    "test:server:e2e": "playwright test --config playwright.server.config.js",
+    "secrets:init": "node scripts/init-secrets.mjs",
+    "backup": "node scripts/backup.mjs",
+    "restore": "node scripts/restore.mjs",
+    "test:restore": "node scripts/verify-restore.mjs",
+    "capture:server": "node scripts/capture-server.mjs",
+    "export:source": "node scripts/export-source.mjs",
+    "test:runner": "node --test tests/runner-docker.test.mjs",
+    "test:execution": "TEST_RUNNER_DOCKER=1 node --test tests/server/execution.test.js",
+    "doctor": "node scripts/doctor.mjs",
+    "test:secrets": "node scripts/verify-secret-ownership.mjs"
+  },
+  "dependencies": {
+    "fastify": "5.12.7",
+    "lucide": "1.57.0",
+    "pg": "8.23.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "prettier": "3.9.10",
+    "vite": "8.3.4"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}

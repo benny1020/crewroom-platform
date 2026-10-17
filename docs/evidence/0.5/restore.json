@@ -1,0 +1,14 @@
+{
+  "date": "2026-10-17T04:28:07.854Z",
+  "release": "0.5.0",
+  "elapsedSeconds": 32,
+  "checks": [
+    "DB Task/Artifact hashes/Memory identical",
+    "immutable runtime input file SHA-256 identical",
+    "old sessions revoked",
+    "unfinished Run quarantined",
+    "runtime extraction failure keeps restore blocked",
+    "incomplete restore rejects App and Worker startup"
+  ],
+  "actualExternalModelCalls": 0
+}

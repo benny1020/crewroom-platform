@@ -1,0 +1,25 @@
+{
+  "date": "2026-10-17T04:28:52.812Z",
+  "release": "0.5.0",
+  "local": {
+    "unit": 24,
+    "postgresIntegration": 21,
+    "staticBrowser": 31,
+    "serverBrowser": 9,
+    "total": 85
+  },
+  "docker": {
+    "appReady": true,
+    "workerReady": true,
+    "postgresMajor": 18,
+    "restore": "restore.json"
+  },
+  "publicGitHubInput": "github-input.json",
+  "externalModelInferenceVerified": false,
+  "productionHostVerified": false,
+  "review": {
+    "astra": "no remaining blocker in reviewed scope",
+    "runtime": "two independently reproduced regressions re-run and passed",
+    "deployment": "restore quarantine and startup checks approved; file preservation drill added"
+  }
+}

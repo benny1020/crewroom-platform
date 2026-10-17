@@ -1,0 +1,120 @@
+{
+  "capturedAt": "2026-10-17T01:57:45.157Z",
+  "source": "Production Vite build rendered in Chromium; real UI actions",
+  "viewport": {
+    "width": 1440,
+    "height": 1080
+  },
+  "gif": {
+    "width": 1200,
+    "fps": 12
+  },
+  "scenario": [
+    "Office activity",
+    "Target-first intake with pinned SHA",
+    "Review artifact and hand off to QA in one task",
+    "Inspect result",
+    "Accept a specific simulation artifact version",
+    "Request lead role, then switch to existing lead for administration",
+    "Inspect team administration and member departments",
+    "Switch to a member workspace and personal assistant"
+  ],
+  "pageErrors": [],
+  "files": [
+    {
+      "name": "office.png",
+      "bytes": 267850,
+      "sha256": "3681613bbe915da03b09883751c8fbf8d1327749a924064df1a6a48acc7865ce"
+    },
+    {
+      "name": "intake.png",
+      "bytes": 171124,
+      "sha256": "abf1241002475f21887eb8fe6a647a671906ddc2591e4127745419d5e0d97d8a"
+    },
+    {
+      "name": "work-brief.png",
+      "bytes": 213946,
+      "sha256": "3ac3a20b14f67d768807e36940fecfccaf372307c47d8890ab1697ea699f2ab0"
+    },
+    {
+      "name": "artifacts.png",
+      "bytes": 226585,
+      "sha256": "28ad524e06a8ca93917f161e897935f6c80df5769fb95c444a6614924bfc5ce3"
+    },
+    {
+      "name": "import-result.png",
+      "bytes": 158235,
+      "sha256": "20b8e0f5312b1e5246018bb4a34e78dd1da25220090568128d92cc330049a60d"
+    },
+    {
+      "name": "skill-stewards.png",
+      "bytes": 129258,
+      "sha256": "09c91136b745ad9239a7dd83a886af01c2ae790885b689a3fee21cb89af1a62e"
+    },
+    {
+      "name": "conversations.png",
+      "bytes": 171877,
+      "sha256": "4676c0b696bbcc2e9514f5c99482e5ff9b71527886ad50db0430e723dadb9020"
+    },
+    {
+      "name": "sharing.png",
+      "bytes": 189933,
+      "sha256": "cb70aa075de530633636c20ca0490365867a439e28e288ed0b20b7f31b6012ec"
+    },
+    {
+      "name": "skills.png",
+      "bytes": 166099,
+      "sha256": "dc988f1d4491e88048054ea6f25d4a91b4f315303d6738321c63964e095dedf8"
+    },
+    {
+      "name": "execution.png",
+      "bytes": 185720,
+      "sha256": "50c37db09b81d86ba320b59efca04beed6febf3761d6369284e5f37c96e5d35b"
+    },
+    {
+      "name": "memory.png",
+      "bytes": 178782,
+      "sha256": "9a8ab761a56e039836ad3697619b51d41e929df0acd3266da835a930c115718c"
+    },
+    {
+      "name": "personal-assistant.png",
+      "bytes": 221637,
+      "sha256": "a16150a99144c3bd94fdeeba9a11acd41b326f896c992a7b8bf00275a820ee46"
+    },
+    {
+      "name": "office.gif",
+      "bytes": 4722228,
+      "sha256": "d3a6f067d1fbe68feeed29bd83a3bf31deba9afedecb5afcddebaee37ab2de88"
+    },
+    {
+      "name": "workflow.gif",
+      "bytes": 10130747,
+      "sha256": "5c80783f987d217db9e0aacbc1386bf1a5f2a268da5ab58d98802708581fd3bf"
+    },
+    {
+      "name": "signup.png",
+      "bytes": 125345,
+      "sha256": "7de2dc070f80fa3c21749f0e5dd46003266f5d7a5e25237999a1e5ebcbcea4d3"
+    },
+    {
+      "name": "member-workspace.png",
+      "bytes": 172934,
+      "sha256": "2c1449808c355603f9e95695c31482c939b92bc549687aa9d06a9b5726ef749b"
+    },
+    {
+      "name": "team-admin.png",
+      "bytes": 199569,
+      "sha256": "febffe8f931d4d0b172f269131c5823fe4a62be283a8bbc9163a43e6bfd23dbf"
+    },
+    {
+      "name": "team-members.png",
+      "bytes": 150982,
+      "sha256": "661b95ace76cb2493c42ef1911faa4ddeee35cd8e115f705c74282838523378b"
+    },
+    {
+      "name": "roles.gif",
+      "bytes": 7230139,
+      "sha256": "b107874a0a64ac8874bbae1c1fe07ed8594c836c597763c76a762de3c0e5a976"
+    }
+  ]
+}

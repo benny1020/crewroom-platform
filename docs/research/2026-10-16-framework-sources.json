@@ -1,0 +1,2109 @@
+{
+  "checked_date": "2026-10-16",
+  "scope": "read-only public repository metadata and file tree; not runtime benchmarks",
+  "repositories": [
+    {
+      "repo": "NousResearch/hermes-agent",
+      "branch": "main",
+      "sha": "7bf3766f3db72d4643d1a78d18e51c1d9ddf1d6d",
+      "commit_date": "2026-10-15T15:00:38Z",
+      "archived": false,
+      "license": "MIT",
+      "tree_truncated": false,
+      "candidate_paths": [
+        "SECURITY.es.md",
+        "SECURITY.md",
+        "acp_adapter/gateway_session_meta.py",
+        "acp_adapter/session.py",
+        "agent/browser_provider.py",
+        "agent/credential_persistence.py",
+        "agent/image_gen_provider.py",
+        "agent/memory_manager.py",
+        "agent/memory_provider.py",
+        "agent/persisted_turn_receipt.py",
+        "agent/provider_base.py",
+        "agent/provider_media.py",
+        "agent/provider_projection.py",
+        "agent/provider_registry.py",
+        "agent/runtime_session_compression.py",
+        "agent/runtime_session_lifecycle.py",
+        "agent/runtime_session_store.py",
+        "agent/session_activity.py",
+        "agent/session_persistence.py",
+        "agent/session_source.py",
+        "agent/terminal_env_provider.py",
+        "agent/transcription_provider.py",
+        "agent/transports/codex_app_server.py",
+        "agent/transports/codex_app_server_session.py",
+        "agent/tts_provider.py",
+        "agent/video_gen_provider.py",
+        "agent/web_search_provider.py",
+        "apps/desktop/e2e/core/harness.ts",
+        "apps/desktop/e2e/core/provider.ts",
+        "apps/desktop/e2e/correction-session-switch.spec.ts",
+        "apps/desktop/e2e/large-session-resume.spec.ts",
+        "apps/desktop/e2e/provider-setup-owner.spec.ts",
+        "apps/desktop/e2e/real-session-builder.ts",
+        "apps/desktop/e2e/session-compression-and-queue-stop.spec.ts",
+        "apps/desktop/e2e/update/harness.ts",
+        "apps/desktop/e2e/visual-snapshot.ts",
+        "apps/desktop/electron/cloud-session-recovery.test.ts",
+        "apps/desktop/electron/cloud-session-recovery.ts",
+        "apps/desktop/electron/fetch-json-oauth-session.test.ts",
+        "apps/desktop/electron/oauth-session-response.ts",
+        "apps/desktop/electron/portal-session-live-fixture/main.ts",
+        "apps/desktop/electron/portal-session-live.test.ts",
+        "apps/desktop/electron/portal-session.test.ts",
+        "apps/desktop/electron/portal-session.ts",
+        "apps/desktop/electron/profile-session-routing.test.ts",
+        "apps/desktop/electron/profile-session-routing.ts",
+        "apps/desktop/electron/remote-session-cookies.test.ts",
+        "apps/desktop/electron/remote-session-cookies.ts",
+        "apps/desktop/electron/session-windows.test.ts",
+        "apps/desktop/electron/session-windows.ts",
+        "apps/desktop/src/api/canonical-session-updated-revision.test.ts",
+        "apps/desktop/src/api/session-http-mutation-identity.test.ts",
+        "apps/desktop/src/api/session-transcript-paging.test.ts",
+        "apps/desktop/src/api/sessions-mutations.test.ts",
+        "apps/desktop/src/api/sessions.test.ts",
+        "apps/desktop/src/api/sessions.ts",
+        "apps/desktop/src/app/capabilities/connectors/data/persist.ts",
+        "apps/desktop/src/app/chat/composer/status-stack/session-control-utils.ts",
+        "apps/desktop/src/app/chat/composer/status-stack/use-subagent-snapshot.ts",
+        "apps/desktop/src/app/chat/new-session-drag.test.ts",
+        "apps/desktop/src/app/chat/new-session-drag.ts",
+        "apps/desktop/src/app/chat/preview-session-focus.test.ts",
+        "apps/desktop/src/app/chat/route-session-state.test.ts",
+        "apps/desktop/src/app/chat/route-session-state.ts",
+        "apps/desktop/src/app/chat/session-drag.test.ts",
+        "apps/desktop/src/app/chat/session-drag.ts",
+        "apps/desktop/src/app/chat/session-tile-actions.test.ts",
+        "apps/desktop/src/app/chat/session-tile-actions.ts",
+        "apps/desktop/src/app/chat/session-tile-owner.test.ts",
+        "apps/desktop/src/app/chat/session-tile-owner.ts",
+        "apps/desktop/src/app/chat/session-tile-row.test.ts",
+        "apps/desktop/src/app/chat/session-tile-slice-title.test.ts",
+        "apps/desktop/src/app/chat/session-tile.test.ts",
+        "apps/desktop/src/app/chat/session-view.test.ts",
+        "apps/desktop/src/app/chat/sidebar/search-result-to-session.test.ts",
+        "apps/desktop/src/app/chat/sidebar/session-actions-menu.test.ts",
+        "apps/desktop/src/app/chat/sidebar/session-index.test.ts",
+        "apps/desktop/src/app/chat/sidebar/session-index.ts",
+        "apps/desktop/src/app/chat/sidebar/session-row-details.test.ts",
+        "apps/desktop/src/app/chat/sidebar/session-row-details.ts",
+        "apps/desktop/src/app/chat/sidebar/session-row-gesture.test.ts",
+        "apps/desktop/src/app/chat/sidebar/session-row-gesture.ts",
+        "apps/desktop/src/app/chat/sidebar/use-entered-project-sessions.test.ts",
+        "apps/desktop/src/app/chat/sidebar/use-entered-project-sessions.ts",
+        "apps/desktop/src/app/chat/sidebar/use-server-session-search.ts",
+        "apps/desktop/src/app/contrib/hooks/remembered-session.test.ts",
+        "apps/desktop/src/app/contrib/hooks/remembered-session.ts",
+        "apps/desktop/src/app/contrib/hooks/use-session-tile-delegate.test.ts",
+        "apps/desktop/src/app/contrib/hooks/use-session-tile-delegate.ts",
+        "apps/desktop/src/app/contrib/session-rpc-dispatcher.test.ts",
+        "apps/desktop/src/app/contrib/session-rpc-dispatcher.ts",
+        "apps/desktop/src/app/open-session.test.ts",
+        "apps/desktop/src/app/open-session.ts",
+        "apps/desktop/src/app/right-sidebar/terminal/use-terminal-session.ts",
+        "apps/desktop/src/app/session-import/api.ts",
+        "apps/desktop/src/app/session/hooks/branch-owner-routing.integration.test.ts",
+        "apps/desktop/src/app/session/hooks/session-context-drift.test.ts",
+        "apps/desktop/src/app/session/hooks/session-context-drift.ts",
+        "apps/desktop/src/app/session/hooks/use-background-queue-drain.ts",
+        "apps/desktop/src/app/session/hooks/use-busy-input-mode.ts",
+        "apps/desktop/src/app/session/hooks/use-context-suggestions.ts",
+        "apps/desktop/src/app/session/hooks/use-cwd-actions.ts",
+        "apps/desktop/src/app/session/hooks/use-hermes-config.test.ts",
+        "apps/desktop/src/app/session/hooks/use-hermes-config.ts",
+        "apps/desktop/src/app/session/hooks/use-message-stream/collapse-duplicate-final.ts",
+        "apps/desktop/src/app/session/hooks/use-message-stream/gateway-event/desktop-bridge.reaction.test.ts",
+        "apps/desktop/src/app/session/hooks/use-message-stream/gateway-event/desktop-bridge.test.ts",
+        "apps/desktop/src/app/session/hooks/use-message-stream/gateway-event/desktop-bridge.ts",
+        "apps/desktop/src/app/session/hooks/use-message-stream/gateway-event/fallback-switch.test.ts",
+        "apps/desktop/src/app/session/hooks/use-message-stream/gateway-event/free-tier.ts"
+      ],
+      "manifest_paths": [
+        "LICENSE",
+        "README.md",
+        "apps/bootstrap-installer/package.json",
+        "apps/desktop/README.md",
+        "apps/desktop/package.json",
+        "apps/shared/package.json",
+        "contributors/README.md",
+        "evals/botmode-dm-delivery/README.md",
+        "evals/botmode-dm-matrix/README.md",
+        "evals/browser_use/README.md",
+        "evals/codebase_navigability/README.md",
+        "evals/codex_echo/README.md",
+        "evals/compaction/README.md",
+        "evals/core_tool_deferral/README.md",
+        "evals/delegation_group_schema/README.md",
+        "evals/desktop-pane-fixture/README.md",
+        "evals/desktop_bug_campaign/async-report-README.md",
+        "evals/desktop_bug_campaign/markdown-README.md"
+      ]
+    },
+    {
+      "repo": "crewAIInc/crewAI",
+      "branch": "main",
+      "sha": "3da2d4e9932b5f2fa9aa73ea9245e0f8b5c154f8",
+      "commit_date": "2026-10-15T04:30:00Z",
+      "archived": false,
+      "license": "MIT",
+      "tree_truncated": false,
+      "candidate_paths": [
+        ".github/security.md",
+        "lib/cli/src/crewai_cli/authentication/providers/__init__.py",
+        "lib/cli/src/crewai_cli/authentication/providers/auth0.py",
+        "lib/cli/src/crewai_cli/authentication/providers/base_provider.py",
+        "lib/cli/src/crewai_cli/authentication/providers/entra_id.py",
+        "lib/cli/src/crewai_cli/authentication/providers/keycloak.py",
+        "lib/cli/src/crewai_cli/authentication/providers/okta.py",
+        "lib/cli/src/crewai_cli/authentication/providers/workos.py",
+        "lib/cli/src/crewai_cli/checkpoint_cli.py",
+        "lib/cli/src/crewai_cli/checkpoint_tui.py",
+        "lib/cli/src/crewai_cli/memory_tui.py",
+        "lib/cli/src/crewai_cli/provider.py",
+        "lib/cli/tests/authentication/providers/__init__.py",
+        "lib/cli/tests/authentication/providers/test_auth0.py",
+        "lib/cli/tests/authentication/providers/test_entra_id.py",
+        "lib/cli/tests/authentication/providers/test_keycloak.py",
+        "lib/cli/tests/authentication/providers/test_okta.py",
+        "lib/cli/tests/authentication/providers/test_workos.py",
+        "lib/cli/tests/test_checkpoint_telemetry.py",
+        "lib/cli/tests/test_trace_consent_session.py",
+        "lib/crewai-core/src/crewai_core/auth/providers/__init__.py",
+        "lib/crewai-core/src/crewai_core/auth/providers/auth0.py",
+        "lib/crewai-core/src/crewai_core/auth/providers/base_provider.py",
+        "lib/crewai-core/src/crewai_core/auth/providers/entra_id.py",
+        "lib/crewai-core/src/crewai_core/auth/providers/keycloak.py",
+        "lib/crewai-core/src/crewai_core/auth/providers/okta.py",
+        "lib/crewai-core/src/crewai_core/auth/providers/workos.py",
+        "lib/crewai-tools/src/crewai_tools/aws/bedrock/browser/browser_session_manager.py",
+        "lib/crewai-tools/src/crewai_tools/security/__init__.py",
+        "lib/crewai-tools/src/crewai_tools/security/safe_path.py",
+        "lib/crewai-tools/src/crewai_tools/security/safe_requests.py",
+        "lib/crewai-tools/src/crewai_tools/security/ssrf_adapter.py",
+        "lib/crewai-tools/tests/tools/test_nl2sql_security.py",
+        "lib/crewai/src/crewai/auth/providers/__init__.py",
+        "lib/crewai/src/crewai/auth/providers/auth0.py",
+        "lib/crewai/src/crewai/auth/providers/base_provider.py",
+        "lib/crewai/src/crewai/auth/providers/entra_id.py",
+        "lib/crewai/src/crewai/auth/providers/keycloak.py",
+        "lib/crewai/src/crewai/auth/providers/okta.py",
+        "lib/crewai/src/crewai/auth/providers/workos.py",
+        "lib/crewai/src/crewai/core/providers/__init__.py",
+        "lib/crewai/src/crewai/core/providers/content_processor.py",
+        "lib/crewai/src/crewai/core/providers/human_input.py",
+        "lib/crewai/src/crewai/events/types/checkpoint_events.py",
+        "lib/crewai/src/crewai/events/types/memory_events.py",
+        "lib/crewai/src/crewai/flow/async_feedback/providers.py",
+        "lib/crewai/src/crewai/flow/input_provider.py",
+        "lib/crewai/src/crewai/flow/persistence/__init__.py",
+        "lib/crewai/src/crewai/flow/persistence/base.py",
+        "lib/crewai/src/crewai/flow/persistence/decorators.py",
+        "lib/crewai/src/crewai/flow/persistence/factory.py",
+        "lib/crewai/src/crewai/flow/persistence/sqlite.py",
+        "lib/crewai/src/crewai/llms/providers/__init__.py",
+        "lib/crewai/src/crewai/llms/providers/anthropic/__init__.py",
+        "lib/crewai/src/crewai/llms/providers/anthropic/completion.py",
+        "lib/crewai/src/crewai/llms/providers/azure/__init__.py",
+        "lib/crewai/src/crewai/llms/providers/azure/completion.py",
+        "lib/crewai/src/crewai/llms/providers/bedrock/__init__.py",
+        "lib/crewai/src/crewai/llms/providers/bedrock/completion.py",
+        "lib/crewai/src/crewai/llms/providers/gemini/__init__.py",
+        "lib/crewai/src/crewai/llms/providers/gemini/completion.py",
+        "lib/crewai/src/crewai/llms/providers/openai/__init__.py",
+        "lib/crewai/src/crewai/llms/providers/openai/completion.py",
+        "lib/crewai/src/crewai/llms/providers/openai_compatible/__init__.py",
+        "lib/crewai/src/crewai/llms/providers/openai_compatible/completion.py",
+        "lib/crewai/src/crewai/llms/providers/snowflake/__init__.py",
+        "lib/crewai/src/crewai/llms/providers/snowflake/completion.py",
+        "lib/crewai/src/crewai/llms/providers/utils/__init__.py",
+        "lib/crewai/src/crewai/llms/providers/utils/common.py",
+        "lib/crewai/src/crewai/memory/__init__.py",
+        "lib/crewai/src/crewai/memory/analyze.py",
+        "lib/crewai/src/crewai/memory/encoding_flow.py",
+        "lib/crewai/src/crewai/memory/memory_scope.py",
+        "lib/crewai/src/crewai/memory/recall_flow.py",
+        "lib/crewai/src/crewai/memory/storage/__init__.py",
+        "lib/crewai/src/crewai/memory/storage/backend.py",
+        "lib/crewai/src/crewai/memory/storage/factory.py",
+        "lib/crewai/src/crewai/memory/storage/kickoff_task_outputs_storage.py",
+        "lib/crewai/src/crewai/memory/storage/lancedb_storage.py",
+        "lib/crewai/src/crewai/memory/storage/qdrant_edge_storage.py",
+        "lib/crewai/src/crewai/memory/types.py",
+        "lib/crewai/src/crewai/memory/unified_memory.py",
+        "lib/crewai/src/crewai/memory/utils.py",
+        "lib/crewai/src/crewai/rag/config/optional_imports/providers.py",
+        "lib/crewai/src/crewai/rag/core/base_embeddings_provider.py",
+        "lib/crewai/src/crewai/rag/embeddings/providers/__init__.py",
+        "lib/crewai/src/crewai/rag/embeddings/providers/aws/__init__.py",
+        "lib/crewai/src/crewai/rag/embeddings/providers/aws/bedrock.py",
+        "lib/crewai/src/crewai/rag/embeddings/providers/aws/types.py",
+        "lib/crewai/src/crewai/rag/embeddings/providers/cohere/__init__.py",
+        "lib/crewai/src/crewai/rag/embeddings/providers/cohere/cohere_provider.py",
+        "lib/crewai/src/crewai/rag/embeddings/providers/cohere/types.py",
+        "lib/crewai/src/crewai/rag/embeddings/providers/custom/__init__.py",
+        "lib/crewai/src/crewai/rag/embeddings/providers/custom/custom_provider.py",
+        "lib/crewai/src/crewai/rag/embeddings/providers/custom/embedding_callable.py",
+        "lib/crewai/src/crewai/rag/embeddings/providers/custom/types.py",
+        "lib/crewai/src/crewai/rag/embeddings/providers/google/__init__.py",
+        "lib/crewai/src/crewai/rag/embeddings/providers/google/genai_vertex_embedding.py",
+        "lib/crewai/src/crewai/rag/embeddings/providers/google/generative_ai.py",
+        "lib/crewai/src/crewai/rag/embeddings/providers/google/types.py",
+        "lib/crewai/src/crewai/rag/embeddings/providers/google/vertex.py",
+        "lib/crewai/src/crewai/rag/embeddings/providers/huggingface/__init__.py",
+        "lib/crewai/src/crewai/rag/embeddings/providers/huggingface/huggingface_provider.py",
+        "lib/crewai/src/crewai/rag/embeddings/providers/huggingface/types.py",
+        "lib/crewai/src/crewai/rag/embeddings/providers/ibm/__init__.py",
+        "lib/crewai/src/crewai/rag/embeddings/providers/ibm/embedding_callable.py",
+        "lib/crewai/src/crewai/rag/embeddings/providers/ibm/types.py",
+        "lib/crewai/src/crewai/rag/embeddings/providers/ibm/watsonx.py",
+        "lib/crewai/src/crewai/rag/embeddings/providers/instructor/__init__.py",
+        "lib/crewai/src/crewai/rag/embeddings/providers/instructor/instructor_provider.py"
+      ],
+      "manifest_paths": [
+        "LICENSE",
+        "README.md",
+        "lib/cli/README.md",
+        "lib/cli/pyproject.toml",
+        "lib/crewai-core/README.md",
+        "lib/crewai-core/pyproject.toml",
+        "lib/crewai-files/README.md",
+        "lib/crewai-files/pyproject.toml",
+        "lib/crewai-tools/README.md",
+        "lib/crewai-tools/pyproject.toml",
+        "lib/crewai/README.md",
+        "lib/crewai/pyproject.toml",
+        "lib/devtools/README.md",
+        "lib/devtools/pyproject.toml",
+        "pyproject.toml"
+      ]
+    },
+    {
+      "repo": "langchain-ai/langgraph",
+      "branch": "main",
+      "sha": "5eb60aef6f3837a1fb632a8abc6cf8e8da81785b",
+      "commit_date": "2026-10-15T01:31:09Z",
+      "archived": false,
+      "license": "MIT",
+      "tree_truncated": false,
+      "candidate_paths": [
+        "libs/checkpoint-conformance/README.md",
+        "libs/checkpoint-conformance/langgraph/checkpoint/conformance/__init__.py",
+        "libs/checkpoint-conformance/langgraph/checkpoint/conformance/capabilities.py",
+        "libs/checkpoint-conformance/langgraph/checkpoint/conformance/initializer.py",
+        "libs/checkpoint-conformance/langgraph/checkpoint/conformance/report.py",
+        "libs/checkpoint-conformance/langgraph/checkpoint/conformance/spec/__init__.py",
+        "libs/checkpoint-conformance/langgraph/checkpoint/conformance/spec/_delta_fixtures.py",
+        "libs/checkpoint-conformance/langgraph/checkpoint/conformance/spec/test_copy_thread.py",
+        "libs/checkpoint-conformance/langgraph/checkpoint/conformance/spec/test_delete_for_runs.py",
+        "libs/checkpoint-conformance/langgraph/checkpoint/conformance/spec/test_delete_thread.py",
+        "libs/checkpoint-conformance/langgraph/checkpoint/conformance/spec/test_delta_channel_history.py",
+        "libs/checkpoint-conformance/langgraph/checkpoint/conformance/spec/test_get_tuple.py",
+        "libs/checkpoint-conformance/langgraph/checkpoint/conformance/spec/test_list.py",
+        "libs/checkpoint-conformance/langgraph/checkpoint/conformance/spec/test_prune.py",
+        "libs/checkpoint-conformance/langgraph/checkpoint/conformance/spec/test_put.py",
+        "libs/checkpoint-conformance/langgraph/checkpoint/conformance/spec/test_put_writes.py",
+        "libs/checkpoint-conformance/langgraph/checkpoint/conformance/test_utils.py",
+        "libs/checkpoint-conformance/langgraph/checkpoint/conformance/validate.py",
+        "libs/checkpoint-conformance/pyproject.toml",
+        "libs/checkpoint-conformance/tests/test_validate_memory.py",
+        "libs/checkpoint-postgres/README.md",
+        "libs/checkpoint-postgres/langgraph/checkpoint/postgres/__init__.py",
+        "libs/checkpoint-postgres/langgraph/checkpoint/postgres/_ainternal.py",
+        "libs/checkpoint-postgres/langgraph/checkpoint/postgres/_internal.py",
+        "libs/checkpoint-postgres/langgraph/checkpoint/postgres/aio.py",
+        "libs/checkpoint-postgres/langgraph/checkpoint/postgres/base.py",
+        "libs/checkpoint-postgres/langgraph/checkpoint/postgres/shallow.py",
+        "libs/checkpoint-postgres/langgraph/store/postgres/__init__.py",
+        "libs/checkpoint-postgres/langgraph/store/postgres/aio.py",
+        "libs/checkpoint-postgres/langgraph/store/postgres/base.py",
+        "libs/checkpoint-postgres/pyproject.toml",
+        "libs/checkpoint-postgres/tests/__init__.py",
+        "libs/checkpoint-postgres/tests/conftest.py",
+        "libs/checkpoint-postgres/tests/embed_test_utils.py",
+        "libs/checkpoint-postgres/tests/test_async.py",
+        "libs/checkpoint-postgres/tests/test_async_store.py",
+        "libs/checkpoint-postgres/tests/test_conformance_delta.py",
+        "libs/checkpoint-postgres/tests/test_delta_pagination.py",
+        "libs/checkpoint-postgres/tests/test_delta_plain_value_seed.py",
+        "libs/checkpoint-postgres/tests/test_prune.py",
+        "libs/checkpoint-postgres/tests/test_store.py",
+        "libs/checkpoint-postgres/tests/test_sync.py",
+        "libs/checkpoint-sqlite/README.md",
+        "libs/checkpoint-sqlite/langgraph/cache/sqlite/__init__.py",
+        "libs/checkpoint-sqlite/langgraph/checkpoint/sqlite/__init__.py",
+        "libs/checkpoint-sqlite/langgraph/checkpoint/sqlite/_delta.py",
+        "libs/checkpoint-sqlite/langgraph/checkpoint/sqlite/aio.py",
+        "libs/checkpoint-sqlite/langgraph/checkpoint/sqlite/utils.py",
+        "libs/checkpoint-sqlite/langgraph/store/sqlite/__init__.py",
+        "libs/checkpoint-sqlite/langgraph/store/sqlite/aio.py",
+        "libs/checkpoint-sqlite/langgraph/store/sqlite/base.py",
+        "libs/checkpoint-sqlite/pyproject.toml",
+        "libs/checkpoint-sqlite/tests/__init__.py",
+        "libs/checkpoint-sqlite/tests/test_aiosqlite.py",
+        "libs/checkpoint-sqlite/tests/test_async_store.py",
+        "libs/checkpoint-sqlite/tests/test_conformance_delta.py",
+        "libs/checkpoint-sqlite/tests/test_delta_channel_migration.py",
+        "libs/checkpoint-sqlite/tests/test_delta_parent_walk.py",
+        "libs/checkpoint-sqlite/tests/test_get_delta_channel_history.py",
+        "libs/checkpoint-sqlite/tests/test_sqlite.py",
+        "libs/checkpoint-sqlite/tests/test_store.py",
+        "libs/checkpoint-sqlite/tests/test_ttl.py",
+        "libs/checkpoint-sqlite/tests/test_writes_task_path_migration.py",
+        "libs/checkpoint/README.md",
+        "libs/checkpoint/langgraph/cache/base/__init__.py",
+        "libs/checkpoint/langgraph/cache/memory/__init__.py",
+        "libs/checkpoint/langgraph/cache/redis/__init__.py",
+        "libs/checkpoint/langgraph/checkpoint/base/__init__.py",
+        "libs/checkpoint/langgraph/checkpoint/base/id.py",
+        "libs/checkpoint/langgraph/checkpoint/memory/__init__.py",
+        "libs/checkpoint/langgraph/checkpoint/serde/__init__.py",
+        "libs/checkpoint/langgraph/checkpoint/serde/_msgpack.py",
+        "libs/checkpoint/langgraph/checkpoint/serde/base.py",
+        "libs/checkpoint/langgraph/checkpoint/serde/encrypted.py",
+        "libs/checkpoint/langgraph/checkpoint/serde/event_hooks.py",
+        "libs/checkpoint/langgraph/checkpoint/serde/jsonplus.py",
+        "libs/checkpoint/langgraph/checkpoint/serde/types.py",
+        "libs/checkpoint/langgraph/store/base/__init__.py",
+        "libs/checkpoint/langgraph/store/base/batch.py",
+        "libs/checkpoint/langgraph/store/base/embed.py",
+        "libs/checkpoint/langgraph/store/memory/__init__.py",
+        "libs/checkpoint/pyproject.toml",
+        "libs/checkpoint/tests/__init__.py",
+        "libs/checkpoint/tests/embed_test_utils.py",
+        "libs/checkpoint/tests/test_encrypted.py",
+        "libs/checkpoint/tests/test_jsonplus.py",
+        "libs/checkpoint/tests/test_memory.py",
+        "libs/checkpoint/tests/test_redis_cache.py",
+        "libs/checkpoint/tests/test_store.py",
+        "libs/langgraph/langgraph/pregel/_checkpoint.py",
+        "libs/langgraph/tests/conftest_checkpointer.py",
+        "libs/langgraph/tests/memory_assert.py",
+        "libs/langgraph/tests/test_checkpoint_migration.py",
+        "libs/langgraph/tests/test_subgraph_persistence.py",
+        "libs/langgraph/tests/test_subgraph_persistence_async.py",
+        "libs/prebuilt/tests/conftest_checkpointer.py",
+        "libs/prebuilt/tests/memory_assert.py"
+      ],
+      "manifest_paths": [
+        "LICENSE",
+        "README.md",
+        "examples/README.md",
+        "examples/delta-channel-dump/README.md",
+        "libs/checkpoint-conformance/README.md",
+        "libs/checkpoint-conformance/pyproject.toml",
+        "libs/checkpoint-postgres/LICENSE",
+        "libs/checkpoint-postgres/README.md",
+        "libs/checkpoint-postgres/pyproject.toml",
+        "libs/checkpoint-sqlite/LICENSE",
+        "libs/checkpoint-sqlite/README.md",
+        "libs/checkpoint-sqlite/pyproject.toml",
+        "libs/checkpoint/LICENSE",
+        "libs/checkpoint/README.md",
+        "libs/checkpoint/pyproject.toml",
+        "libs/cli/LICENSE",
+        "libs/cli/README.md",
+        "libs/cli/pyproject.toml"
+      ]
+    },
+    {
+      "repo": "letta-ai/letta-code",
+      "branch": "main",
+      "sha": "cc4654acc3b424a68c385bce0fe0c00edaad5d7e",
+      "commit_date": "2026-10-15T05:01:15Z",
+      "archived": false,
+      "license": "Apache-2.0",
+      "tree_truncated": false,
+      "candidate_paths": [
+        "docs/examples/mods/learning/memory-citations.env.json",
+        "docs/examples/mods/memory-citations.ts",
+        "hooks/memory_logger.py",
+        "scripts/claude-watch/docs-snapshot.ts",
+        "src/agent/client-skills-shared-memory.test.ts",
+        "src/agent/memory-auth.ts",
+        "src/agent/memory-conflict-repair.test.ts",
+        "src/agent/memory-conflict-repair.ts",
+        "src/agent/memory-constants.ts",
+        "src/agent/memory-constraints-audit.test.ts",
+        "src/agent/memory-constraints-audit.ts",
+        "src/agent/memory-constraints.ts",
+        "src/agent/memory-filesystem.integration.test.ts",
+        "src/agent/memory-filesystem.sync.integration.test.ts",
+        "src/agent/memory-filesystem.test.ts",
+        "src/agent/memory-filesystem.ts",
+        "src/agent/memory-format.test.ts",
+        "src/agent/memory-format.ts",
+        "src/agent/memory-git-dir.ts",
+        "src/agent/memory-git-hooks.runtime.test.ts",
+        "src/agent/memory-git-hooks.ts",
+        "src/agent/memory-git-signing.ts",
+        "src/agent/memory-git-v2-precommit.test.ts",
+        "src/agent/memory-git-windows-credentials.test.ts",
+        "src/agent/memory-git-windows-credentials.ts",
+        "src/agent/memory-git.auth.test.ts",
+        "src/agent/memory-git.local-config-writes.test.ts",
+        "src/agent/memory-git.local-scope.test.ts",
+        "src/agent/memory-git.postcommit.test.ts",
+        "src/agent/memory-git.precommit.test.ts",
+        "src/agent/memory-git.retry.test.ts",
+        "src/agent/memory-git.signing.test.ts",
+        "src/agent/memory-git.ts",
+        "src/agent/memory-operation.test.ts",
+        "src/agent/memory-operation.ts",
+        "src/agent/memory-prompt.integration.test.ts",
+        "src/agent/memory-runtime.ts",
+        "src/agent/memory-scanner.ts",
+        "src/agent/memory-worktree-http.test.ts",
+        "src/agent/memory-worktree.test.ts",
+        "src/agent/memory-worktree.ts",
+        "src/agent/memory.ts",
+        "src/agent/session-history.ts",
+        "src/agent/shared-memory-skills.ts",
+        "src/agent/skills-memory-palace.test.ts",
+        "src/agent/subagents/builtin/memory-v2.md",
+        "src/agent/subagents/builtin/memory.md",
+        "src/agent/subagents/memory-handoff.test.ts",
+        "src/agent/subagents/memory-handoff.ts",
+        "src/agent/subagents/memory-worker-session.ts",
+        "src/agent/subagents/memory-worker.test.ts",
+        "src/agent/subagents/memory-worker.ts",
+        "src/app-server-client.test.ts",
+        "src/app-server-client.ts",
+        "src/auth/org-credentials-session.test.ts",
+        "src/auth/org-credentials-session.ts",
+        "src/backend/api/providers.ts",
+        "src/backend/dev/local-provider-errors.ts",
+        "src/backend/dev/pi-llama-cpp-provider.test.ts",
+        "src/backend/dev/pi-llama-cpp-provider.ts",
+        "src/backend/dev/pi-lmstudio-provider.test.ts",
+        "src/backend/dev/pi-lmstudio-provider.ts",
+        "src/backend/dev/pi-local-endpoint-provider.ts",
+        "src/backend/dev/pi-mod-provider.test.ts",
+        "src/backend/dev/pi-mod-provider.ts",
+        "src/backend/dev/pi-ollama-provider.test.ts",
+        "src/backend/dev/pi-ollama-provider.ts",
+        "src/backend/dev/pi-openai-compatible-provider.ts",
+        "src/backend/dev/pi-provider-mod-registry.ts",
+        "src/backend/dev/pi-provider-mod-types.ts",
+        "src/backend/dev/pi-provider-mod-validation.ts",
+        "src/backend/dev/pi-provider-registry.ts",
+        "src/backend/dev/provider-turn-executor.ts",
+        "src/backend/dev/registered-pi-provider-runtime.ts",
+        "src/backend/local-fresh-memory-layout.test.ts",
+        "src/backend/local-provider-errors.test.ts",
+        "src/backend/local-provider-timeout.test.ts",
+        "src/backend/local/initial-memory.ts",
+        "src/backend/local/local-provider-auth-store.test.ts",
+        "src/backend/local/local-provider-auth-store.ts",
+        "src/backend/local/local-provider-timeout.ts",
+        "src/backend/pi-stream-adapter-opencode-session.test.ts",
+        "src/backend/provider-turn-executor.test.ts",
+        "src/channels/service-snapshots.ts",
+        "src/channels/slack/adapter-test-harness.ts",
+        "src/channels/telegram/adapter-test-harness.ts",
+        "src/channels/whatsapp-session.test.ts",
+        "src/channels/whatsapp/session.ts",
+        "src/cli/app/session.ts",
+        "src/cli/commands/memory-repository.ts",
+        "src/cli/components/provider-selector-helpers.ts",
+        "src/cli/components/provider-selector.test.ts",
+        "src/cli/display/product-status/workflows.test.ts",
+        "src/cli/display/product-status/workflows.ts",
+        "src/cli/helpers/memory-reminder.ts",
+        "src/cli/helpers/memory-subagent-completion.ts",
+        "src/cli/helpers/reflection-memory-v2.ts",
+        "src/cli/helpers/session-context-windows.test.ts",
+        "src/cli/helpers/session-context.test.ts",
+        "src/cli/helpers/session-context.ts",
+        "src/cli/helpers/workflow-display.test.ts",
+        "src/cli/helpers/workflow-display.ts",
+        "src/cli/memory-reminder.test.ts",
+        "src/cli/memory-repository.test.ts",
+        "src/cli/memory-subagent-recompile.test.ts",
+        "src/cli/reflection-memory-v2.test.ts",
+        "src/cli/subcommands/app-server.ts",
+        "src/cli/subcommands/mcp-session.test.ts",
+        "src/cli/subcommands/memory-tokens.test.ts",
+        "src/cli/subcommands/memory-tokens.ts"
+      ],
+      "manifest_paths": [
+        "LICENSE",
+        "README.md",
+        "package.json",
+        "python/README.md",
+        "python/pyproject.toml",
+        "src/channels/README.md",
+        "src/mods/README.md",
+        "src/tools/README.md"
+      ]
+    },
+    {
+      "repo": "mastra-ai/mastra",
+      "branch": "main",
+      "sha": "0a4037f30fd0d712a6de4c167c6420fc2822a6a5",
+      "commit_date": "2026-10-15T15:04:39Z",
+      "archived": false,
+      "license": "NOASSERTION",
+      "tree_truncated": false,
+      "candidate_paths": [
+        ".changeset/automated-provider-registry-20261014-063630.md",
+        ".changeset/brave-e2b-memory-sizes.md",
+        ".changeset/factory-draft-session-images.md",
+        ".changeset/factory-session-properties-menu.md",
+        ".changeset/factory-sessions-group-by.md",
+        ".changeset/factory-sessions-group-order.md",
+        ".changeset/factory-sessions-one-list.md",
+        ".changeset/nested-workflow-step-scorers.md",
+        ".changeset/workflow-run-ownership-auth.md",
+        ".claude/skills/builder-smoke-test/assets/template/src/mastra/workflows/index.ts",
+        ".claude/skills/mastra-docs/references/AUTHORING_WORKFLOW.md",
+        ".claude/skills/mastra-smoke-test/references/storage-provider-migration-smoke.md",
+        ".claude/skills/mastra-smoke-test/references/tests/memory.md",
+        ".claude/skills/mastra-smoke-test/references/tests/workflows.md",
+        ".github/workflows/README.md",
+        ".github/workflows/data/2027dev-evals.json",
+        ".github/workflows/data/first-time-contributor-pr-test.json",
+        ".github/workflows/data/stable-release-test.json",
+        ".github/workflows/e2e-experiments.test.ts",
+        ".mastracode/skills/herdr-kit-workflows/SKILL.md",
+        ".mastracode/skills/playground-snapshot-release/SKILL.md",
+        ".mastracode/skills/pr-snapshot-release/SKILL.md",
+        ".mastracode/skills/understand-pr/references/categories/security.md",
+        "agent-sdks/acp/src/session.ts",
+        "auth/cloud/src/auth-provider.ts",
+        "auth/cloud/src/rbac/rbac-provider.ts",
+        "auth/cloud/src/session/cookie.ts",
+        "auth/cloud/src/session/index.ts",
+        "auth/cloud/src/session/session.ts",
+        "auth/google/src/auth-provider.ts",
+        "auth/google/src/rbac-provider.ts",
+        "auth/neon/src/rbac-provider.ts",
+        "auth/okta/src/auth-provider.ts",
+        "auth/okta/src/rbac-provider.ts",
+        "auth/workos/src/auth-provider.ts",
+        "auth/workos/src/fga-provider.test.ts",
+        "auth/workos/src/fga-provider.ts",
+        "auth/workos/src/rbac-provider.ts",
+        "auth/workos/src/session-storage.ts",
+        "browser/agent-browser/src/tools/snapshot.ts",
+        "browser/stagehand/src/model-providers.test.ts",
+        "channels/discord/src/discord-provider.gateway.test.ts",
+        "channels/discord/src/discord-provider.test.ts",
+        "channels/discord/src/discord-provider.ts",
+        "channels/slack/src/provider.test.ts",
+        "channels/slack/src/provider.ts",
+        "channels/teams/src/teams-provider.test.ts",
+        "channels/teams/src/teams-provider.ts",
+        "channels/telegram/src/telegram-provider.test.ts",
+        "channels/telegram/src/telegram-provider.ts",
+        "client-sdks/ai-sdk/src/__tests__/provider-options.test.ts",
+        "client-sdks/ai-sdk/src/__tests__/transform-workflow-cumulative-growth.test.ts",
+        "client-sdks/ai-sdk/src/__tests__/workflow-route.test.ts",
+        "client-sdks/ai-sdk/src/convert-snapshot.ts",
+        "client-sdks/ai-sdk/src/workflow-route.ts",
+        "client-sdks/client-js/src/resources/dynamic-workflow.test.ts",
+        "client-sdks/client-js/src/resources/dynamic-workflow.ts",
+        "client-sdks/client-js/src/resources/memory-thread.test.ts",
+        "client-sdks/client-js/src/resources/memory-thread.ts",
+        "client-sdks/client-js/src/resources/processor-provider.ts",
+        "client-sdks/client-js/src/resources/tool-provider.test.ts",
+        "client-sdks/client-js/src/resources/tool-provider.ts",
+        "client-sdks/client-js/src/resources/workflow.test.ts",
+        "client-sdks/client-js/src/resources/workflow.ts",
+        "client-sdks/client-js/src/serialized-memory-config.test.ts",
+        "client-sdks/react/src/hooks/agents/use-agent-working-memory.ts",
+        "client-sdks/react/src/hooks/agents/use-agents-model-providers.ts",
+        "client-sdks/react/src/hooks/agents/use-browser-session-probe.ts",
+        "client-sdks/react/src/hooks/datasets/use-workflow-schema.ts",
+        "client-sdks/react/src/hooks/llm/use-llm-providers.ts",
+        "client-sdks/react/src/hooks/memory/__tests__/fixtures/memory-status.ts",
+        "client-sdks/react/src/hooks/memory/__tests__/fixtures/threads.ts",
+        "client-sdks/react/src/hooks/memory/index.ts",
+        "client-sdks/react/src/hooks/memory/use-memory-status.ts",
+        "client-sdks/react/src/hooks/memory/use-memory-thread-messages.ts",
+        "client-sdks/react/src/hooks/memory/use-memory.ts",
+        "client-sdks/react/src/hooks/memory/use-observational-memory.ts",
+        "client-sdks/react/src/hooks/tool-providers/index.ts",
+        "client-sdks/react/src/hooks/tool-providers/use-all-connections.ts",
+        "client-sdks/react/src/hooks/tool-providers/use-all-provider-tools.ts",
+        "client-sdks/react/src/hooks/tool-providers/use-authorize.ts",
+        "client-sdks/react/src/hooks/tool-providers/use-disconnect-connection.ts",
+        "client-sdks/react/src/hooks/tool-providers/use-existing-connections.ts",
+        "client-sdks/react/src/hooks/tool-providers/use-provider-tools.ts",
+        "client-sdks/react/src/hooks/tool-providers/use-tool-providers.ts",
+        "client-sdks/react/src/hooks/tool-providers/use-toolkits.ts",
+        "client-sdks/react/src/hooks/tool-providers/use-update-connection.ts",
+        "client-sdks/react/src/hooks/workflows/__tests__/use-workflow-runs.test.ts",
+        "client-sdks/react/src/hooks/workflows/__tests__/use-workflows-run-counts.test.ts",
+        "client-sdks/react/src/hooks/workflows/index.ts",
+        "client-sdks/react/src/hooks/workflows/use-workflow-runs.ts",
+        "client-sdks/react/src/hooks/workflows/use-workflow.ts",
+        "client-sdks/react/src/hooks/workflows/use-workflows-run-counts.ts",
+        "client-sdks/react/src/hooks/workflows/use-workflows.ts",
+        "client-sdks/react/src/workflows/WorkflowStepFactory/index.ts",
+        "client-sdks/react/src/workflows/WorkflowStepFactory/types.ts",
+        "client-sdks/react/src/workflows/hooks.ts",
+        "client-sdks/react/src/workflows/index.ts",
+        "client-sdks/react/src/workflows/types.ts",
+        "client-sdks/react/src/workflows/use-stream-workflow.ts",
+        "docs/src/content/en/models/providers/_meta.ts",
+        "docs/src/course/01-first-agent/14-understanding-memory.md",
+        "docs/src/course/01-first-agent/15-installing-memory.md",
+        "docs/src/course/01-first-agent/16-adding-memory-to-agent.md",
+        "docs/src/course/01-first-agent/17-testing-memory.md",
+        "docs/src/course/02-agent-tools-mcp/31-enhancing-memory-configuration.md",
+        "docs/src/course/03-agent-memory/01-understanding-memory.md",
+        "docs/src/course/03-agent-memory/02-why-memory-matters.md",
+        "docs/src/course/03-agent-memory/03-installing-memory.md",
+        "docs/src/course/03-agent-memory/04-creating-basic-memory-agent.md"
+      ],
+      "manifest_paths": [
+        ".changeset/README.md",
+        ".github/workflows/README.md",
+        "README.md",
+        "agent-sdks/acp/README.md",
+        "agent-sdks/acp/package.json",
+        "agent-sdks/claude/README.md",
+        "agent-sdks/claude/package.json",
+        "agent-sdks/cursor/README.md",
+        "agent-sdks/cursor/package.json",
+        "agent-sdks/openai/README.md",
+        "agent-sdks/openai/package.json",
+        "auth/auth0/README.md",
+        "auth/auth0/package.json",
+        "auth/better-auth/README.md",
+        "auth/better-auth/package.json",
+        "auth/clerk/README.md",
+        "auth/clerk/package.json",
+        "auth/cloud/README.md"
+      ],
+      "focused_paths": [
+        "packages/core/src/agent/durable/abort-transport.ts",
+        "packages/core/src/agent/durable/constants.ts",
+        "packages/core/src/agent/durable/create-durable-agent.ts",
+        "packages/core/src/agent/durable/create-evented-agent.ts",
+        "packages/core/src/agent/durable/durable-agent.ts",
+        "packages/core/src/agent/durable/durable-stream-until-idle.ts",
+        "packages/core/src/agent/durable/evented-agent.ts",
+        "packages/core/src/agent/durable/execution-fence.ts",
+        "packages/core/src/agent/durable/index.ts",
+        "packages/core/src/agent/durable/leases.md",
+        "packages/core/src/agent/durable/memory-fga.ts",
+        "packages/core/src/agent/durable/preparation.ts",
+        "packages/core/src/agent/durable/run-fence-scope.ts",
+        "packages/core/src/agent/durable/run-message-refs.ts",
+        "packages/core/src/agent/durable/run-recovery.md",
+        "packages/core/src/agent/durable/run-registry.ts",
+        "packages/core/src/agent/durable/stream-adapter.ts",
+        "packages/core/src/agent/durable/types.ts",
+        "packages/core/src/agent/durable/utils/index.ts",
+        "packages/core/src/agent/durable/utils/resolve-runtime.ts",
+        "packages/core/src/agent/durable/utils/run-message-list.ts",
+        "packages/core/src/agent/durable/utils/serialize-state.ts",
+        "packages/core/src/agent/durable/workflows/create-durable-agentic-workflow.ts",
+        "packages/core/src/agent/durable/workflows/deprecated-tool-execution.ts",
+        "packages/core/src/agent/durable/workflows/durable-loop-builder.ts",
+        "packages/core/src/agent/durable/workflows/finalize-run.ts",
+        "packages/core/src/agent/durable/workflows/index.ts",
+        "packages/core/src/agent/durable/workflows/shared/execute-scorers.ts",
+        "packages/core/src/agent/durable/workflows/shared/index.ts",
+        "packages/core/src/agent/durable/workflows/shared/iteration-state.ts",
+        "packages/core/src/agent/durable/workflows/shared/message-list-state.ts",
+        "packages/core/src/agent/durable/workflows/shared/schemas.ts",
+        "packages/core/src/agent/durable/workflows/shared/tool-call-concurrency.ts",
+        "packages/core/src/agent/durable/workflows/steps/background-task-check.ts",
+        "packages/core/src/agent/durable/workflows/steps/goal.ts",
+        "packages/core/src/agent/durable/workflows/steps/index.ts",
+        "packages/core/src/agent/durable/workflows/steps/is-task-complete.ts",
+        "packages/core/src/agent/durable/workflows/steps/llm-execution.ts",
+        "packages/core/src/agent/durable/workflows/steps/llm-mapping.ts",
+        "packages/core/src/agent/durable/workflows/steps/scorer-execution.ts",
+        "packages/core/src/agent/durable/workflows/steps/tool-call.ts",
+        "packages/core/src/harness/index.ts"
+      ],
+      "license_paths": [
+        "LICENSE.md",
+        "ee/LICENSE",
+        "packages/connect/LICENSE-ELv2.txt",
+        "packages/fastembed/LICENSE-fastembed",
+        "templates/template-competitor-monitor-jev/LICENSE",
+        "templates/template-customer-refund-agent/LICENSE",
+        "templates/template-kyc-customer-onboarding/LICENSE",
+        "templates/template-organization-intelligence/LICENSE",
+        "templates/template-security-incident-triage/LICENSE"
+      ]
+    },
+    {
+      "repo": "openclaw/openclaw",
+      "branch": "main",
+      "sha": "0e85fcf9bab3c4e83364bf038425bc0a5ee6cf86",
+      "commit_date": "2026-10-15T15:07:41Z",
+      "archived": false,
+      "license": "MIT",
+      "tree_truncated": false,
+      "candidate_paths": [
+        ".agents/skills/claw-score/references/completeness/agent-runtime-and-provider-execution.md",
+        ".agents/skills/claw-score/references/completeness/anthropic-provider-path.md",
+        ".agents/skills/claw-score/references/completeness/google-provider-path.md",
+        ".agents/skills/claw-score/references/completeness/local-model-providers-ollama-vllm-sglang-lm-studio.md",
+        ".agents/skills/claw-score/references/completeness/long-tail-hosted-providers.md",
+        ".agents/skills/claw-score/references/completeness/multi-agent-orchestration.md",
+        ".agents/skills/claw-score/references/completeness/openai-codex-provider-path.md",
+        ".agents/skills/claw-score/references/completeness/openrouter-provider-path.md",
+        ".agents/skills/claw-score/references/completeness/security-auth-pairing-and-secrets.md",
+        ".agents/skills/claw-score/references/completeness/session-memory-and-context-engine.md",
+        ".agents/skills/security-triage/SKILL.md",
+        ".github/actions/setup-security-review/package.json",
+        "SECURITY.md",
+        "apps/android/scripts/capture-session-snooze.py",
+        "apps/ios/Sources/Assets.xcassets/ProviderIconAnthropic.imageset/Contents.json",
+        "apps/ios/Sources/Assets.xcassets/ProviderIconGoogle.imageset/Contents.json",
+        "apps/ios/Sources/Assets.xcassets/ProviderIconMiniMax.imageset/Contents.json",
+        "apps/ios/Sources/Assets.xcassets/ProviderIconOpenAI.imageset/Contents.json",
+        "apps/ios/Sources/Assets.xcassets/ProviderIconOpenRouter.imageset/Contents.json",
+        "apps/ios/Sources/Assets.xcassets/ProviderIconXAI.imageset/Contents.json",
+        "apps/macos/Sources/OpenClaw/Resources/NativeSessionCatalogs.json",
+        "apps/macos/Sources/OpenClaw/Resources/ProviderIcons/ATTRIBUTION.md",
+        "apps/macos/Sources/OpenClaw/Resources/ProviderIcons/NOTICE.md",
+        "custodian-skills/add-model-provider/SKILL.md",
+        "docs/.i18n/translation-workflow.md",
+        "docs/channels/discord/threads-and-sessions.md",
+        "docs/channels/matrix/threads-and-sessions.md",
+        "docs/channels/slack/threads-and-sessions.md",
+        "docs/channels/telegram/threads-and-sessions.md",
+        "docs/ci/scheduled-workflows.md",
+        "docs/cli/memory.md",
+        "docs/cli/security.md",
+        "docs/cli/sessions.md",
+        "docs/concepts/active-memory.md",
+        "docs/concepts/active-memory/advanced-options.md",
+        "docs/concepts/active-memory/configuration.md",
+        "docs/concepts/active-memory/enabling.md",
+        "docs/concepts/active-memory/how-it-works.md",
+        "docs/concepts/active-memory/memory-tools.md",
+        "docs/concepts/active-memory/recommended-setup.md",
+        "docs/concepts/active-memory/session-controls.md",
+        "docs/concepts/active-memory/troubleshooting.md",
+        "docs/concepts/active-memory/tuning.md",
+        "docs/concepts/main-session.md",
+        "docs/concepts/memory-architecture.md",
+        "docs/concepts/memory-builtin.md",
+        "docs/concepts/memory-honcho.md",
+        "docs/concepts/memory-provenance.md",
+        "docs/concepts/memory-search.md",
+        "docs/concepts/memory.md",
+        "docs/concepts/model-providers.md",
+        "docs/concepts/model-providers/control-ui-and-keys.md",
+        "docs/concepts/model-providers/custom-providers.md",
+        "docs/concepts/model-providers/official-provider-plugins.md",
+        "docs/concepts/model-providers/quick-rules.md",
+        "docs/concepts/multi-agent.md",
+        "docs/concepts/session-attachment.md",
+        "docs/concepts/session-pruning.md",
+        "docs/concepts/session-search.md",
+        "docs/concepts/session-state.md",
+        "docs/concepts/session-tool.md",
+        "docs/concepts/session.md",
+        "docs/gateway/cloud-sessions.md",
+        "docs/gateway/cloud-workers/dispatching-a-session.md",
+        "docs/gateway/cloud-workers/security-model.md",
+        "docs/gateway/cloud-workers/session-lifecycle.md",
+        "docs/gateway/config-agents/entries-and-multi-agent.md",
+        "docs/gateway/config-agents/sessions.md",
+        "docs/gateway/config-tools/custom-providers.md",
+        "docs/gateway/config-tools/provider-examples.md",
+        "docs/gateway/config-tools/sessions-and-subagents.md",
+        "docs/gateway/doctor/provider-repairs.md",
+        "docs/gateway/doctor/state-and-sessions.md",
+        "docs/gateway/protocol/rpc-session-control.md",
+        "docs/gateway/security/access-control.md",
+        "docs/gateway/security/audit-checks.md",
+        "docs/gateway/security/browser-control.md",
+        "docs/gateway/security/exposure-runbook.md",
+        "docs/gateway/security/hardened-baseline.md",
+        "docs/gateway/security/index.md",
+        "docs/gateway/security/network-exposure.md",
+        "docs/gateway/security/operator-incident-response.md",
+        "docs/gateway/security/prompt-injection.md",
+        "docs/gateway/security/rate-limiting.md",
+        "docs/gateway/security/running-the-audit.md",
+        "docs/gateway/security/secrets-and-storage.md",
+        "docs/gateway/security/secure-file-operations.md",
+        "docs/gateway/security/tool-permissions.md",
+        "docs/gateway/security/trust-model.md",
+        "docs/gateway/troubleshooting/skills-and-model-providers.md",
+        "docs/help/faq-first-run/providers-and-hosting.md",
+        "docs/help/faq/sandboxing-and-memory.md",
+        "docs/help/faq/security-and-access-control.md",
+        "docs/help/faq/sessions-and-chats.md",
+        "docs/help/testing-live/media-providers.md",
+        "docs/help/testing/live-workflows.md",
+        "docs/nodes/session-catalogs.md",
+        "docs/nodes/session-hosting.md",
+        "docs/nodes/talk/realtime-sessions.md",
+        "docs/nodes/talk/session-ownership.md",
+        "docs/plugins/architecture-internals/provider-hooks.md",
+        "docs/plugins/codex-harness-reference.md",
+        "docs/plugins/codex-harness-reference/app-server-transport.md",
+        "docs/plugins/codex-harness-reference/approval-and-sandbox.md",
+        "docs/plugins/codex-harness-reference/auth.md",
+        "docs/plugins/codex-harness-reference/dynamic-tools.md",
+        "docs/plugins/codex-harness-reference/model-discovery.md",
+        "docs/plugins/codex-harness-reference/restricted-turns.md",
+        "docs/plugins/codex-harness-reference/supervision.md",
+        "docs/plugins/codex-harness-reference/timeouts.md"
+      ],
+      "manifest_paths": [
+        "LICENSE",
+        "README.md",
+        "apps/android/README.md",
+        "apps/ios/README.md",
+        "apps/linux/README.md",
+        "apps/macos/README.md",
+        "apps/swabble/LICENSE",
+        "apps/swabble/README.md",
+        "deploy/lightpanda/README.md",
+        "docs/.generated/README.md",
+        "docs/.i18n/README.md",
+        "examples/ai-chat/README.md",
+        "examples/ai-chat/package.json",
+        "extensions/a2a/README.md",
+        "extensions/a2a/package.json",
+        "extensions/acpx/README.md",
+        "extensions/acpx/package.json",
+        "extensions/active-memory/README.md"
+      ]
+    },
+    {
+      "repo": "pydantic/pydantic-ai",
+      "branch": "main",
+      "sha": "be2ed8fbafaf66242cc87d752121396f5fa0fe22",
+      "commit_date": "2026-10-15T13:51:07Z",
+      "archived": false,
+      "license": "MIT",
+      "tree_truncated": false,
+      "candidate_paths": [
+        ".agents/skills/adding-a-provider-api-feature/SKILL.md",
+        ".github/scripts/agent_provider_health.py",
+        ".github/scripts/agentic_workflow_guard.py",
+        ".github/scripts/test_agent_provider_health.py",
+        ".github/scripts/test_agentic_workflow_guard.py",
+        ".github/scripts/test_docs_navigation_workflow.py",
+        ".github/workflows/AGENTS.md",
+        ".github/workflows/CLAUDE.md",
+        ".github/workflows/lychee.toml",
+        ".github/workflows/pydantic-ai-attention-triage.md",
+        ".github/workflows/pydantic-ai-bug-hunter.md",
+        ".github/workflows/pydantic-ai-community-demand.md",
+        ".github/workflows/pydantic-ai-docs-drift.md",
+        ".github/workflows/pydantic-ai-feature-digest.md",
+        ".github/workflows/pydantic-ai-pr-review.md",
+        ".github/workflows/pydantic-ai-provider-mapping-sweep.md",
+        ".github/workflows/pydantic-ai-provider-parity-explore.md",
+        ".github/workflows/pydantic-ai-regression-detector.md",
+        ".github/workflows/pydantic-ai-roundtrip-sweep.md",
+        ".github/workflows/pydantic-ai-stale-issues-finder.md",
+        ".github/workflows/pydantic-ai-streaming-resilience-sweep.md",
+        ".github/workflows/pydantic-ai-ui-security-review.md",
+        ".github/workflows/shared/adversarial-review.md",
+        ".github/workflows/shared/checkout.md",
+        ".github/workflows/shared/engine-zai.md",
+        ".github/workflows/shared/issue-filing-context.md",
+        ".github/workflows/shared/network-vendor-domains.md",
+        ".github/workflows/shared/otel-logfire.md",
+        ".github/workflows/shared/pre-agent-steps.md",
+        ".github/workflows/shared/pre-steps.md",
+        ".github/workflows/shared/prompts/pydantic-ai-bug-hunter.md",
+        ".github/workflows/shared/prompts/pydantic-ai-docs-drift.md",
+        ".github/workflows/shared/prompts/pydantic-ai-pr-review.md",
+        ".github/workflows/shared/prompts/pydantic-ai-provider-mapping-sweep.md",
+        ".github/workflows/shared/prompts/pydantic-ai-provider-parity-explore.md",
+        ".github/workflows/shared/prompts/pydantic-ai-regression-detector.md",
+        ".github/workflows/shared/prompts/pydantic-ai-roundtrip-sweep.md",
+        ".github/workflows/shared/prompts/pydantic-ai-stale-issues-finder.md",
+        ".github/workflows/shared/prompts/pydantic-ai-streaming-resilience-sweep.md",
+        ".github/workflows/shared/prompts/pydantic-ai-ui-security-review.md",
+        ".github/workflows/shared/provider-health.md",
+        ".github/workflows/shared/repo-context.md",
+        ".github/workflows/shared/review-context.md",
+        ".github/workflows/shared/rigor.md",
+        ".github/workflows/shared/security-findings.md",
+        ".github/workflows/shared/tool-hints.md",
+        "docs/api/providers.md",
+        "docs/harness/AGENTS.md",
+        "docs/harness/CLAUDE.md",
+        "docs/harness/absurd.md",
+        "docs/harness/acp.md",
+        "docs/harness/advisor.md",
+        "docs/harness/approval-reviewer.md",
+        "docs/harness/ask-user.md",
+        "docs/harness/aws-lambda.md",
+        "docs/harness/background-tools.md",
+        "docs/harness/browser-use.md",
+        "docs/harness/bubblewrap-sandbox.md",
+        "docs/harness/capability-creation.md",
+        "docs/harness/clai2.md",
+        "docs/harness/code-mode.md",
+        "docs/harness/coder.md",
+        "docs/harness/compaction.md",
+        "docs/harness/conversation-search.md",
+        "docs/harness/day-ai.md",
+        "docs/harness/durable-execution.md",
+        "docs/harness/dynamic-workflow.md",
+        "docs/harness/e2b-sandbox.md",
+        "docs/harness/exa-search.md",
+        "docs/harness/examples.md",
+        "docs/harness/filesystem.md",
+        "docs/harness/gh-aw.md",
+        "docs/harness/github.md",
+        "docs/harness/google-workspace.md",
+        "docs/harness/grain.md",
+        "docs/harness/guardrails.md",
+        "docs/harness/index.md",
+        "docs/harness/linear.md",
+        "docs/harness/localstack.md",
+        "docs/harness/logfire-mcp.md",
+        "docs/harness/macroscope.md",
+        "docs/harness/managed-prompt.md",
+        "docs/harness/media.md",
+        "docs/harness/memory.md",
+        "docs/harness/modal-sandbox.md",
+        "docs/harness/mutation-testing.md",
+        "docs/harness/notion.md",
+        "docs/harness/ordinal.md",
+        "docs/harness/pgtask.md",
+        "docs/harness/planning.md",
+        "docs/harness/playwright.md",
+        "docs/harness/posthog.md",
+        "docs/harness/prompt-injection-defender.md",
+        "docs/harness/pydantic-ai-docs.md",
+        "docs/harness/pylon.md",
+        "docs/harness/render-workflows.md",
+        "docs/harness/repair-tool-arguments.md",
+        "docs/harness/repo-context.md",
+        "docs/harness/researcher.md",
+        "docs/harness/shell.md",
+        "docs/harness/skills.md",
+        "docs/harness/slack.md",
+        "docs/harness/smol-sandbox.md",
+        "docs/harness/spend.md",
+        "docs/harness/sprites-sandbox.md",
+        "docs/harness/ssh-workspace.md",
+        "docs/harness/stackone.md",
+        "docs/harness/step-persistence.md",
+        "docs/harness/subagents.md",
+        "docs/harness/system-reminders.md"
+      ],
+      "manifest_paths": [
+        "LICENSE",
+        "README.md",
+        "clai/LICENSE",
+        "clai/README.md",
+        "clai/pyproject.toml",
+        "examples/LICENSE",
+        "examples/README.md",
+        "examples/pyproject.toml",
+        "pydantic_ai_slim/LICENSE",
+        "pydantic_ai_slim/README.md",
+        "pydantic_ai_slim/pyproject.toml",
+        "pydantic_evals/LICENSE",
+        "pydantic_evals/README.md",
+        "pydantic_evals/pyproject.toml",
+        "pydantic_graph/LICENSE",
+        "pydantic_graph/README.md",
+        "pydantic_graph/pyproject.toml",
+        "pyproject.toml"
+      ]
+    },
+    {
+      "repo": "vercel/ai",
+      "branch": "main",
+      "sha": "07d4227e8cfacde8d4e84bcdeaf597121fe7c1e5",
+      "commit_date": "2026-10-15T14:41:23Z",
+      "archived": false,
+      "license": "NOASSERTION",
+      "tree_truncated": false,
+      "candidate_paths": [
+        ".github/SECURITY.md",
+        ".github/workflows/actions/verify-changesets/package.json",
+        "apps/docs/app/[lang]/providers-llms.mdx/[[...slug]]/route.ts",
+        "apps/docs/app/[lang]/v5/providers-llms.mdx/[[...slug]]/route.ts",
+        "apps/docs/app/[lang]/v6/providers-llms.mdx/[[...slug]]/route.ts",
+        "architecture/harness-abstraction.md",
+        "architecture/provider-abstraction.md",
+        "architecture/realtime-provider-integration.md",
+        "contributing/add-new-provider.md",
+        "contributing/provider-architecture.md",
+        "contributing/providers.md",
+        "contributing/workflow-agent-compatibility.md",
+        "examples/ai-e2e-next/app/api/chat/persistence-metadata/route.ts",
+        "examples/ai-e2e-next/app/api/chat/persistence-single-message/route.ts",
+        "examples/ai-e2e-next/app/api/chat/persistence/route.ts",
+        "examples/ai-e2e-next/app/api/chat/resilient-persistence/route.ts",
+        "examples/ai-functions/src/decide/openai/default-provider.ts",
+        "examples/ai-functions/src/embed-many/mistral/provider-options.ts",
+        "examples/ai-functions/src/embed/mistral/provider-options.ts",
+        "examples/ai-functions/src/generate-speech/fish-audio/provider-options.ts",
+        "examples/ai-functions/src/generate-text/anthropic/custom-provider-name.ts",
+        "examples/ai-functions/src/generate-text/anthropic/custom-provider-with-telemetry.ts",
+        "examples/ai-functions/src/generate-text/anthropic/memory-20250818.ts",
+        "examples/ai-functions/src/generate-text/anthropic/provider-defined-tools.ts",
+        "examples/ai-functions/src/generate-text/azure/provider-options-name-openai-compatible.ts",
+        "examples/ai-functions/src/generate-text/azure/responses-provider-metadata-source-document-part.ts",
+        "examples/ai-functions/src/generate-text/azure/responses-provider-metadata-text-part.ts",
+        "examples/ai-functions/src/generate-text/gateway/provider-options-sort.ts",
+        "examples/ai-functions/src/generate-text/google/custom-provider-with-telemetry.ts",
+        "examples/ai-functions/src/generate-text/mistral/provider-options.ts",
+        "examples/ai-functions/src/generate-text/mock/language-model-call-provider-metadata.ts",
+        "examples/ai-functions/src/generate-text/open-responses/provider-native-reasoning-effort.ts",
+        "examples/ai-functions/src/generate-text/openai/compatible-chat-provider-options.ts",
+        "examples/ai-functions/src/generate-text/openai/provider-options.ts",
+        "examples/ai-functions/src/generate-text/openai/responses-provider-metadata-source-document-part.ts",
+        "examples/ai-functions/src/generate-text/openai/responses-provider-metadata-text-part.ts",
+        "examples/ai-functions/src/generate-text/xai/responses-provider-options.ts",
+        "examples/ai-functions/src/harness-agent/claude-code/_create.ts",
+        "examples/ai-functions/src/harness-agent/claude-code/active-tools.ts",
+        "examples/ai-functions/src/harness-agent/claude-code/ask-user-questions.ts",
+        "examples/ai-functions/src/harness-agent/claude-code/attach.ts",
+        "examples/ai-functions/src/harness-agent/claude-code/builtin-tool-approval.ts",
+        "examples/ai-functions/src/harness-agent/claude-code/changing-settings.ts",
+        "examples/ai-functions/src/harness-agent/claude-code/compaction.ts",
+        "examples/ai-functions/src/harness-agent/claude-code/custom-tool-approval.ts",
+        "examples/ai-functions/src/harness-agent/claude-code/file-edit.ts",
+        "examples/ai-functions/src/harness-agent/claude-code/generate-text.ts",
+        "examples/ai-functions/src/harness-agent/claude-code/inactive-tools.ts",
+        "examples/ai-functions/src/harness-agent/claude-code/lifecycle-callbacks.ts",
+        "examples/ai-functions/src/harness-agent/claude-code/multi-turn.ts",
+        "examples/ai-functions/src/harness-agent/claude-code/native-subscription.ts",
+        "examples/ai-functions/src/harness-agent/claude-code/parallel-tool-approvals.ts",
+        "examples/ai-functions/src/harness-agent/claude-code/resume.ts",
+        "examples/ai-functions/src/harness-agent/claude-code/runtime-configuration.ts",
+        "examples/ai-functions/src/harness-agent/claude-code/sandbox-template.ts",
+        "examples/ai-functions/src/harness-agent/claude-code/steer.ts",
+        "examples/ai-functions/src/harness-agent/claude-code/stop-when.ts",
+        "examples/ai-functions/src/harness-agent/claude-code/stream-text.ts",
+        "examples/ai-functions/src/harness-agent/claude-code/suspend-turn.ts",
+        "examples/ai-functions/src/harness-agent/claude-code/typed-builtin-tools.ts",
+        "examples/ai-functions/src/harness-agent/claude-code/vercel-sandbox-resume.ts",
+        "examples/ai-functions/src/harness-agent/claude-code/with-client-side-tool.ts",
+        "examples/ai-functions/src/harness-agent/claude-code/with-instructions.ts",
+        "examples/ai-functions/src/harness-agent/claude-code/with-mcp.ts",
+        "examples/ai-functions/src/harness-agent/claude-code/with-model.ts",
+        "examples/ai-functions/src/harness-agent/claude-code/with-provided-sandbox.ts",
+        "examples/ai-functions/src/harness-agent/claude-code/with-reasoning.ts",
+        "examples/ai-functions/src/harness-agent/claude-code/with-restricted-sandbox.ts",
+        "examples/ai-functions/src/harness-agent/claude-code/with-skills.ts",
+        "examples/ai-functions/src/harness-agent/claude-code/with-structured-output.ts",
+        "examples/ai-functions/src/harness-agent/claude-code/with-to-model-output.ts",
+        "examples/ai-functions/src/harness-agent/claude-code/with-tool-input-error.ts",
+        "examples/ai-functions/src/harness-agent/claude-code/with-tools.ts",
+        "examples/ai-functions/src/harness-agent/cline/_create.ts",
+        "examples/ai-functions/src/harness-agent/cline/active-tools.ts",
+        "examples/ai-functions/src/harness-agent/cline/ask-user-questions.ts",
+        "examples/ai-functions/src/harness-agent/cline/attach.ts",
+        "examples/ai-functions/src/harness-agent/cline/builtin-tool-approval.ts",
+        "examples/ai-functions/src/harness-agent/cline/changing-settings.ts",
+        "examples/ai-functions/src/harness-agent/cline/compaction.ts",
+        "examples/ai-functions/src/harness-agent/cline/custom-tool-approval.ts",
+        "examples/ai-functions/src/harness-agent/cline/file-edit.ts",
+        "examples/ai-functions/src/harness-agent/cline/generate-text.ts",
+        "examples/ai-functions/src/harness-agent/cline/inactive-tools.ts",
+        "examples/ai-functions/src/harness-agent/cline/lifecycle-callbacks.ts",
+        "examples/ai-functions/src/harness-agent/cline/multi-turn.ts",
+        "examples/ai-functions/src/harness-agent/cline/native-subscription.ts",
+        "examples/ai-functions/src/harness-agent/cline/parallel-tool-approvals.ts",
+        "examples/ai-functions/src/harness-agent/cline/resume.ts",
+        "examples/ai-functions/src/harness-agent/cline/sandbox-template.ts",
+        "examples/ai-functions/src/harness-agent/cline/steer.ts",
+        "examples/ai-functions/src/harness-agent/cline/stop-when.ts",
+        "examples/ai-functions/src/harness-agent/cline/stream-text.ts",
+        "examples/ai-functions/src/harness-agent/cline/suspend-turn.ts",
+        "examples/ai-functions/src/harness-agent/cline/typed-builtin-tools.ts",
+        "examples/ai-functions/src/harness-agent/cline/vercel-sandbox-resume.ts",
+        "examples/ai-functions/src/harness-agent/cline/with-client-side-tool.ts",
+        "examples/ai-functions/src/harness-agent/cline/with-instructions.ts",
+        "examples/ai-functions/src/harness-agent/cline/with-mcp.ts",
+        "examples/ai-functions/src/harness-agent/cline/with-model.ts",
+        "examples/ai-functions/src/harness-agent/cline/with-provided-sandbox.ts",
+        "examples/ai-functions/src/harness-agent/cline/with-reasoning.ts",
+        "examples/ai-functions/src/harness-agent/cline/with-restricted-sandbox.ts",
+        "examples/ai-functions/src/harness-agent/cline/with-skills.ts",
+        "examples/ai-functions/src/harness-agent/cline/with-structured-output.ts",
+        "examples/ai-functions/src/harness-agent/cline/with-to-model-output.ts",
+        "examples/ai-functions/src/harness-agent/cline/with-tool-input-error.ts",
+        "examples/ai-functions/src/harness-agent/cline/with-tools.ts",
+        "examples/ai-functions/src/harness-agent/codex-acp/_create.ts",
+        "examples/ai-functions/src/harness-agent/codex-acp/active-tools.ts"
+      ],
+      "manifest_paths": [
+        ".changeset/README.md",
+        "LICENSE",
+        "README.md",
+        "apps/docs/README.md",
+        "apps/docs/package.json",
+        "contributing/decisions/README.md",
+        "examples/ai-e2e-next/README.md",
+        "examples/ai-e2e-next/package.json",
+        "examples/ai-functions/README.md",
+        "examples/ai-functions/package.json",
+        "examples/angular/README.md",
+        "examples/angular/package.json",
+        "examples/express/README.md",
+        "examples/express/package.json",
+        "examples/fastify/README.md",
+        "examples/fastify/package.json",
+        "examples/harness-e2e-next/package.json",
+        "examples/harness-e2e-tui/package.json"
+      ]
+    }
+  ],
+  "source_reads": [
+    {
+      "repo": "NousResearch/hermes-agent",
+      "path": "agent/memory_manager.py",
+      "sha": "7bf3766f3db72d4643d1a78d18e51c1d9ddf1d6d",
+      "url": "https://github.com/NousResearch/hermes-agent/blob/7bf3766f3db72d4643d1a78d18e51c1d9ddf1d6d/agent/memory_manager.py",
+      "line_count": 998,
+      "excerpts": [
+        {
+          "line": 1,
+          "text": "\"\"\"MemoryManager — fans the agent's memory hooks out to registered providers."
+        },
+        {
+          "line": 21,
+          "text": "from agent.memory_provider import MemoryProvider, PRE_COMPRESS_CHECKPOINT_API_VERSION, ctx_bound, spawn_context_thread"
+        },
+        {
+          "line": 22,
+          "text": "from agent.skill_commands import extract_user_instruction_from_skill_message"
+        },
+        {
+          "line": 81,
+          "text": "def memory_provider_tools_enabled(enabled_toolsets: Optional[list[str]], disabled_toolsets: Optional[list[str]] = None,"
+        },
+        {
+          "line": 82,
+          "text": "                                  *, memory_tool_present: bool = False) -> bool:"
+        },
+        {
+          "line": 83,
+          "text": "    \"\"\"Return whether external memory-provider tools should be exposed.\"\"\""
+        },
+        {
+          "line": 84,
+          "text": "    if disabled_toolsets and \"memory\" in disabled_toolsets:"
+        },
+        {
+          "line": 86,
+          "text": "    if memory_tool_present or enabled_toolsets is None:"
+        },
+        {
+          "line": 90,
+          "text": "    if \"memory\" in enabled_toolsets:"
+        },
+        {
+          "line": 95,
+          "text": "        return any(\"memory\" in resolve_toolset(name) for name in enabled_toolsets)"
+        },
+        {
+          "line": 97,
+          "text": "        logger.debug(\"Failed to resolve enabled toolsets for memory-provider tools\", exc_info=True)"
+        },
+        {
+          "line": 105,
+          "text": "def memory_provider_tools_exposed(agent: Any) -> bool:"
+        },
+        {
+          "line": 106,
+          "text": "    \"\"\"Whether external memory-provider tools are exposed on ``agent``."
+        },
+        {
+          "line": 108,
+          "text": "    Same gate as ``inject_memory_provider_tools`` so a provider's ``system_prompt_block()``"
+        },
+        {
+          "line": 112,
+          "text": "    present = isinstance(tools, (list, tuple)) and any(_tool_name(t) == \"memory\" for t in tools)"
+        },
+        {
+          "line": 114,
+          "text": "    return memory_provider_tools_enabled(enabled, disabled, memory_tool_present=present)"
+        },
+        {
+          "line": 117,
+          "text": "def inject_memory_provider_tools(agent: Any) -> int:"
+        },
+        {
+          "line": 118,
+          "text": "    \"\"\"Append external memory-provider tool schemas to an agent tool surface; return count added.\"\"\""
+        },
+        {
+          "line": 119,
+          "text": "    memory_manager = getattr(agent, \"_memory_manager\", None)"
+        },
+        {
+          "line": 121,
+          "text": "    if not memory_manager or tools is None:"
+        },
+        {
+          "line": 124,
+          "text": "    if not memory_provider_tools_exposed(agent):"
+        },
+        {
+          "line": 128,
+          "text": "        _providers = [p for p in getattr(memory_manager, \"providers\", None) or []"
+        }
+      ]
+    },
+    {
+      "repo": "langchain-ai/langgraph",
+      "path": "libs/checkpoint-postgres/langgraph/checkpoint/postgres/__init__.py",
+      "sha": "5eb60aef6f3837a1fb632a8abc6cf8e8da81785b",
+      "url": "https://github.com/langchain-ai/langgraph/blob/5eb60aef6f3837a1fb632a8abc6cf8e8da81785b/libs/checkpoint-postgres/langgraph/checkpoint/postgres/__init__.py",
+      "line_count": 677,
+      "excerpts": [
+        {
+          "line": 142,
+          "text": "            >>> with PostgresSaver.from_conn_string(DB_URI) as memory:"
+        },
+        {
+          "line": 145,
+          "text": "            >>>     checkpoints = list(memory.list(config, limit=2))"
+        },
+        {
+          "line": 151,
+          "text": "            >>> with PostgresSaver.from_conn_string(DB_URI) as memory:"
+        },
+        {
+          "line": 153,
+          "text": "            >>>     checkpoints = list(memory.list(config, before=before))"
+        },
+        {
+          "line": 215,
+          "text": "            >>> checkpoint_tuple = memory.get_tuple(config)"
+        },
+        {
+          "line": 228,
+          "text": "            >>> checkpoint_tuple = memory.get_tuple(config)"
+        },
+        {
+          "line": 293,
+          "text": "            >>> with PostgresSaver.from_conn_string(DB_URI) as memory:"
+        },
+        {
+          "line": 296,
+          "text": "            >>>     saved_config = memory.put(config, checkpoint, {\"source\": \"input\", \"step\": 1, \"writes\": {\"key\": \"value\"}}, {})"
+        },
+        {
+          "line": 420,
+          "text": "        `\"keep_latest\"` keeps the latest checkpoint of each namespace (the one"
+        },
+        {
+          "line": 424,
+          "text": "        no parent. A subgraph call's namespace is deleted with the root"
+        },
+        {
+          "line": 469,
+          "text": "                    # The transaction has to start with its isolation level, and"
+        }
+      ]
+    },
+    {
+      "repo": "letta-ai/letta-code",
+      "path": "src/agent/memory-filesystem.ts",
+      "sha": "cc4654acc3b424a68c385bce0fe0c00edaad5d7e",
+      "url": "https://github.com/letta-ai/letta-code/blob/cc4654acc3b424a68c385bce0fe0c00edaad5d7e/src/agent/memory-filesystem.ts",
+      "line_count": 693,
+      "excerpts": [
+        {
+          "line": 2,
+          "text": " * Memory filesystem helpers."
+        },
+        {
+          "line": 4,
+          "text": " * With git-backed memory, most sync/hash logic is removed."
+        },
+        {
+          "line": 6,
+          "text": " * the shared memfs initialization logic used by both interactive"
+        },
+        {
+          "line": 17,
+          "text": "  getLocalBackendMemoryFilesystemRoot,"
+        },
+        {
+          "line": 26,
+          "text": "import { DEFAULT_ROOT_MEMORY_BLOCK } from \"./create-agent-request\";"
+        },
+        {
+          "line": 27,
+          "text": "import { installMemoryGitHooks } from \"./memory-git-hooks\";"
+        },
+        {
+          "line": 29,
+          "text": "export const MEMORY_FS_ROOT = \".letta\";"
+        },
+        {
+          "line": 30,
+          "text": "export const MEMORY_FS_AGENTS_DIR = \"agents\";"
+        },
+        {
+          "line": 31,
+          "text": "export const MEMORY_FS_MEMORY_DIR = \"memory\";"
+        },
+        {
+          "line": 32,
+          "text": "export const MEMORY_SYSTEM_DIR = \"system\";"
+        },
+        {
+          "line": 33,
+          "text": "export const MEMORY_TREE_MAX_LINES = DIRECTORY_LIMIT_DEFAULTS.memfsTreeMaxLines;"
+        },
+        {
+          "line": 34,
+          "text": "export const MEMORY_TREE_MAX_CHARS = DIRECTORY_LIMIT_DEFAULTS.memfsTreeMaxChars;"
+        },
+        {
+          "line": 35,
+          "text": "export const MEMORY_TREE_MAX_CHILDREN_PER_DIR ="
+        },
+        {
+          "line": 38,
+          "text": "export interface MemoryTreeRenderOptions {"
+        },
+        {
+          "line": 46,
+          "text": "export function getMemoryFilesystemRoot("
+        },
+        {
+          "line": 52,
+          "text": "    MEMORY_FS_ROOT,"
+        },
+        {
+          "line": 53,
+          "text": "    MEMORY_FS_AGENTS_DIR,"
+        },
+        {
+          "line": 55,
+          "text": "    MEMORY_FS_MEMORY_DIR,"
+        },
+        {
+          "line": 59,
+          "text": "export function getMemorySystemDir("
+        },
+        {
+          "line": 63,
+          "text": "  return join(getMemoryFilesystemRoot(agentId, homeDir), MEMORY_SYSTEM_DIR);"
+        },
+        {
+          "line": 66,
+          "text": "export function getScopedMemoryFilesystemRoot("
+        },
+        {
+          "line": 80,
+          "text": "    return getLocalBackendMemoryFilesystemRoot(agentId, storageDir);"
+        }
+      ]
+    },
+    {
+      "repo": "letta-ai/letta-code",
+      "path": "src/agent/shared-memory-skills.ts",
+      "sha": "cc4654acc3b424a68c385bce0fe0c00edaad5d7e",
+      "url": "https://github.com/letta-ai/letta-code/blob/cc4654acc3b424a68c385bce0fe0c00edaad5d7e/src/agent/shared-memory-skills.ts",
+      "line_count": 198,
+      "excerpts": [
+        {
+          "line": 7,
+          "text": "  compareSkills,"
+        },
+        {
+          "line": 8,
+          "text": "  discoverSkills,"
+        },
+        {
+          "line": 9,
+          "text": "  type Skill,"
+        },
+        {
+          "line": 10,
+          "text": "  type SkillDiscoveryError,"
+        },
+        {
+          "line": 11,
+          "text": "  type SkillDiscoveryResult,"
+        },
+        {
+          "line": 12,
+          "text": "  type SkillSource,"
+        },
+        {
+          "line": 13,
+          "text": "} from \"./skills\";"
+        },
+        {
+          "line": 78,
+          "text": "export interface SharedMemorySkillsContext {"
+        },
+        {
+          "line": 79,
+          "text": "  skillsDirs: string[];"
+        },
+        {
+          "line": 80,
+          "text": "  errors: SkillDiscoveryError[];"
+        },
+        {
+          "line": 87,
+          "text": "export async function resolveSharedMemorySkillsContext(options: {"
+        },
+        {
+          "line": 89,
+          "text": "  skillSources: SkillSource[];"
+        },
+        {
+          "line": 91,
+          "text": "}): Promise<SharedMemorySkillsContext> {"
+        },
+        {
+          "line": 96,
+          "text": "    options.skillSources.length === 0"
+        },
+        {
+          "line": 98,
+          "text": "    return { skillsDirs: [], errors: [] };"
+        },
+        {
+          "line": 107,
+          "text": "    const { isLettaCloud } = await import(\"./memory-filesystem\");"
+        },
+        {
+          "line": 109,
+          "text": "      if (!(await isLettaCloud())) {"
+        },
+        {
+          "line": 110,
+          "text": "        return { skillsDirs: [], errors: [] };"
+        },
+        {
+          "line": 114,
+          "text": "      return { skillsDirs: [], errors: [] };"
+        },
+        {
+          "line": 120,
+          "text": "        skillsDirs: [],"
+        },
+        {
+          "line": 123,
+          "text": "            path: `shared-memory:${agentId}`,"
+        },
+        {
+          "line": 131,
+          "text": "  const errors: SkillDiscoveryError[] = [];"
+        }
+      ]
+    },
+    {
+      "repo": "mastra-ai/mastra",
+      "path": "LICENSE",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "repo": "mastra-ai/mastra",
+      "path": "agent-sdks/claude/README.md",
+      "sha": "0a4037f30fd0d712a6de4c167c6420fc2822a6a5",
+      "url": "https://github.com/mastra-ai/mastra/blob/0a4037f30fd0d712a6de4c167c6420fc2822a6a5/agent-sdks/claude/README.md",
+      "line_count": 44,
+      "excerpts": [
+        {
+          "line": 3,
+          "text": "`@mastra/claude` connects Mastra to the Claude Agent SDK. Use it when you want Claude Code's agent loop, tools, permissions, and runtime configuration while exposing the agent through Mastra-compatible `generate()` and `stream()` methods."
+        }
+      ]
+    },
+    {
+      "repo": "mastra-ai/mastra",
+      "path": "agent-sdks/openai/README.md",
+      "sha": "0a4037f30fd0d712a6de4c167c6420fc2822a6a5",
+      "url": "https://github.com/mastra-ai/mastra/blob/0a4037f30fd0d712a6de4c167c6420fc2822a6a5/agent-sdks/openai/README.md",
+      "line_count": 46,
+      "excerpts": []
+    },
+    {
+      "repo": "openclaw/openclaw",
+      "path": "SECURITY.md",
+      "sha": "0e85fcf9bab3c4e83364bf038425bc0a5ee6cf86",
+      "url": "https://github.com/openclaw/openclaw/blob/0e85fcf9bab3c4e83364bf038425bc0a5ee6cf86/SECURITY.md",
+      "line_count": 397,
+      "excerpts": [
+        {
+          "line": 5,
+          "text": "This policy does two things: it gives researchers a clear disclosure path, and it spells out the trust model maintainers use when triaging reports. OpenClaw is local-first agent infrastructure for trusted operators; it is not designed as a "
+        },
+        {
+          "line": 7,
+          "text": "The fastest useful reports show a current, reproducible boundary bypass with demonstrated impact. Scanner output, prompt-injection-only chains, or reports that rely on hostile users sharing one trusted gateway are usually not security vulne"
+        },
+        {
+          "line": 9,
+          "text": "Security work is shared across a number of OpenClaw maintainers, including engineers and security researchers from organizations such as NVIDIA and Tencent. See the [maintainer list](CONTRIBUTING.md#maintainers)."
+        },
+        {
+          "line": 11,
+          "text": "## Shared Agents"
+        },
+        {
+          "line": 13,
+          "text": "Anyone who can operate an agent can make it do anything that agent can do. Session ownership, visibility, and presence are usability features, not security boundaries. Turn attribution is best-effort because steering can merge input into an"
+        },
+        {
+          "line": 31,
+          "text": "For full reporting instructions see our [Trust page](https://trust.openclaw.ai)."
+        },
+        {
+          "line": 43,
+          "text": "- The actual impact, including which OpenClaw trust boundary is crossed."
+        },
+        {
+          "line": 52,
+          "text": "- Prompt injection without a policy, auth, approval, sandbox, or tool-boundary bypass."
+        },
+        {
+          "line": 53,
+          "text": "- A trusted operator using an intentional local feature, such as local shell access or browser/script execution."
+        },
+        {
+          "line": 55,
+          "text": "- A malicious plugin after a trusted operator installs or enables it."
+        },
+        {
+          "line": 56,
+          "text": "- Multiple adversarial users sharing one Gateway host/config and expecting per-user isolation."
+        },
+        {
+          "line": 81,
+          "text": "- Demonstrated impact tied to OpenClaw's documented trust boundaries."
+        },
+        {
+          "line": 85,
+          "text": "- For command-risk/parity reports (for example obfuscation detection differences), a concrete boundary-bypass path is required (auth/approval/allowlist/sandbox). Parity-only findings are treated as hardening, not vulnerabilities."
+        },
+        {
+          "line": 95,
+          "text": "- Reports that treat explicit operator-control surfaces (for example browser evaluate/script execution or direct `node.invoke` execution primitives) as vulnerabilities without demonstrating an auth/policy/sandbox boundary bypass. These capa"
+        },
+        {
+          "line": 96,
+          "text": "- Reports that treat an admin-gated enablement or arming step as requiring `operator.admin` for every subsequent action, when the documented contract delegates use of the enabled capability to `operator.write` and no auth, arming, allowlist"
+        },
+        {
+          "line": 97,
+          "text": "- Authorized user-triggered local actions presented as privilege escalation. Example: an allowlisted/owner sender running `/export-session /absolute/path.html` to write on the host. In this trust model, authorized user actions are trusted h"
+        },
+        {
+          "line": 98,
+          "text": "- Reports that only show a malicious plugin executing privileged actions after a trusted operator installs/enables it."
+        },
+        {
+          "line": 99,
+          "text": "- Reports that assume per-user multi-tenant authorization on a shared gateway host/config."
+        },
+        {
+          "line": 100,
+          "text": "- Reports that only show quoted/replied/thread/forwarded supplemental context from non-allowlisted senders being visible to the model, without demonstrating an auth, policy, approval, or sandbox boundary bypass."
+        },
+        {
+          "line": 101,
+          "text": "- Reports that treat the Gateway HTTP compatibility endpoints (`POST /v1/chat/completions`, `POST /v1/responses`) as if they implemented scoped operator auth (`operator.write` vs `operator.admin`). These endpoints authenticate the shared Ga"
+        },
+        {
+          "line": 102,
+          "text": "- Reports that assume `x-openclaw-scopes` can reduce or redefine shared-secret bearer auth on the OpenAI-compatible HTTP endpoints. For shared-secret auth (`gateway.auth.mode=\"token\"` or `\"password\"`), those endpoints ignore narrower bearer"
+        },
+        {
+          "line": 103,
+          "text": "- Reports that treat `POST /tools/invoke` under shared-secret bearer auth (`gateway.auth.mode=\"token\"` or `\"password\"`) as a narrower per-request/per-scope authorization surface. That endpoint is designed as the same trusted-operator HTTP b"
+        }
+      ]
+    },
+    {
+      "repo": "vercel/ai",
+      "path": "architecture/harness-abstraction.md",
+      "sha": "07d4227e8cfacde8d4e84bcdeaf597121fe7c1e5",
+      "url": "https://github.com/vercel/ai/blob/07d4227e8cfacde8d4e84bcdeaf597121fe7c1e5/architecture/harness-abstraction.md",
+      "line_count": 241,
+      "excerpts": [
+        {
+          "line": 1,
+          "text": "# Harness abstraction architecture"
+        },
+        {
+          "line": 3,
+          "text": "This document explains how harness agents, sandbox sessions, and harness adapters fit together in the AI SDK."
+        },
+        {
+          "line": 4,
+          "text": "It starts with a high-level view and then describes the main decisions involved in adding a new harness adapter."
+        },
+        {
+          "line": 8,
+          "text": "- **Harness agent**: user-facing agent runtime wrapper (`HarnessAgent`)"
+        },
+        {
+          "line": 9,
+          "text": "- **Harness specification**: `HarnessV1`"
+        },
+        {
+          "line": 10,
+          "text": "- **Sandbox template**: `HarnessSandboxTemplate`, prepared by a sandbox session creator before a live session starts"
+        },
+        {
+          "line": 11,
+          "text": "- **Sandbox session**: either `HarnessV1NetworkSandboxSession` (recommended) or the narrower `Experimental_SandboxSession`"
+        },
+        {
+          "line": 12,
+          "text": "- **Harness implementations**: provider-specific coding-agent adapters that implement `HarnessV1`"
+        },
+        {
+          "line": 16,
+          "text": "    class HarnessAgent"
+        },
+        {
+          "line": 17,
+          "text": "    class HarnessV1 {"
+        },
+        {
+          "line": 20,
+          "text": "    class HarnessSandboxTemplate {"
+        },
+        {
+          "line": 24,
+          "text": "    class HarnessV1NetworkSandboxSession {"
+        },
+        {
+          "line": 27,
+          "text": "    class Experimental_SandboxSession {"
+        },
+        {
+          "line": 30,
+          "text": "    class HarnessImplementationA"
+        },
+        {
+          "line": 31,
+          "text": "    class HarnessImplementationB"
+        },
+        {
+          "line": 33,
+          "text": "    HarnessAgent ..> HarnessV1 : uses"
+        },
+        {
+          "line": 34,
+          "text": "    HarnessAgent ..> HarnessSandboxTemplate : resolves bootstrap"
+        },
+        {
+          "line": 35,
+          "text": "    HarnessSandboxTemplate ..> Experimental_SandboxSession : prepares"
+        },
+        {
+          "line": 36,
+          "text": "    HarnessV1NetworkSandboxSession --|> Experimental_SandboxSession : extends"
+        },
+        {
+          "line": 37,
+          "text": "    HarnessAgent ..> Experimental_SandboxSession : passes to adapter"
+        },
+        {
+          "line": 38,
+          "text": "    HarnessV1 ..> Experimental_SandboxSession : operates on"
+        },
+        {
+          "line": 39,
+          "text": "    HarnessV1 ..> HarnessV1NetworkSandboxSession : may use network capabilities"
+        }
+      ]
+    },
+    {
+      "repo": "mastra-ai/mastra",
+      "path": "LICENSE.md",
+      "sha": "0a4037f30fd0d712a6de4c167c6420fc2822a6a5",
+      "url": "https://github.com/mastra-ai/mastra/blob/0a4037f30fd0d712a6de4c167c6420fc2822a6a5/LICENSE.md",
+      "line_count": 32,
+      "excerpts": [
+        {
+          "line": 1,
+          "text": "Portions of this software are licensed as follows:"
+        },
+        {
+          "line": 4,
+          "text": "  repository, including but not limited to:"
+        },
+        {
+          "line": 9,
+          "text": "  is licensed under the license defined in [`ee/LICENSE`](https://github.com/mastra-ai/mastra/blob/main/ee/LICENSE)."
+        },
+        {
+          "line": 12,
+          "text": "  licensed under the original license provided by the owner of the"
+        },
+        {
+          "line": 16,
+          "text": "  available under the \"Apache License 2.0\" as defined below."
+        },
+        {
+          "line": 18,
+          "text": "# Apache License 2.0"
+        },
+        {
+          "line": 20,
+          "text": "Copyright (c) 2025 Kepler Software, Inc."
+        },
+        {
+          "line": 22,
+          "text": "Licensed under the Apache License, Version 2.0 (the \"License\");"
+        },
+        {
+          "line": 23,
+          "text": "you may not use this file except in compliance with the License."
+        },
+        {
+          "line": 24,
+          "text": "You may obtain a copy of the License at"
+        },
+        {
+          "line": 26,
+          "text": "    http://www.apache.org/licenses/LICENSE-2.0"
+        },
+        {
+          "line": 29,
+          "text": "distributed under the License is distributed on an \"AS IS\" BASIS,"
+        },
+        {
+          "line": 31,
+          "text": "See the License for the specific language governing permissions and"
+        },
+        {
+          "line": 32,
+          "text": "limitations under the License."
+        }
+      ]
+    },
+    {
+      "repo": "mastra-ai/mastra",
+      "path": "packages/core/src/agent/durable/create-durable-agent.ts",
+      "sha": "0a4037f30fd0d712a6de4c167c6420fc2822a6a5",
+      "url": "https://github.com/mastra-ai/mastra/blob/0a4037f30fd0d712a6de4c167c6420fc2822a6a5/packages/core/src/agent/durable/create-durable-agent.ts",
+      "line_count": 182,
+      "excerpts": [
+        {
+          "line": 29,
+          "text": "import type { ShouldPersistSnapshotFn } from '../../workflows/types';"
+        },
+        {
+          "line": 57,
+          "text": "   * - If not provided: Inherits from Mastra instance, or uses InMemoryServerCache"
+        },
+        {
+          "line": 65,
+          "text": "   * Optional - if not provided, defaults to EventEmitterPubSub."
+        },
+        {
+          "line": 79,
+          "text": "   * Overrides the snapshot-persistence policy for the agent's durable"
+        },
+        {
+          "line": 80,
+          "text": "   * workflows. By default `pending | paused | suspended` snapshots are always"
+        },
+        {
+          "line": 81,
+          "text": "   * persisted (required for human-in-the-loop `resume()`), and `running`"
+        },
+        {
+          "line": 82,
+          "text": "   * checkpoints are persisted only when the Mastra instance sets"
+        },
+        {
+          "line": 83,
+          "text": "   * `recovery: { durableAgents: 'auto' }`. See"
+        },
+        {
+          "line": 84,
+          "text": "   * {@link DurableAgentConfig.shouldPersistSnapshot} for caveats."
+        },
+        {
+          "line": 86,
+          "text": "  shouldPersistSnapshot?: ShouldPersistSnapshotFn;"
+        },
+        {
+          "line": 146,
+          "text": "  const { agent, id, name, cache, pubsub, maxSteps, cleanupTimeoutMs, shouldCache, shouldPersistSnapshot } = options;"
+        },
+        {
+          "line": 157,
+          "text": "    shouldPersistSnapshot,"
+        }
+      ]
+    },
+    {
+      "repo": "mastra-ai/mastra",
+      "path": "packages/core/src/agent/durable/execution-fence.ts",
+      "sha": "0a4037f30fd0d712a6de4c167c6420fc2822a6a5",
+      "url": "https://github.com/mastra-ai/mastra/blob/0a4037f30fd0d712a6de4c167c6420fc2822a6a5/packages/core/src/agent/durable/execution-fence.ts",
+      "line_count": 1038,
+      "excerpts": [
+        {
+          "line": 2,
+          "text": " * Execution fence for DurableAgent runs (#23734)."
+        },
+        {
+          "line": 5,
+          "text": " * `resume()`, `recover()`) claims the run under a fresh execution id."
+        },
+        {
+          "line": 6,
+          "text": " * `recover()` claims only a run nobody holds; `recover({ force: true })` takes"
+        },
+        {
+          "line": 10,
+          "text": " * overwriting the recovered answer."
+        },
+        {
+          "line": 15,
+          "text": " *   per-run owner record whose generation goes up on every claim. The memory"
+        },
+        {
+          "line": 17,
+          "text": " *   fence are rejected by storage once a newer claim exists, which closes the"
+        },
+        {
+          "line": 19,
+          "text": " * - A pubsub lease otherwise. This gives liveness only: a window of"
+        },
+        {
+          "line": 21,
+          "text": " *   With `NoopLeaseProvider` every check passes, which preserves the previous"
+        },
+        {
+          "line": 24,
+          "text": "import { ErrorCategory, ErrorDomain, MastraError, MastraNonRetryableError } from '../../error';"
+        },
+        {
+          "line": 25,
+          "text": "import { isLeaseProvider, NoopLeaseProvider } from '../../events/pubsub';"
+        },
+        {
+          "line": 26,
+          "text": "import type { LeaseProvider, PubSub } from '../../events/pubsub';"
+        },
+        {
+          "line": 30,
+          "text": "import type { MemoryStorage } from '../../storage/domains/memory/base';"
+        },
+        {
+          "line": 32,
+          "text": "import { isRunFenceConflictError, matchesRunFence, runOutsideRunFenceScope } from '../../storage/run-fencing';"
+        },
+        {
+          "line": 33,
+          "text": "import type { RunFence, RunFenceScope } from '../../storage/run-fencing';"
+        },
+        {
+          "line": 34,
+          "text": "import { runInRunFenceScope } from './run-fence-scope';"
+        },
+        {
+          "line": 36,
+          "text": "export const EXECUTION_LEASE_TTL_MS = 30_000;"
+        },
+        {
+          "line": 37,
+          "text": "export const EXECUTION_LEASE_RENEW_INTERVAL_MS = 10_000;"
+        },
+        {
+          "line": 38,
+          "text": "const VERIFY_RETRY_DELAY_MS = 250;"
+        },
+        {
+          "line": 56,
+          "text": "export const RECOVER_RUN_ACTIVE_LOCALLY_ERROR_ID = 'DURABLE_AGENT_RECOVER_RUN_ACTIVE_LOCALLY';"
+        },
+        {
+          "line": 58,
+          "text": "/** Shortest delay {@link RUN_ACTIVE_ERROR_ID} suggests before retrying, so a skewed clock can't cause a tight loop. */"
+        },
+        {
+          "line": 59,
+          "text": "const MIN_RETRY_DELAY_MS = 1_000;"
+        },
+        {
+          "line": 68,
+          "text": "    `Durable run ${runId} lost its execution lease (taken over by another execution, or expired); this execution stopped without writing.`,"
+        },
+        {
+          "line": 72,
+          "text": "    `Durable run ${runId}: the process shut down before this execution finished; it stopped without writing and released the run for recovery.`,"
+        },
+        {
+          "line": 78,
+          "text": " * `MastraNonRetryableError` so the workflow engine fails the step instead of"
+        },
+        {
+          "line": 79,
+          "text": " * retrying it."
+        },
+        {
+          "line": 81,
+          "text": "export class DurableExecutionFenceError extends MastraNonRetryableError {"
+        },
+        {
+          "line": 89,
+          "text": "    this.name = 'DurableExecutionFenceError';"
+        },
+        {
+          "line": 96,
+          "text": " * `recover()` refused a run that is still live. `details.retryAt` (epoch ms,"
+        },
+        {
+          "line": 108,
+          "text": "  const ttlMs = liveBy === 'thread-lease' && args.untrackedRun ? args.untrackedRun.ttlMs : EXECUTION_LEASE_TTL_MS;"
+        },
+        {
+          "line": 110,
+          "text": "  const remainingMs = attempt.leaseExpiresAt ? attempt.leaseExpiresAt.getTime() - now : ttlMs;"
+        }
+      ]
+    },
+    {
+      "repo": "mastra-ai/mastra",
+      "path": "packages/core/src/agent/durable/run-recovery.md",
+      "sha": "0a4037f30fd0d712a6de4c167c6420fc2822a6a5",
+      "url": "https://github.com/mastra-ai/mastra/blob/0a4037f30fd0d712a6de4c167c6420fc2822a6a5/packages/core/src/agent/durable/run-recovery.md",
+      "line_count": 105,
+      "excerpts": [
+        {
+          "line": 1,
+          "text": "# Durable run recovery"
+        },
+        {
+          "line": 3,
+          "text": "A durable agent run whose process dies stays `running` in storage with nobody driving it. Recovery restarts it in another process (or the same one after a restart) from its last persisted snapshot."
+        },
+        {
+          "line": 5,
+          "text": "Recovery only takes runs that are orphaned. Whether a run is orphaned is decided by run ownership; see [leases.md](./leases.md) for how claims, generations, and fencing work. This file covers what recovery does with that."
+        },
+        {
+          "line": 9,
+          "text": "- The agent is registered on a `Mastra` instance with storage (`DURABLE_AGENT_RECOVER_NO_MASTRA`, `DURABLE_AGENT_RECOVER_NO_STORAGE` otherwise)."
+        },
+        {
+          "line": 10,
+          "text": "- The run has a persisted `running` snapshot. `listActiveRuns()` and `recover()` read nothing else. A plain `DurableAgent` writes `running` snapshots only when `recovery.durableAgents` is `'auto'`, or when a user `shouldPersistSna"
+        },
+        {
+          "line": 11,
+          "text": "- The workflows store supports run fencing. Without it recovery still works, but liveness comes from the pubsub lease and a superseded execution's writes are not rejected. `recoverActiveRuns()` and `recover()` warn once per store "
+        },
+        {
+          "line": 17,
+          "text": "| `agent.recover(runId, { force?, abortSignal?, ... })` | Recovers one run and returns its stream.                                                                                                                                    "
+        },
+        {
+          "line": 18,
+          "text": "| `agent.recoverActiveRuns({ runId?, ...listOptions })` | Recovers every run `listActiveRuns()` finds (or one `runId`), awaits each, and returns `{ recovered, succeeded, failed }`. No streams.                                      "
+        },
+        {
+          "line": 19,
+          "text": "| `mastra.recoverAllDurableAgents()`                    | Calls `recoverActiveRuns()` on every registered durable agent and schedules re-checks for skipped runs.                                                                     "
+        },
+        {
+          "line": 20,
+          "text": "| Boot                                                  | With `recovery: { durableAgents: 'auto' }`, the built server calls `recoverAllDurableAgents()` at startup, and `mastra dev` triggers it through `/__restart-active-workflow-"
+        },
+        {
+          "line": 21,
+          "text": "| `POST /agents/:agentId/recover`                       | Server route over `recover()`. Run-state conflicts map to 409.                                                                                                              "
+        },
+        {
+          "line": 23,
+          "text": "## When a run is recovered"
+        },
+        {
+          "line": 25,
+          "text": "`recover()` takes a run only if all of these hold:"
+        },
+        {
+          "line": 27,
+          "text": "1. Its snapshot exists, is `running`, and belongs to this agent."
+        },
+        {
+          "line": 28,
+          "text": "2. This process is not already recovering it."
+        },
+        {
+          "line": 31,
+          "text": "5. For a run without an ownership record (started by a version from before ownership records existed), its thread lease is not held. A run without a thread, or a pubsub without leases, gives no signal, so such a run counts as not "
+        },
+        {
+          "line": 33,
+          "text": "The checks happen in that order. The claim in step 4 is atomic with the check, so no other execution can claim the run once it succeeds. With storage fencing, storage rejects writes from any execution that lost the run from that m"
+        },
+        {
+          "line": 37,
+          "text": "1. **Validate.** Load the snapshot and reject a missing, foreign, or suspended run before touching ownership."
+        },
+        {
+          "line": 38,
+          "text": "2. **Pin the agent version.** A run that was executing a stored agent version is recovered on that version: `recover()` resolves it and delegates to it. This happens before claiming, so the claim is never held by one agent object "
+        },
+        {
+          "line": 39,
+          "text": "3. **Claim locally.** A second `recover()` of the same run in this process fails with `DURABLE_AGENT_RECOVER_ALREADY_IN_PROGRESS`."
+        },
+        {
+          "line": 40,
+          "text": "4. **Refuse a local execution.** If this process still executes the run, fail with `DURABLE_AGENT_RECOVER_RUN_ACTIVE_LOCALLY`. `force` does not override this: taking it over would replace the live execution's registry entry mid-fl"
+        },
+        {
+          "line": 41,
+          "text": "5. **Claim the run** in `recover` mode, or `takeover` mode under `force`."
+        },
+        {
+          "line": 42,
+          "text": "6. **Reload the snapshot.** The previous owner may have finished or suspended while the claim was in flight. Everything after this uses the reloaded snapshot, never the pre-claim copy. A run that suspended in the meantime is refus"
+        },
+        {
+          "line": 43,
+          "text": "7. **Rebuild state.** Rehydrate the message list, memory, request context, and tracing span from the snapshot, then raise the memory store's fence to the claim's generation."
+        },
+        {
+          "line": 45,
+          "text": "9. **Register the stream** and, for a run on a memory thread, the thread run."
+        },
+        {
+          "line": 46,
+          "text": "10. **Restart** the workflow from the snapshot under the claim. On a non-suspended terminal, while still owned, delete the run's snapshots, as `stream()` and `resume()` do."
+        },
+        {
+          "line": 48,
+          "text": "If setup fails after ownership is acquired but before the workflow restarts, the claim is settled and released and `recover()` throws. While that attempt still owns the run, a genuine setup failure also publishes a generation-fenc"
+        },
+        {
+          "line": 52,
+          "text": "The workflow restarts from the last persisted snapshot. Every step after it runs again, including model calls and tool calls."
+        },
+        {
+          "line": 54,
+          "text": "Writes from the redo land on the same rows the crashed execution wrote. Message and part ids come from the snapshot's state, not freshly generated, so a redo upserts rather than appends. This holds for crashes anywhere in the run,"
+        },
+        {
+          "line": 56,
+          "text": "One edge: on the default engine, `map-final-output` publishes `finish` before its result is saved. If the saved snapshot already shows it succeeded, the engine continues past it instead of re-running it, so the recovered stream wo"
+        }
+      ]
+    }
+  ]
+}

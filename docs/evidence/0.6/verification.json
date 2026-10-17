@@ -1,0 +1,27 @@
+{
+  "release": "0.6.0",
+  "date": "2026-10-17",
+  "environment": "macOS host Node 26, Docker Node 24, PostgreSQL 18; CI Node 24",
+  "counts": {
+    "unit": 36,
+    "postgres": 28,
+    "dockerRunner": 5,
+    "staticBrowser": 31,
+    "serverBrowser": 11,
+    "total": 111
+  },
+  "execution": "Native Claude protocol fixture -> actual file edit -> actual Docker test -> fresh QA same patch -> different human acceptance",
+  "restore": "Active edit checkpoint -> encrypted backup -> empty project restore -> CLI stop confirmation -> new Run retains patch -> actual assertion requiring edited value passes",
+  "media": "docs/media/execution/manifest.json",
+  "remoteModelInference": false,
+  "remoteGitLab": false,
+  "projectToolchainImage": false,
+  "unverified": [
+    "configured endpoint authentication/CA/model ID",
+    "actual private GitLab permissions/version",
+    "project-specific offline dependencies and checks",
+    "model quality, cost, latency",
+    "deployment host and real team effectiveness"
+  ],
+  "secretOwnership": "Real Linux Docker volumes: uid1001 0600 source, uid1000 cannot read source, per-service staged ownership/readability and restaging pass"
+}

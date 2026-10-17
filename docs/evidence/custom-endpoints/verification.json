@@ -1,0 +1,28 @@
+{
+  "date": "2026-10-17T05:08:03.673Z",
+  "scope": "Custom model endpoint and GitLab adapter contracts",
+  "localTests": {
+    "unit": 34,
+    "postgresIntegration": 22,
+    "serverBrowser": 9,
+    "staticBrowser": 31,
+    "total": 96
+  },
+  "actualRemoteEndpointAccess": false,
+  "actualExternalModelInference": false,
+  "addedRuntimeDependencies": 0,
+  "contracts": [
+    "Native Claude Messages and OpenAI-compatible body/response",
+    "Configurable full endpoint and token header/scheme",
+    "GitLab subgroup/subpath MR and immutable base/head",
+    "GitLab modes/creation/deletion/rename preserved",
+    "Partial or unexplained empty diff rejected",
+    "Project and sharing registration",
+    "Provider/SCM pinned profile changes rejected",
+    "GitLab to Claude protocol stub to persisted Artifact through real Worker",
+    "Existing secret upgrade preserves values"
+  ],
+  "review": "Astra follow-up: metadata and secret upgrade findings resolved; no remaining blocker in reviewed scope",
+  "gitLabCIExecuted": false,
+  "hermesConnected": false
+}

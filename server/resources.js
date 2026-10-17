@@ -1,0 +1,388 @@
+import { randomUUID } from "node:crypto";
+import { z } from "zod";
+import { transaction, event, digest } from "./db.js";
+import {
+  requireLead,
+  requireRead,
+  readPredicate,
+  canRead,
+} from "./permissions.js";
+import { conflict, fail } from "./errors.js";
+import { getTask } from "./tasks.js";
+import { department, revision, memoryInput } from "./validation.js";
+
+export async function agents(db, user) {
+  return (
+    await db.query(
+      "SELECT a.*,coalesce(jsonb_agg(jsonb_build_object('skillId',b.skill_id,'version',b.version)) FILTER(WHERE b.skill_id IS NOT NULL),'[]') AS skills FROM cr_agents a LEFT JOIN cr_skill_bindings b ON b.agent_id=a.id WHERE a.owner_id IS NULL OR a.owner_id=$1 GROUP BY a.id ORDER BY a.created_at",
+      [user.id],
+    )
+  ).rows;
+}
+export async function updateAgent(pool, user, id, input) {
+  const v = z
+    .object({
+      revision,
+      name: z.string().trim().min(1).max(40),
+      instructions: z.string().trim().min(1).max(6000),
+      runtime: z.enum(["readonly", "hermes"]),
+    })
+    .strict()
+    .parse(input);
+  return transaction(pool, async (db) => {
+    const a = (
+      await db.query("SELECT * FROM cr_agents WHERE id=$1 FOR UPDATE", [id])
+    ).rows[0];
+    if (!a || (a.owner_id && a.owner_id !== user.id))
+      fail(404, "NOT_FOUND", "동료를 찾을 수 없어요.");
+    if (a.owner_id !== user.id) requireLead(user);
+    if (a.config_version !== v.revision) conflict();
+    const result = (
+      await db.query(
+        "UPDATE cr_agents SET name=$2,instructions=$3,runtime=$4,config_version=config_version+1 WHERE id=$1 RETURNING *",
+        [id, v.name, v.instructions, v.runtime],
+      )
+    ).rows[0];
+    await event(db, null, { type: "user", id: user.id }, "agent_updated", {
+      agentId: id,
+      configVersion: result.config_version,
+    });
+    return result;
+  });
+}
+export async function listSkills(db, user) {
+  return (
+    await db.query(
+      "SELECT s.*,v.instructions,v.done_criteria,v.content_hash FROM cr_skills s JOIN cr_skill_versions v ON v.skill_id=s.id AND v.version=s.current_version WHERE s.owner_id IS NULL OR s.owner_id=$1 ORDER BY s.name",
+      [user.id],
+    )
+  ).rows;
+}
+export async function publishSkill(pool, user, id, input) {
+  const v = z
+    .object({
+      revision,
+      instructions: z.string().trim().min(1).max(12000),
+      doneCriteria: z.string().trim().min(1).max(2000),
+    })
+    .strict()
+    .parse(input);
+  return transaction(pool, async (db) => {
+    const skill = (
+      await db.query("SELECT * FROM cr_skills WHERE id=$1 FOR UPDATE", [id])
+    ).rows[0];
+    if (!skill || (skill.owner_id && skill.owner_id !== user.id))
+      fail(404, "NOT_FOUND", "스킬을 찾을 수 없어요.");
+    if (
+      user.role !== "lead" &&
+      skill.owner_id !== user.id &&
+      skill.steward_id !== user.id
+    )
+      fail(403, "SKILL_STEWARD_REQUIRED", "이 스킬의 관리 권한이 필요해요.");
+    if (skill.current_version !== v.revision) conflict();
+    const version = skill.current_version + 1;
+    await db.query(
+      "INSERT INTO cr_skill_versions(skill_id,version,instructions,done_criteria,content_hash,created_by) VALUES($1,$2,$3,$4,$5,$6)",
+      [
+        id,
+        version,
+        v.instructions,
+        v.doneCriteria,
+        digest({ instructions: v.instructions, done: v.doneCriteria }),
+        user.id,
+      ],
+    );
+    await db.query("UPDATE cr_skills SET current_version=$2 WHERE id=$1", [
+      id,
+      version,
+    ]);
+    await event(db, null, { type: "user", id: user.id }, "skill_published", {
+      skillId: id,
+      version,
+    });
+    return { id, version };
+  });
+}
+export async function bindSkill(pool, user, agentId, input) {
+  const v = z
+    .object({
+      skillId: z.string().max(80),
+      version: revision,
+      agentRevision: revision,
+    })
+    .strict()
+    .parse(input);
+  return transaction(pool, async (db) => {
+    const a = (
+      await db.query("SELECT * FROM cr_agents WHERE id=$1 FOR UPDATE", [
+        agentId,
+      ])
+    ).rows[0];
+    if (!a || (a.owner_id && a.owner_id !== user.id))
+      fail(404, "NOT_FOUND", "동료를 찾을 수 없어요.");
+    if (a.owner_id !== user.id) requireLead(user);
+    if (a.config_version !== v.agentRevision) conflict();
+    const skill = (
+      await db.query(
+        "SELECT s.id,s.owner_id FROM cr_skills s JOIN cr_skill_versions v ON v.skill_id=s.id AND v.version=$2 WHERE s.id=$1",
+        [v.skillId, v.version],
+      )
+    ).rows[0];
+    if (
+      !skill ||
+      (skill.owner_id && skill.owner_id !== user.id) ||
+      (skill.owner_id && !a.owner_id)
+    )
+      fail(
+        400,
+        "SKILL_SCOPE",
+        "이 동료에 적용할 수 있는 스킬 버전을 선택해주세요.",
+      );
+    await db.query(
+      "INSERT INTO cr_skill_bindings(agent_id,skill_id,version) VALUES($1,$2,$3) ON CONFLICT(agent_id,skill_id) DO UPDATE SET version=excluded.version",
+      [agentId, v.skillId, v.version],
+    );
+    await db.query(
+      "UPDATE cr_agents SET config_version=config_version+1 WHERE id=$1",
+      [agentId],
+    );
+    await event(db, null, { type: "user", id: user.id }, "skill_bound", {
+      agentId,
+      skillId: v.skillId,
+      version: v.version,
+    });
+    return { ok: true };
+  });
+}
+export async function updateMember(pool, user, id, input) {
+  requireLead(user);
+  const v = z
+    .object({
+      role: z.enum(["lead", "member"]),
+      department,
+      active: z.boolean(),
+    })
+    .strict()
+    .parse(input);
+  return transaction(pool, async (db) => {
+    await db.query(
+      "SELECT pg_advisory_xact_lock(hashtext('crewroom-members'))",
+    );
+    const m = (
+      await db.query("SELECT * FROM cr_members WHERE id=$1 FOR UPDATE", [id])
+    ).rows[0];
+    if (!m) fail(404, "NOT_FOUND", "구성원을 찾을 수 없어요.");
+    if (
+      m.role === "lead" &&
+      m.active &&
+      (v.role !== "lead" || !v.active) &&
+      Number(
+        (
+          await db.query(
+            "SELECT count(*) FROM cr_members WHERE role='lead' AND active",
+          )
+        ).rows[0].count,
+      ) <= 1
+    )
+      fail(409, "LAST_LEAD", "팀장은 한 명 이상 필요해요.");
+    await db.query(
+      "UPDATE cr_members SET role=$2,department=$3,active=$4,lead_requested=CASE WHEN $2='lead' THEN false ELSE lead_requested END WHERE id=$1",
+      [id, v.role, v.department, v.active],
+    );
+    if (!v.active)
+      await db.query("DELETE FROM cr_sessions WHERE user_id=$1", [id]);
+    await event(db, null, { type: "user", id: user.id }, "member_updated", {
+      memberId: id,
+      ...v,
+    });
+    return { ok: true };
+  });
+}
+export async function setSteward(pool, user, skillId, stewardId) {
+  requireLead(user);
+  if (stewardId !== null && !z.uuid().safeParse(stewardId).success)
+    fail(400, "INVALID_MEMBER", "구성원을 선택해주세요.");
+  return transaction(pool, async (db) => {
+    if (
+      stewardId &&
+      !(
+        await db.query("SELECT 1 FROM cr_members WHERE id=$1 AND active", [
+          stewardId,
+        ])
+      ).rowCount
+    )
+      fail(400, "INVALID_MEMBER", "활성 구성원을 선택해주세요.");
+    if (
+      !(
+        await db.query(
+          "UPDATE cr_skills SET steward_id=$2 WHERE id=$1 AND owner_id IS NULL RETURNING id",
+          [skillId, stewardId],
+        )
+      ).rowCount
+    )
+      fail(404, "NOT_FOUND", "공용 스킬을 찾을 수 없어요.");
+    await event(db, null, { type: "user", id: user.id }, "steward_updated", {
+      skillId,
+      stewardId,
+    });
+    return { ok: true };
+  });
+}
+export async function listMemories(db, user, query = "") {
+  return (
+    await db.query(
+      `SELECT m.* FROM cr_memories m JOIN cr_agents a ON a.id=m.agent_id WHERE m.deleted_at IS NULL AND (a.owner_id IS NULL OR a.owner_id=$1) AND ${readPredicate("m")} AND ($3='' OR m.title ILIKE $4 OR m.body ILIKE $4) ORDER BY m.updated_at DESC LIMIT 100`,
+      [
+        user.id,
+        user.department,
+        query,
+        `%${query.replace(/[\\%_]/g, "\\$&")}%`,
+      ],
+    )
+  ).rows;
+}
+export async function createMemory(pool, user, input) {
+  const v = memoryInput.parse(input);
+  return transaction(pool, async (db) => {
+    const a = (
+      await db.query("SELECT * FROM cr_agents WHERE id=$1", [v.agentId])
+    ).rows[0];
+    if (!a || (a.owner_id && a.owner_id !== user.id))
+      fail(404, "NOT_FOUND", "동료를 찾을 수 없어요.");
+    if (a.owner_id && v.visibility !== "private")
+      fail(400, "PERSONAL_SCOPE", "개인 비서의 기억은 비공개로 저장해주세요.");
+    const source = v.sourceTaskId
+      ? await getTask(db, user, v.sourceTaskId)
+      : null;
+    if (source && source.visibility !== v.visibility)
+      fail(400, "SOURCE_SCOPE", "원본 업무와 같은 공개 범위를 사용해주세요.");
+    if (
+      v.visibility !== "private" &&
+      user.role !== "lead" &&
+      source?.responsible_id !== user.id
+    )
+      fail(
+        403,
+        "MEMORY_STEWARD_REQUIRED",
+        "공유 기억은 업무 책임자 또는 팀장이 저장할 수 있어요.",
+      );
+    const id = randomUUID();
+    await db.query(
+      "INSERT INTO cr_memories(id,agent_id,owner_id,visibility,department,source_task_id,title,body,source) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)",
+      [
+        id,
+        v.agentId,
+        user.id,
+        v.visibility,
+        source?.department || user.department,
+        source?.id || null,
+        v.title,
+        v.body,
+        v.source,
+      ],
+    );
+    // Private content is intentionally absent from global activity payloads.
+    await event(
+      db,
+      source?.id || null,
+      { type: "user", id: user.id },
+      "memory_created",
+      { memoryId: id },
+    );
+    return { id };
+  });
+}
+export async function changeMemory(pool, user, id, input, deleting = false) {
+  const v = deleting
+    ? z.object({ revision }).strict().parse(input)
+    : z
+        .object({
+          revision,
+          title: z.string().trim().min(1).max(120),
+          body: z.string().trim().min(1).max(10000),
+          reason: z.string().trim().min(1).max(300),
+        })
+        .strict()
+        .parse(input);
+  return transaction(pool, async (db) => {
+    const ref = (
+      await db.query("SELECT source_task_id FROM cr_memories WHERE id=$1", [id])
+    ).rows[0];
+    if (ref?.source_task_id) await getTask(db, user, ref.source_task_id, true);
+    const m = (
+      await db.query(
+        "SELECT * FROM cr_memories WHERE id=$1 AND deleted_at IS NULL FOR UPDATE",
+        [id],
+      )
+    ).rows[0];
+    requireRead(user, m);
+    if (
+      m.owner_id !== user.id &&
+      !(user.role === "lead" && m.visibility !== "private")
+    )
+      fail(
+        403,
+        "MEMORY_OWNER_REQUIRED",
+        "기억 작성자 또는 공유 기억 관리자만 수정할 수 있어요.",
+      );
+    if (m.revision !== v.revision) conflict();
+    const history = JSON.stringify([
+      {
+        revision: m.revision,
+        title: m.title,
+        body: m.body,
+        actor: user.id,
+        reason: v.reason || "삭제",
+        at: new Date().toISOString(),
+      },
+    ]);
+    await db.query(
+      "UPDATE cr_memories SET title=$2,body=$3,history=history || $4::jsonb,revision=revision+1,updated_at=now(),deleted_at=CASE WHEN $5 THEN now() ELSE NULL END WHERE id=$1",
+      [id, v.title || m.title, v.body || m.body, history, deleting],
+    );
+    await event(
+      db,
+      m.source_task_id,
+      { type: "user", id: user.id },
+      deleting ? "memory_deleted" : "memory_corrected",
+      { memoryId: id },
+    );
+    return { ok: true };
+  });
+}
+
+export async function createSkill(pool, user, input) {
+  const v = z
+    .object({
+      name: z.string().trim().min(1).max(80),
+      scope: z.enum(["private", "team"]),
+      instructions: z.string().trim().min(1).max(12000),
+      doneCriteria: z.string().trim().min(1).max(2000),
+    })
+    .strict()
+    .parse(input);
+  if (v.scope === "team") requireLead(user);
+  const id = "custom-" + randomUUID();
+  return transaction(pool, async (db) => {
+    await db.query("INSERT INTO cr_skills(id,name,owner_id) VALUES($1,$2,$3)", [
+      id,
+      v.name,
+      v.scope === "private" ? user.id : null,
+    ]);
+    await db.query(
+      "INSERT INTO cr_skill_versions(skill_id,version,instructions,done_criteria,content_hash,created_by) VALUES($1,1,$2,$3,$4,$5)",
+      [
+        id,
+        v.instructions,
+        v.doneCriteria,
+        digest({ instructions: v.instructions, done: v.doneCriteria }),
+        user.id,
+      ],
+    );
+    await event(db, null, { type: "user", id: user.id }, "skill_created", {
+      skillId: id,
+      scope: v.scope,
+    });
+    return { id, version: 1 };
+  });
+}

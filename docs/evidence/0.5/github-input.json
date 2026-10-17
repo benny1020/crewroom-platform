@@ -1,0 +1,14 @@
+{
+  "date": "2026-10-17T04:27:38.413Z",
+  "target": "https://github.com/paperclipai/paperclip/pull/16631",
+  "requestedHead": "cfef7a16707e61eead8c5b73268be953ce0e8b15",
+  "input": {
+    "kind": "github-immutable-diff",
+    "url": "https://github.com/paperclipai/paperclip/pull/16631",
+    "sha": "cfef7a16707e61eead8c5b73268be953ce0e8b15",
+    "baseSha": "32ee2e9a6a35da4cbde0c7f57df92f4d7eda5444",
+    "hash": "8c76217a8b3bc4f7149bfe3d75730a7b70d216c5f48fd01628088be77c094f4b",
+    "fetchedAt": "2026-10-17T04:27:38.413Z",
+    "warning": "공개 GitHub diff를 읽었습니다. 저장소 코드 실행·테스트·외부 변경은 수행하지 않았습니다."
+  }
+}
