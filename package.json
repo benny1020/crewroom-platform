@@ -1,6 +1,6 @@
 {
   "name": "crewroom",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "private": true,
   "type": "module",
   "description": "Crewroom — shared agents, durable team workrooms, skills and scoped memory.",
@@ -28,7 +28,8 @@
     "test:runner": "node --test tests/runner-docker.test.mjs",
     "test:execution": "TEST_RUNNER_DOCKER=1 node --test tests/server/execution.test.js",
     "doctor": "node scripts/doctor.mjs",
-    "test:secrets": "node scripts/verify-secret-ownership.mjs"
+    "test:secrets": "node scripts/verify-secret-ownership.mjs",
+    "evaluate:memory": "node scripts/evaluate-memory.mjs"
   },
   "dependencies": {
     "fastify": "5.12.7",

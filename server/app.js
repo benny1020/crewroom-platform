@@ -32,6 +32,7 @@ import {
   sourceAllowed,
 } from "./memory.js";
 import * as resources from "./resources.js";
+import { listProposals, resolveProposal } from "./memory-learning.js";
 
 export function buildApp(pool, config = configuration()) {
   const app = Fastify({
@@ -383,6 +384,10 @@ export function buildApp(pool, config = configuration()) {
     visibility: d.visibility,
     targetVersion: d.target_version,
     createdAt: d.created_at,
+    audience: d.audience,
+    validFrom: d.valid_from,
+    validTo: d.valid_to,
+    supersedesId: d.supersedes_id,
   });
   app.get("/api/tasks/:id/memory", async (req) => {
     const task = await getTask(pool, req.member, id.parse(req.params.id));
@@ -437,6 +442,7 @@ export function buildApp(pool, config = configuration()) {
         q: z.string().max(300).default(""),
         agentId: z.string().max(80).default(""),
         project: z.string().max(80).default(""),
+        asOf: z.iso.datetime({ offset: true }).optional(),
       })
       .strict()
       .parse(req.query);
@@ -444,14 +450,26 @@ export function buildApp(pool, config = configuration()) {
       pool,
       req.member,
       { visibility: "private", department: req.member.department },
-      { query: v.q, agentId: v.agentId, project: v.project, limit: 30 },
+      {
+        query: v.q,
+        agentId: v.agentId,
+        project: v.project,
+        asOf: v.asOf,
+        limit: 30,
+      },
     );
     return {
       items: docs.map(publicMemory),
-      method: "keyword",
+      method: "rrf-keyword",
       automaticSummaries: "extractive",
     };
   });
+  app.get("/api/memory/proposals", async (req) => ({
+    items: await listProposals(pool, req.member),
+  }));
+  app.post("/api/memory/proposals/:id", async (req) =>
+    resolveProposal(pool, req.member, id.parse(req.params.id), req.body),
+  );
   app.get("/api/memory/sources/:key", async (req) => {
     const key = z.string().max(100).parse(req.params.key),
       doc = await readMemorySource(

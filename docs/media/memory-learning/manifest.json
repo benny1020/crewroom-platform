@@ -1,0 +1,47 @@
+{
+  "capturedAt": "2026-10-18T01:00:33.308Z",
+  "mode": "CUA browser; real API and isolated PostgreSQL; deterministic model fixture; GIF is a sequence of UI captures",
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "pageErrors": [],
+  "visualCorrection": "Registered missing Link/RefreshCw icons; no warnings from final icon bundle",
+  "files": [
+    {
+      "name": "accepted.jpg",
+      "bytes": 45175,
+      "sha256": "c8ffe00a8b26d8714d35af820b04a4ffba09065dd874c2ba660540789e84e424"
+    },
+    {
+      "name": "effective-date.jpg",
+      "bytes": 53991,
+      "sha256": "872de193d191e041362524c6c996217290d177cf774c8388e44215d0c94a735a"
+    },
+    {
+      "name": "history.jpg",
+      "bytes": 52947,
+      "sha256": "0e735e71312f8a8a768ccdf6c32d9a4216df13fdee4eee17a53d99dcb691c361"
+    },
+    {
+      "name": "proposal.jpg",
+      "bytes": 59022,
+      "sha256": "d003ae1b4b7f53f01cf70b3a010e0d3d90be39470715dd81b0938a3e83a0d71f"
+    },
+    {
+      "name": "skill-draft.jpg",
+      "bytes": 52461,
+      "sha256": "3538cfd26829bc59bedb7804c1903ea0a4ae30327bc0dd20ea88297eb449b6b3"
+    },
+    {
+      "name": "source.jpg",
+      "bytes": 45468,
+      "sha256": "59547f47ea1dc2ecbc6936c80c18b85f329705dc98fc0e0c44b5631c856a2023"
+    },
+    {
+      "name": "workflow.gif",
+      "bytes": 706887,
+      "sha256": "6c654967a17753db3f4c4ba626596d86575fc3873a1706250b08ce40c3cdff86"
+    }
+  ]
+}

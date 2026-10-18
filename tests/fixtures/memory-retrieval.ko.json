@@ -1,0 +1,40 @@
+{
+ "description":"Hand-authored Korean retrieval regression corpus. Not LongMemEval/EverMemBench; no generated-answer scoring or real semantic embeddings.",
+ "notes":[
+  {"id":"session-old","title":"로그인 세션 만료 결정","body":"로그인 세션 만료기간은 35분입니다.","validFrom":"2026-01-01T00:00:00Z","validTo":"2026-11-01T00:00:00Z"},
+  {"id":"session-new","title":"로그인 세션 만료 결정","body":"로그인 세션 만료기간은 50분입니다.","validFrom":"2026-11-01T00:00:00Z"},
+  {"id":"release-owner","title":"결제 배포 승인 책임자","body":"결제 서비스의 배포 승인 책임자는 유나입니다."},
+  {"id":"rollback","title":"결제 롤백 기준","body":"결제 오류율이 3퍼센트를 넘으면 롤백 검토를 시작합니다."},
+  {"id":"certificate","title":"TLS 인증서 갱신 주기","body":"TLS 인증서는 30일마다 갱신합니다."},
+  {"id":"private","title":"개인 일정 비공개 메모","body":"개인휴가암호는 구름나무입니다.","visibility":"private","audience":"agent"},
+  {"id":"agent-only","title":"리뷰 전용 점검표","body":"카이전용정책은 새벽별입니다.","audience":"agent"},
+  {"id":"other-project","title":"로그인 세션 만료 결정","body":"별도 프로젝트의 로그인 세션은 90분입니다.","project":"다른 프로젝트"},
+  {"id":"department","title":"개발 부서 전용 회의","body":"개발부서암호는 단풍입니다.","visibility":"department","audience":"agent"}
+ ],
+ "answers":[
+  {"id":"historic","agentId":"ops","versions":[{"summary":"이전 운영 답변","evidence":["옥색배포키는 4827입니다.","결제 재시도 간격은 7초입니다."]},{"summary":"다음 답변은 일정 안내입니다.","evidence":["정기 점검은 월요일입니다."]}]},
+  {"id":"qa-answer","agentId":"qa","versions":[{"summary":"이전 QA 결과","evidence":["물결검사키는 913입니다."]},{"summary":"최근 QA 결과","evidence":["푸른검사키는 621입니다."]}]}
+ ],
+ "queries":[
+  {"id":"current","q":"로그인 세션 만료","expected":["session-old"],"forbidden":["50분","90분"],"asOf":"2026-10-18T00:00:00Z","category":"effective-time"},
+  {"id":"future","q":"로그인 세션 만료","expected":["session-new"],"forbidden":["35분","90분"],"asOf":"2026-11-01T00:00:00Z","category":"effective-time"},
+  {"id":"historical","q":"로그인 세션 만료기간을","expected":["session-old"],"asOf":"2026-02-01T00:00:00Z","category":"korean-inflection"},
+  {"id":"owner","q":"결제 배포 승인 책임자","expected":["release-owner"],"category":"shared-project"},
+  {"id":"owner-review","q":"결제 배포 책임자를 알려줘","agentId":"review","expected":["release-owner"],"category":"korean-inflection"},
+  {"id":"rollback","q":"결제 오류율 롤백 기준","expected":["rollback"],"category":"shared-project"},
+  {"id":"multi","q":"결제 승인 책임자와 롤백 기준","expected":["release-owner","rollback"],"category":"multi-source"},
+  {"id":"cert","q":"TLS 인증서 갱신 주기","expected":["certificate"],"category":"shared-project"},
+  {"id":"old-ops","q":"옥색배포키","expected":["historic:1:evidence:1"],"category":"historic-assistant"},
+  {"id":"old-ops-numeric","q":"결제 재시도 간격","expected":["historic:1:evidence:2"],"category":"historic-assistant"},
+  {"id":"latest-ops","q":"정기 점검 월요일","expected":["historic:2:evidence:1"],"category":"assistant-evidence"},
+  {"id":"old-qa","q":"물결검사키","expected":["qa-answer:1:evidence:1"],"category":"historic-assistant"},
+  {"id":"latest-qa","q":"푸른검사키","expected":["qa-answer:2:evidence:1"],"category":"assistant-evidence"},
+  {"id":"private-denied","q":"개인휴가암호","expected":[],"forbidden":["구름나무"],"category":"acl"},
+  {"id":"department-denied","q":"개발부서암호","expected":[],"forbidden":["단풍"],"category":"acl"},
+  {"id":"agent-denied","q":"카이전용정책","expected":[],"forbidden":["새벽별"],"category":"agent-scope"},
+  {"id":"project-denied","q":"로그인 세션","project":"없는 프로젝트","expected":[],"forbidden":["35분","50분","90분"],"category":"project-scope"},
+  {"id":"unknown","q":"자주색은하의 비밀담당자","expected":[],"category":"no-evidence"},
+  {"id":"paraphrase-owner","q":"누가 배포를 허락하나요","expected":["release-owner"],"category":"semantic-paraphrase"},
+  {"id":"paraphrase-cert","q":"증명서 교체 간격","expected":["certificate"],"category":"semantic-paraphrase"}
+ ]
+}

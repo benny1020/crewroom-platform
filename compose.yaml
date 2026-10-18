@@ -1,7 +1,7 @@
 name: crewroom
 x-app: &app
   build: .
-  image: crewroom:0.7.0
+  image: crewroom:0.8.0
   environment: &environment
     NODE_ENV: ${NODE_ENV:-development}
     PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:4180}
@@ -106,7 +106,7 @@ services:
     restart: unless-stopped
   runner:
     build: { context: ., dockerfile: Dockerfile.runner }
-    image: crewroom-runner:0.7.0
+    image: crewroom-runner:0.8.0
     environment:
       HOST: 0.0.0.0
       PORT: 4191

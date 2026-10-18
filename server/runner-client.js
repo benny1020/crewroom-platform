@@ -216,15 +216,18 @@ export async function runCodeAgent(
         "execution_action",
         progress,
       );
-      const outcome =
-        action.action === "search_memory" || action.action === "read_memory"
-          ? await memoryTools(action)
-          : await runnerRequest(
-              config,
-              `/v1/jobs/${jobId}/actions`,
-              { ...args, sequence: ++runnerSequence },
-              { token: job.capability, signal, dispatch },
-            );
+      const outcome = [
+        "search_memory",
+        "read_memory",
+        "propose_memory",
+      ].includes(action.action)
+        ? await memoryTools(action)
+        : await runnerRequest(
+            config,
+            `/v1/jobs/${jobId}/actions`,
+            { ...args, sequence: ++runnerSequence },
+            { token: job.capability, signal, dispatch },
+          );
       traces.push({
         ...progress,
         passed: outcome.passed,

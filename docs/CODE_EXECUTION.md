@@ -12,7 +12,7 @@ App과 Worker는 Docker socket을 갖지 않는다. Job에는 모델/GitLab/DB/R
 
 에이전트는 항상 DB에 존재하는 역할·설정·스킬·기억이다. 상주 프로세스는 App/Worker/Runner이고, 개발·QA 컨테이너는 **업무 Run의 generation마다 생성**한다. 분석 대화·PR 검토는 모델 HTTP 호출만 수행한다. 개인마다 상주 컨테이너를 유지할 필요가 없다.
 
-0.7에서는 개발·QA 루프도 읽기 전용 `search_memory`·`read_memory`를 지원한다. 기억 조회는 Docker command 권한을 늘리지 않으며 Runner 행동 sequence와 따로 기록한다. [장기 기억](MEMORY_ARCHITECTURE.md)
+0.8에서는 개발·QA 루프도 `search_memory`·`read_memory`와 근거가 있는 `propose_memory`를 지원한다. 제안은 사람이 저장하기 전까지 검색 기억이 되지 않는다. 기억 조회는 Docker command 권한을 늘리지 않으며 Runner 행동 sequence와 따로 기록한다. [장기 기억](MEMORY_ARCHITECTURE.md)
 
 ## 실제 업무 흐름
 

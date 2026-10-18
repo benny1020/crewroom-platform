@@ -14,6 +14,7 @@ import { canRead } from "./permissions.js";
 import { collectInput, collectCodeInput } from "./inputs.js";
 import { runModel } from "./provider.js";
 import { runMemoryAgent } from "./memory-agent.js";
+import { recordProposal } from "./memory-learning.js";
 import {
   searchMemory,
   contextFromDocuments,
@@ -419,6 +420,8 @@ export async function recallForRun(pool, run, owner, action, semantic = {}) {
         "MEMORY_LOOKUP_LIMIT",
         "이번 실행의 기억 조회 한도에 도달했어요.",
       );
+    if (action.action === "propose_memory")
+      return recordProposal(db, user, locked.task, run, action, count + 1);
     const docs = await searchMemory(db, user, locked.task, {
       query: action.query || "",
       keys: action.action === "read_memory" ? [action.key] : null,
@@ -429,6 +432,7 @@ export async function recallForRun(pool, run, owner, action, semantic = {}) {
           : action.project || locked.task.project,
       ...semantic,
       before: run.created_at,
+      asOf: action.asOf || run.created_at,
       limit: action.action === "read_memory" ? 1 : 10,
     });
     if (action.action === "read_memory")

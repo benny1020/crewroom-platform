@@ -368,7 +368,7 @@ test("archive search opens an old conversation source and preserves core-memory 
     })
     .first();
   await expect(section).toContainText("다연");
-  await page
+  await section
     .getByRole("button", { name: "출처 원문", exact: true })
     .first()
     .click();
@@ -408,5 +408,72 @@ test("archive search opens an old conversation source and preserves core-memory 
   await page.getByRole("button", { name: "참고한 기억", exact: true }).click();
   await expect(page.getByRole("dialog")).toContainText(
     "회상 검색에는 출처를 표시합니다.",
+  );
+});
+
+test("evidence proposal promotion, a future policy replacement and accepted-work skill drafts are explicit", async ({
+  page,
+}) => {
+  await login(page);
+  await page.locator('.cr-nav[href="#/memory"]').click();
+  const candidate = page
+    .locator(".cr-proposal")
+    .filter({ hasText: "합성 로그인 정책 제안" });
+  await expect(candidate).toContainText("세션 만료는 35분입니다.");
+  await candidate
+    .getByRole("button", { name: "출처 원문", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toContainText("로그인정책합의");
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "닫기", exact: true })
+    .first()
+    .click();
+  await candidate
+    .getByRole("button", { name: "확인하고 기억에 저장", exact: true })
+    .click();
+  await expect(candidate).toHaveCount(0);
+  const old = page
+    .locator(".cr-memory")
+    .filter({ hasText: "합성 로그인 정책 제안" });
+  await expect(old).toContainText("프로젝트 공통");
+  await old
+    .getByRole("button", { name: "새 결정으로 대체", exact: true })
+    .click();
+  await page.getByLabel("기억 제목").fill("로그인 신규 정책");
+  await page.getByLabel("기억할 내용").fill("세션 만료는 50분입니다.");
+  await page.getByLabel("적용 시작 (비우면 상시)").fill("2026-11-01T09:00");
+  await page.getByRole("button", { name: "저장", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByLabel("기억 검색", { exact: true }).fill("세션 만료");
+  await page.getByLabel("적용 기준일 (비우면 현재)").fill("2026-10-18");
+  await page.getByRole("button", { name: "검색", exact: true }).click();
+  await expect(page.locator(".cr-memory-grid").first()).toContainText("35분");
+  await expect(page.locator(".cr-memory-grid").first()).not.toContainText(
+    "50분",
+  );
+  await page.getByLabel("적용 기준일 (비우면 현재)").fill("2026-11-02");
+  await page.getByRole("button", { name: "검색", exact: true }).click();
+  await expect(page.locator(".cr-memory-grid").first()).toContainText("50분");
+  await expect(page.locator(".cr-memory-grid").first()).not.toContainText(
+    "35분",
+  );
+  // The shared task accepted earlier is a real API fixture result, and remains available as a reviewed example.
+  await page.locator('.cr-nav[href="#/work"]').click();
+  await page
+    .getByRole("link", { name: /같은 업무에서 검토와 QA 계획을 이어주세요/ })
+    .first()
+    .click();
+  await expect(
+    page.getByRole("button", { name: "반복 업무 스킬 초안", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "반복 업무 스킬 초안", exact: true })
+    .click();
+  await expect(page.getByLabel("반복 업무 지침")).toContainText(
+    "새 대상과 버전",
+  );
+  await expect(page.getByLabel("반복 업무 지침")).toHaveValue(
+    /과거 결과의 검사·수용을 새 업무의 승인으로 사용하지 마세요./,
   );
 });

@@ -79,5 +79,10 @@ export const memoryInput = z
       .default("fact"),
     pinned: z.boolean().default(false),
     project: z.string().trim().max(80).default(""),
+    audience: z.enum(["agent", "project"]).default("agent"),
+    validFrom: z.iso.datetime({ offset: true }).nullable().default(null),
+    validTo: z.iso.datetime({ offset: true }).nullable().default(null),
+    supersedesId: id.nullable().default(null),
+    sourceKey: z.string().max(120).nullable().default(null),
   })
   .strict();

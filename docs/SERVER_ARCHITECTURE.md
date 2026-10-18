@@ -1,4 +1,4 @@
-# 0.7 실제 서버 아키텍처
+# 0.8 실제 서버 아키텍처
 
 **코드 실행 추가 구조와 실제 검사 계약은 [0.6 실행 아키텍처](CODE_EXECUTION.md)가 기준이다.** 아래 협업·인증·큐 계약은 유지한다.
 
@@ -24,7 +24,7 @@ App과 Worker는 같은 릴리스를 사용하되 별도 프로세스다. 큐·�
 - 정지·취소는 generation을 바꾸고 이전 응답의 결과 게시를 막는다. Worker stop은 진행 중 tick과 실행을 기다린다.
 - 임대 만료는 자동 재시도하지 않는다. 기존 실행 종료를 확인해야 한다. 모델 요청은 DB와 원자적으로 결합할 수 없으므로 **exactly-once 외부 호출을 보장하지 않는다**. 발송 intent를 먼저 저장하고 불명 상태는 격리한다.
 - 취소·일시정지와 발송 오류가 겹쳐도 `prepared/launched/unknown` intent가 있으면 lease를 자동 해제하지 않는다. 운영 CLI가 근거 해시를 남기며 확인한다.
-- Agent·스킬·provider endpoint/model profile은 Run 시작 시 고정한다. 최근 대화는 최대 20개·12,000자다. 장기 기억은 관련성 검색으로 16,000자까지 고정하며 원문·업무 요약을 최대 4회 추가 조회한다. 출처 key/버전과 의존 자료를 발송·완료 때 다시 검사한다. [0.7 장기 기억](MEMORY_ARCHITECTURE.md)
+- Agent·스킬·provider endpoint/model profile은 Run 시작 시 고정한다. 최근 대화는 최대 20개·12,000자다. 장기 기억은 관련성 검색으로 16,000자까지 고정하며 모든 답변 버전·프로젝트 공통 기록을 조회하며 조회·기억 제안 합계는 최대 4회다. 제안은 사람이 저장하기 전까지 기억으로 사용하지 않는다. 출처 key/버전과 의존 자료를 발송·완료 때 다시 검사한다. [0.8 장기 기억](MEMORY_ARCHITECTURE.md)
 - 기억 삭제·정정·소속/계정 변경은 발송 전/갱신/완료 때 재검사한다. 이미 발송한 데이터를 외부 모델에서 회수할 수는 없다. 결과 게시는 막는다.
 
 ## 입력과 모델
@@ -53,14 +53,15 @@ GitHub PR은 7~40자리 head SHA를 받는다. head를 확인하고 불변 base/
 
 ## API와 소스
 
-| 경로                                           | 역할                           | 구현                   |
-| ---------------------------------------------- | ------------------------------ | ---------------------- |
-| `/api/auth/*`                                  | 로그인·세션·로그아웃·팀장 요청 | auth.js, app.js        |
-| `/api/workspace`, `/api/events`                | 범위별 목록·실시간 갱신        | app.js, permissions.js |
-| `/api/tasks`, `/:id/commands`, `/:id/messages` | 접수·상태·책임·대화            | tasks.js               |
-| `/api/artifacts/:id`                           | 범위 검사 후 Markdown 다운로드 | app.js                 |
-| `/api/memories`                                | 검색·출처·정정·삭제            | resources.js           |
-| `/api/agents`, `/api/skills`, `/api/members`   | 설정·버전·담당·역할            | resources.js           |
-| `/api/health`, `/api/ready`                    | 프로세스 / DB·복원 준비 상태   | app.js                 |
+| 경로                                                | 역할                           | 구현                          |
+| --------------------------------------------------- | ------------------------------ | ----------------------------- |
+| `/api/auth/*`                                       | 로그인·세션·로그아웃·팀장 요청 | auth.js, app.js               |
+| `/api/workspace`, `/api/events`                     | 범위별 목록·실시간 갱신        | app.js, permissions.js        |
+| `/api/tasks`, `/:id/commands`, `/:id/messages`      | 접수·상태·책임·대화            | tasks.js                      |
+| `/api/artifacts/:id`                                | 범위 검사 후 Markdown 다운로드 | app.js                        |
+| `/api/memories`                                     | 검색·출처·정정·삭제            | resources.js                  |
+| `/api/memory/search`, `/sources/:key`, `/proposals` | 시점 검색·원문·제안 검토       | memory.js, memory-learning.js |
+| `/api/agents`, `/api/skills`, `/api/members`        | 설정·버전·담당·역할            | resources.js                  |
+| `/api/health`, `/api/ready`                         | 프로세스 / DB·복원 준비 상태   | app.js                        |
 
 기억 원문·정정 이력은 DB에 보관한다. 핵심 기억과 대화 원문·자동 발췌 업무 요약을 검색하고 출처를 추적한다. 선택적 embedding URL은 Worker가 별도로 호출한다. 자동 요약을 승인된 사실·검사 결과로 승격하지 않는다. [구조·설정·검증](MEMORY_ARCHITECTURE.md)

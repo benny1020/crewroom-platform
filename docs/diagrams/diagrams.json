@@ -181,5 +181,12 @@
     "title": "장기 기억 흐름",
     "source": "source/memory-retrieval.json",
     "renderer": "illustrated"
+  },
+  {
+    "id": "memory-learning",
+    "source": "source/memory-learning.json",
+    "title": "기억 제안·적용 기간·스킬 초안",
+    "renderer": "illustrated",
+    "document": "docs/MEMORY_ARCHITECTURE.md"
   }
 ]

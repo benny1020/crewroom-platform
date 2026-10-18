@@ -1,0 +1,434 @@
+{
+  "date": "2026-10-18T00:57:22.706Z",
+  "current": {
+    "corpus": "hand-authored Korean synthetic retrieval regression",
+    "queries": 20,
+    "positiveQueries": 15,
+    "meanRecallAt5": 0.9333333333333333,
+    "allEvidenceQueries": 19,
+    "forbiddenMatches": 0,
+    "semanticParaphraseHits": 1,
+    "realEmbeddingCalls": 0,
+    "realAnswerModelCalls": 0,
+    "rows": [
+      {
+        "id": "current",
+        "category": "effective-time",
+        "expected": 1,
+        "hits": 1,
+        "recallAt5": 1,
+        "allEvidence": true,
+        "forbiddenMatches": 0,
+        "returned": 1
+      },
+      {
+        "id": "future",
+        "category": "effective-time",
+        "expected": 1,
+        "hits": 1,
+        "recallAt5": 1,
+        "allEvidence": true,
+        "forbiddenMatches": 0,
+        "returned": 1
+      },
+      {
+        "id": "historical",
+        "category": "korean-inflection",
+        "expected": 1,
+        "hits": 1,
+        "recallAt5": 1,
+        "allEvidence": true,
+        "forbiddenMatches": 0,
+        "returned": 1
+      },
+      {
+        "id": "owner",
+        "category": "shared-project",
+        "expected": 1,
+        "hits": 1,
+        "recallAt5": 1,
+        "allEvidence": true,
+        "forbiddenMatches": 0,
+        "returned": 4
+      },
+      {
+        "id": "owner-review",
+        "category": "korean-inflection",
+        "expected": 1,
+        "hits": 1,
+        "recallAt5": 1,
+        "allEvidence": true,
+        "forbiddenMatches": 0,
+        "returned": 4
+      },
+      {
+        "id": "rollback",
+        "category": "shared-project",
+        "expected": 1,
+        "hits": 1,
+        "recallAt5": 1,
+        "allEvidence": true,
+        "forbiddenMatches": 0,
+        "returned": 3
+      },
+      {
+        "id": "multi",
+        "category": "multi-source",
+        "expected": 2,
+        "hits": 2,
+        "recallAt5": 1,
+        "allEvidence": true,
+        "forbiddenMatches": 0,
+        "returned": 3
+      },
+      {
+        "id": "cert",
+        "category": "shared-project",
+        "expected": 1,
+        "hits": 1,
+        "recallAt5": 1,
+        "allEvidence": true,
+        "forbiddenMatches": 0,
+        "returned": 1
+      },
+      {
+        "id": "old-ops",
+        "category": "historic-assistant",
+        "expected": 1,
+        "hits": 1,
+        "recallAt5": 1,
+        "allEvidence": true,
+        "forbiddenMatches": 0,
+        "returned": 1
+      },
+      {
+        "id": "old-ops-numeric",
+        "category": "historic-assistant",
+        "expected": 1,
+        "hits": 1,
+        "recallAt5": 1,
+        "allEvidence": true,
+        "forbiddenMatches": 0,
+        "returned": 3
+      },
+      {
+        "id": "latest-ops",
+        "category": "assistant-evidence",
+        "expected": 1,
+        "hits": 1,
+        "recallAt5": 1,
+        "allEvidence": true,
+        "forbiddenMatches": 0,
+        "returned": 1
+      },
+      {
+        "id": "old-qa",
+        "category": "historic-assistant",
+        "expected": 1,
+        "hits": 1,
+        "recallAt5": 1,
+        "allEvidence": true,
+        "forbiddenMatches": 0,
+        "returned": 1
+      },
+      {
+        "id": "latest-qa",
+        "category": "assistant-evidence",
+        "expected": 1,
+        "hits": 1,
+        "recallAt5": 1,
+        "allEvidence": true,
+        "forbiddenMatches": 0,
+        "returned": 1
+      },
+      {
+        "id": "private-denied",
+        "category": "acl",
+        "expected": 0,
+        "hits": 0,
+        "recallAt5": null,
+        "allEvidence": true,
+        "forbiddenMatches": 0,
+        "returned": 0
+      },
+      {
+        "id": "department-denied",
+        "category": "acl",
+        "expected": 0,
+        "hits": 0,
+        "recallAt5": null,
+        "allEvidence": true,
+        "forbiddenMatches": 0,
+        "returned": 0
+      },
+      {
+        "id": "agent-denied",
+        "category": "agent-scope",
+        "expected": 0,
+        "hits": 0,
+        "recallAt5": null,
+        "allEvidence": true,
+        "forbiddenMatches": 0,
+        "returned": 0
+      },
+      {
+        "id": "project-denied",
+        "category": "project-scope",
+        "expected": 0,
+        "hits": 0,
+        "recallAt5": null,
+        "allEvidence": true,
+        "forbiddenMatches": 0,
+        "returned": 0
+      },
+      {
+        "id": "unknown",
+        "category": "no-evidence",
+        "expected": 0,
+        "hits": 0,
+        "recallAt5": null,
+        "allEvidence": true,
+        "forbiddenMatches": 0,
+        "returned": 0
+      },
+      {
+        "id": "paraphrase-owner",
+        "category": "semantic-paraphrase",
+        "expected": 1,
+        "hits": 1,
+        "recallAt5": 1,
+        "allEvidence": true,
+        "forbiddenMatches": 0,
+        "returned": 2
+      },
+      {
+        "id": "paraphrase-cert",
+        "category": "semantic-paraphrase",
+        "expected": 1,
+        "hits": 0,
+        "recallAt5": 0,
+        "allEvidence": false,
+        "forbiddenMatches": 0,
+        "returned": 1
+      }
+    ]
+  },
+  "limitations": [
+    "Synthetic Korean retrieval corpus, not a public benchmark result",
+    "No real embeddings or generated-answer quality measurement",
+    "Same five-document result cap; no latency or cost comparison claimed"
+  ],
+  "baseline": {
+    "corpus": "hand-authored Korean synthetic retrieval regression",
+    "queries": 20,
+    "positiveQueries": 15,
+    "meanRecallAt5": 0.06666666666666667,
+    "allEvidenceQueries": 6,
+    "forbiddenMatches": 0,
+    "semanticParaphraseHits": 0,
+    "realEmbeddingCalls": 0,
+    "realAnswerModelCalls": 0,
+    "rows": [
+      {
+        "id": "current",
+        "category": "effective-time",
+        "expected": 1,
+        "hits": 0,
+        "recallAt5": 0,
+        "allEvidence": false,
+        "forbiddenMatches": 0,
+        "returned": 0
+      },
+      {
+        "id": "future",
+        "category": "effective-time",
+        "expected": 1,
+        "hits": 0,
+        "recallAt5": 0,
+        "allEvidence": false,
+        "forbiddenMatches": 0,
+        "returned": 0
+      },
+      {
+        "id": "historical",
+        "category": "korean-inflection",
+        "expected": 1,
+        "hits": 0,
+        "recallAt5": 0,
+        "allEvidence": false,
+        "forbiddenMatches": 0,
+        "returned": 0
+      },
+      {
+        "id": "owner",
+        "category": "shared-project",
+        "expected": 1,
+        "hits": 0,
+        "recallAt5": 0,
+        "allEvidence": false,
+        "forbiddenMatches": 0,
+        "returned": 0
+      },
+      {
+        "id": "owner-review",
+        "category": "korean-inflection",
+        "expected": 1,
+        "hits": 1,
+        "recallAt5": 1,
+        "allEvidence": true,
+        "forbiddenMatches": 0,
+        "returned": 2
+      },
+      {
+        "id": "rollback",
+        "category": "shared-project",
+        "expected": 1,
+        "hits": 0,
+        "recallAt5": 0,
+        "allEvidence": false,
+        "forbiddenMatches": 0,
+        "returned": 0
+      },
+      {
+        "id": "multi",
+        "category": "multi-source",
+        "expected": 2,
+        "hits": 0,
+        "recallAt5": 0,
+        "allEvidence": false,
+        "forbiddenMatches": 0,
+        "returned": 0
+      },
+      {
+        "id": "cert",
+        "category": "shared-project",
+        "expected": 1,
+        "hits": 0,
+        "recallAt5": 0,
+        "allEvidence": false,
+        "forbiddenMatches": 0,
+        "returned": 0
+      },
+      {
+        "id": "old-ops",
+        "category": "historic-assistant",
+        "expected": 1,
+        "hits": 0,
+        "recallAt5": 0,
+        "allEvidence": false,
+        "forbiddenMatches": 0,
+        "returned": 0
+      },
+      {
+        "id": "old-ops-numeric",
+        "category": "historic-assistant",
+        "expected": 1,
+        "hits": 0,
+        "recallAt5": 0,
+        "allEvidence": false,
+        "forbiddenMatches": 0,
+        "returned": 0
+      },
+      {
+        "id": "latest-ops",
+        "category": "assistant-evidence",
+        "expected": 1,
+        "hits": 0,
+        "recallAt5": 0,
+        "allEvidence": false,
+        "forbiddenMatches": 0,
+        "returned": 0
+      },
+      {
+        "id": "old-qa",
+        "category": "historic-assistant",
+        "expected": 1,
+        "hits": 0,
+        "recallAt5": 0,
+        "allEvidence": false,
+        "forbiddenMatches": 0,
+        "returned": 0
+      },
+      {
+        "id": "latest-qa",
+        "category": "assistant-evidence",
+        "expected": 1,
+        "hits": 0,
+        "recallAt5": 0,
+        "allEvidence": false,
+        "forbiddenMatches": 0,
+        "returned": 0
+      },
+      {
+        "id": "private-denied",
+        "category": "acl",
+        "expected": 0,
+        "hits": 0,
+        "recallAt5": null,
+        "allEvidence": true,
+        "forbiddenMatches": 0,
+        "returned": 0
+      },
+      {
+        "id": "department-denied",
+        "category": "acl",
+        "expected": 0,
+        "hits": 0,
+        "recallAt5": null,
+        "allEvidence": true,
+        "forbiddenMatches": 0,
+        "returned": 0
+      },
+      {
+        "id": "agent-denied",
+        "category": "agent-scope",
+        "expected": 0,
+        "hits": 0,
+        "recallAt5": null,
+        "allEvidence": true,
+        "forbiddenMatches": 0,
+        "returned": 0
+      },
+      {
+        "id": "project-denied",
+        "category": "project-scope",
+        "expected": 0,
+        "hits": 0,
+        "recallAt5": null,
+        "allEvidence": true,
+        "forbiddenMatches": 0,
+        "returned": 0
+      },
+      {
+        "id": "unknown",
+        "category": "no-evidence",
+        "expected": 0,
+        "hits": 0,
+        "recallAt5": null,
+        "allEvidence": true,
+        "forbiddenMatches": 0,
+        "returned": 0
+      },
+      {
+        "id": "paraphrase-owner",
+        "category": "semantic-paraphrase",
+        "expected": 1,
+        "hits": 0,
+        "recallAt5": 0,
+        "allEvidence": false,
+        "forbiddenMatches": 0,
+        "returned": 0
+      },
+      {
+        "id": "paraphrase-cert",
+        "category": "semantic-paraphrase",
+        "expected": 1,
+        "hits": 0,
+        "recallAt5": 0,
+        "allEvidence": false,
+        "forbiddenMatches": 0,
+        "returned": 0
+      }
+    ]
+  }
+}

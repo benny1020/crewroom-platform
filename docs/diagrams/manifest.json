@@ -15,7 +15,7 @@
     },
     {
       "file": "package-lock.json",
-      "sha256": "3fefc84f1ebe03fb6f5de5554cc2bb3abc13053d4621cab3653c1011f566cef2"
+      "sha256": "35abd8a0eaf0c98bbb39eecf0e235de6943a2d0cc6c37e470699cef51b7da14e"
     }
   ],
   "diagrams": [
@@ -567,16 +567,36 @@
       "renderer": "illustrated",
       "width": 1280,
       "height": 1030,
-      "sourceHash": "753cbb63a619298049b572594e59293a0d309b1bd0b68be2db833f24bace784d",
+      "sourceHash": "d51c2f34c846fbe4018f276ffec7b0e160e2de9c28c6cd0e4577495faeda0db6",
       "svg": {
         "file": "memory-retrieval.svg",
-        "bytes": 17850,
-        "sha256": "7ce28080f905a520ca56aabe0202e714ad5b99f1f2875e5354ecd2c074731623"
+        "bytes": 17920,
+        "sha256": "582d64d30ec761799c77883b73b98e061371c73187ee96220786a75bd9f6da26"
       },
       "png": {
         "file": "memory-retrieval.png",
-        "bytes": 305679,
-        "sha256": "86a49ab724512d60017d28571ab9c533a01baa13e01c6930d1175cf09495475e"
+        "bytes": 318684,
+        "sha256": "d4dca60a9490cb43a562e15fb89eabde08764e9c308336c005157db955a943d0"
+      }
+    },
+    {
+      "id": "memory-learning",
+      "source": "source/memory-learning.json",
+      "title": "기억 제안·적용 기간·스킬 초안",
+      "renderer": "illustrated",
+      "document": "docs/MEMORY_ARCHITECTURE.md",
+      "width": 1280,
+      "height": 1060,
+      "sourceHash": "cd7638c0886b9443449fcbb1550cdaf9aa581bfda045b203ddec890c559c9242",
+      "svg": {
+        "file": "memory-learning.svg",
+        "bytes": 15631,
+        "sha256": "ec4cf7bd67a963bc368a661fb4b129bd9336ce5c0440633af941f12929dbdea3"
+      },
+      "png": {
+        "file": "memory-learning.png",
+        "bytes": 275977,
+        "sha256": "cb715c7db2891c3b25ba7f59e410a45e0437a08836a21fba327f83ca89aae16a"
       }
     }
   ]

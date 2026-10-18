@@ -4,7 +4,13 @@ import { seed } from "../server/seed.js";
 import { bootstrap, createMember } from "../server/auth.js";
 import { configuration } from "../server/config.js";
 import { buildApp } from "../server/app.js";
-import { startWorker } from "../server/worker.js";
+import {
+  startWorker,
+  claimRun,
+  recallForRun,
+  processRun,
+} from "../server/worker.js";
+import { createTask, executeCommand } from "../server/tasks.js";
 if (!process.env.TEST_DATABASE_URL)
   throw new Error("TEST_DATABASE_URL is required for the isolated E2E server");
 const root = database(process.env.TEST_DATABASE_URL),
@@ -40,6 +46,55 @@ const config = configuration({
   MODEL_NAME: "deterministic-e2e",
   CREWROOM_TEST_FIXTURE: "1",
 });
+// Seed one evidence-bound proposal through the same Worker protocol as a model call.
+const lead = (
+  await pool.query("SELECT * FROM cr_members WHERE email=$1", [
+    "lead@e2e.invalid",
+  ])
+).rows[0];
+const sourceTask = await createTask(
+  pool,
+  lead,
+  {
+    workType: "chat",
+    agentId: "review",
+    project: "기억 검토 검증",
+    target: "합성 정책 원문",
+    targetVersion: "policy-v1",
+    goal: "로그인 정책을 기억 후보로 정리",
+    visibility: "team",
+  },
+  randomUUID(),
+);
+const msg = (
+  await pool.query(
+    "INSERT INTO cr_messages(task_id,user_id,body,target_version) VALUES($1,$2,$3,$4) RETURNING id",
+    [
+      sourceTask.id,
+      lead.id,
+      "로그인정책합의: 세션 만료는 35분입니다.",
+      "policy-v1",
+    ],
+  )
+).rows[0];
+await executeCommand(
+  pool,
+  lead,
+  sourceTask.id,
+  { action: "start", revision: sourceTask.revision },
+  config,
+);
+const seedRun = await claimRun(pool, "proposal-e2e-seed", config);
+await recallForRun(pool, seedRun, "proposal-e2e-seed", {
+  action: "propose_memory",
+  key: "message:" + msg.id,
+  quote: "세션 만료는 35분입니다.",
+  title: "합성 로그인 정책 제안",
+  body: "세션 만료는 35분입니다.",
+  kind: "decision",
+  audience: "project",
+});
+await processRun(pool, seedRun, "proposal-e2e-seed", config);
 const app = buildApp(pool, config),
   worker = await startWorker(pool, config);
 await app.listen({ host: config.host, port: config.port });

@@ -6,6 +6,7 @@ import {
   cosine,
   contextFromDocuments,
   sourceAllowed,
+  reciprocalRankFusion,
 } from "../server/memory.js";
 import {
   embeddingProfile,
@@ -94,6 +95,28 @@ test("cosine similarity rejects incompatible dimensions and zero vectors", () =>
   assert.equal(cosine([0, 0], [0, 0]), -1);
   assert.equal(cosine([Infinity], [1]), -1);
   assert.equal(cosine([1e300], [1e300]), -1);
+});
+test("rank fusion combines independent rankings without mixing incompatible raw score scales", () => {
+  const a = { key: "a", score: 99999 },
+    b = { key: "b", score: 0.3 },
+    c = { key: "c", score: 0.9 };
+  const fused = reciprocalRankFusion([
+    [a, b],
+    [c, b],
+  ]);
+  assert.ok(fused.get("b") > fused.get("a"));
+  assert.ok(fused.get("b") > fused.get("c"));
+  assert.equal(reciprocalRankFusion([[a, a]]).get("a"), 1 / 61);
+});
+test("identical passages do not consume the context budget repeatedly", () => {
+  const docs = ["a", "b", "c"].map((key) => ({
+    key,
+    title: key,
+    revision: "v1",
+    body: "같은 원문입니다.",
+    dependencies: [],
+  }));
+  assert.equal(contextFromDocuments(docs).items.length, 1);
 });
 test("embedding calls use a separate explicit endpoint/auth and reorder indexed results", async () => {
   let request;

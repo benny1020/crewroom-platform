@@ -114,6 +114,7 @@ export async function searchMemory(
     vector = null,
     profileId = "",
     before = null,
+    asOf = new Date().toISOString(),
   } = {},
 ) {
   const terms = queryTerms(query),
@@ -128,6 +129,7 @@ export async function searchMemory(
       keys,
       before,
       terms.map((t) => "'" + t + "':*").join(" | "),
+      asOf,
     ];
   // Scope filters precede ranking. No recency preselection: an old exact match can win.
   const rows = (
@@ -137,8 +139,9 @@ export async function searchMemory(
     (d.owner_id=$1 OR d.visibility='team' OR (d.visibility='department' AND d.department=$2))
     AND (d.agent_owner_id IS NULL OR d.agent_owner_id=$1)
     AND ($3='private' OR d.visibility='team' OR ($3='department' AND d.visibility='department' AND d.department=$4))
-    AND ($5='' OR $5=ANY(d.agents)) AND ($6='' OR d.project='' OR d.project=$6)
+    AND ($5='' OR $5=ANY(d.agents) OR (d.audience='project' AND ($6='' OR d.project=$6))) AND ($6='' OR d.project='' OR d.project=$6)
     AND ($8::text[] IS NULL OR d.key=ANY($8)) AND ($9::timestamptz IS NULL OR d.created_at<=$9)
+    AND ($8::text[] IS NOT NULL OR ((d.valid_from IS NULL OR d.valid_from<=$11::timestamptz) AND (d.valid_to IS NULL OR d.valid_to>$11::timestamptz) AND (d.memory_id IS NOT NULL OR d.created_at<=$11::timestamptz)))
   ), scored AS (
     SELECT d.*, (SELECT count(*) FROM unnest($7::text[]) p WHERE d.title ILIKE p)*6
      +(SELECT count(*) FROM unnest($7::text[]) p WHERE d.body ILIKE p)*2
@@ -149,15 +152,25 @@ export async function searchMemory(
       args,
     )
   ).rows;
+  const rankedLists = [
+    rows
+      .slice()
+      .sort(
+        (a, b) =>
+          Number(b.lexical) - Number(a.lexical) ||
+          new Date(b.created_at) - new Date(a.created_at),
+      ),
+  ];
   if (vector && profileId) {
     // Caches may lag or contain revoked documents: join live documents and reapply ACLs.
     const semantic = (
       await db.query(
         `SELECT d.*,e.vectors FROM cr_memory_embeddings e JOIN cr_recall_documents d ON d.key=e.source_key AND d.revision=e.source_revision
-      WHERE e.status='ready' AND e.profile_id=$1 AND ($2='' OR $2=ANY(d.agents)) AND ($3='' OR d.project='' OR d.project=$3)
+      WHERE e.status='ready' AND e.profile_id=$1 AND ($2='' OR $2=ANY(d.agents) OR (d.audience='project' AND ($3='' OR d.project=$3))) AND ($3='' OR d.project='' OR d.project=$3)
       AND (d.owner_id=$4 OR d.visibility='team' OR (d.visibility='department' AND d.department=$5))
       AND (d.agent_owner_id IS NULL OR d.agent_owner_id=$4)
-      AND ($6='private' OR d.visibility='team' OR ($6='department' AND d.visibility='department' AND d.department=$7)) AND ($8::timestamptz IS NULL OR d.created_at<=$8)`,
+      AND ($6='private' OR d.visibility='team' OR ($6='department' AND d.visibility='department' AND d.department=$7)) AND ($8::timestamptz IS NULL OR d.created_at<=$8)
+      AND (d.valid_from IS NULL OR d.valid_from<=$9::timestamptz) AND (d.valid_to IS NULL OR d.valid_to>$9::timestamptz) AND (d.memory_id IS NOT NULL OR d.created_at<=$9::timestamptz)`,
         [
           profileId,
           agentId,
@@ -167,29 +180,33 @@ export async function searchMemory(
           scope.visibility,
           scope.department || user.department,
           before,
+          asOf,
         ],
       )
     ).rows;
+    const semanticRank = [];
     for (const doc of semantic) {
       const best = doc.vectors
         .map((v) => ({ ...v, score: cosine(vector, v.vector) }))
         .sort((a, b) => b.score - a.score)[0];
+      if (!best) continue;
       doc.semantic = best.score;
       doc.semanticExcerpt = best.text;
       if (doc.semantic < 0.35) continue;
+      semanticRank.push(doc);
       const found = rows.find((r) => r.key === doc.key);
       if (found) {
         found.semantic = doc.semantic;
         found.semanticExcerpt = doc.semanticExcerpt;
       } else rows.push({ ...doc, lexical: 0 });
     }
+    rankedLists.push(semanticRank.sort((a, b) => b.semantic - a.semantic));
   }
+  const fused = reciprocalRankFusion(rankedLists);
   rows.sort(
     (a, b) =>
       Number(b.pinned) - Number(a.pinned) ||
-      Number(b.lexical) +
-        Number(b.semantic || 0) * 8 -
-        (Number(a.lexical) + Number(a.semantic || 0) * 8) ||
+      (fused.get(b.key) || 0) - (fused.get(a.key) || 0) ||
       new Date(b.created_at) - new Date(a.created_at),
   );
   const dependencies = [
@@ -218,6 +235,18 @@ export async function searchMemory(
     vectors: undefined,
   }));
 }
+export function reciprocalRankFusion(lists, k = 60) {
+  const scores = new Map();
+  for (const list of lists) {
+    const seen = new Set();
+    list.forEach((doc, index) => {
+      if (seen.has(doc.key)) return;
+      seen.add(doc.key);
+      scores.set(doc.key, (scores.get(doc.key) || 0) + 1 / (k + index + 1));
+    });
+  }
+  return scores;
+}
 export function cosine(a, b) {
   if (a.length !== b.length || !a.length) return -1;
   let dot = 0,
@@ -233,8 +262,10 @@ export function cosine(a, b) {
 }
 export function contextFromDocuments(docs, budget = MEMORY_CHARS) {
   const items = [],
-    refs = new Map();
-  let used = 0;
+    refs = new Map(),
+    seenBodies = new Set();
+  let used = 0,
+    pinnedChars = 0;
   for (const doc of docs) {
     const body = doc.excerpt || excerpt(doc.body, [], doc.pinned ? 3000 : 1600),
       item = {
@@ -249,13 +280,21 @@ export function contextFromDocuments(docs, budget = MEMORY_CHARS) {
         targetVersion: doc.target_version,
         createdAt: doc.created_at,
         recordRevision: doc.record_revision,
+        audience: doc.audience || "agent",
+        validFrom: doc.valid_from,
+        validTo: doc.valid_to,
+        supersedesId: doc.supersedes_id,
       };
     const size = JSON.stringify(item).length;
-    if (used + size > budget) continue;
+    const normalized = body.normalize("NFKC").replace(/\s+/g, " ").trim();
+    if (seenBodies.has(normalized) || used + size > budget) continue;
+    if (doc.pinned && pinnedChars + size > budget / 2 && items.length) continue;
     const own = [reference(doc), ...(doc.dependencies || [])];
     if (new Set([...refs.keys(), ...own.map((r) => r.key)]).size > 300)
       continue;
     items.push(item);
+    seenBodies.add(normalized);
+    if (doc.pinned) pinnedChars += size;
     used += size;
     for (const r of own) refs.set(r.key, r);
   }
@@ -265,7 +304,7 @@ export function contextFromDocuments(docs, budget = MEMORY_CHARS) {
     refs: [...refs.values()],
     characters: used,
     budget,
-    method: "keyword",
+    method: "rrf",
   };
 }
 export async function buildMemoryContext(db, user, task, agentId) {

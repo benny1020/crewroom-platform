@@ -10,6 +10,7 @@ import {
 import { conflict, fail } from "./errors.js";
 import { getTask } from "./tasks.js";
 import { department, revision, memoryInput } from "./validation.js";
+import { readMemorySource } from "./memory.js";
 
 export async function agents(db, user) {
   return (
@@ -241,9 +242,9 @@ export async function listMemories(db, user, query = "") {
     )
   ).rows;
 }
-export async function createMemory(pool, user, input) {
+export async function createMemory(pool, user, input, existingDb = null) {
   const v = memoryInput.parse(input);
-  return transaction(pool, async (db) => {
+  const execute = async (db) => {
     const a = (
       await db.query("SELECT * FROM cr_agents WHERE id=$1", [v.agentId])
     ).rows[0];
@@ -252,7 +253,7 @@ export async function createMemory(pool, user, input) {
     if (a.owner_id && v.visibility !== "private")
       fail(400, "PERSONAL_SCOPE", "개인 비서의 기억은 비공개로 저장해주세요.");
     const source = v.sourceTaskId
-      ? await getTask(db, user, v.sourceTaskId)
+      ? await getTask(db, user, v.sourceTaskId, true)
       : null;
     if (source && source.visibility !== v.visibility)
       fail(400, "SOURCE_SCOPE", "원본 업무와 같은 공개 범위를 사용해주세요.");
@@ -266,9 +267,100 @@ export async function createMemory(pool, user, input) {
         "MEMORY_STEWARD_REQUIRED",
         "공유 기억은 업무 책임자 또는 팀장이 저장할 수 있어요.",
       );
+    const project = source?.project || v.project;
+    if (
+      v.audience === "project" &&
+      (v.visibility === "private" || !project || a.owner_id)
+    )
+      fail(
+        400,
+        "MEMORY_AUDIENCE",
+        "프로젝트 공통 기억은 공유 업무에만 적용할 수 있어요.",
+      );
+    if (
+      v.validFrom &&
+      v.validTo &&
+      new Date(v.validFrom) >= new Date(v.validTo)
+    )
+      fail(400, "MEMORY_INTERVAL", "적용 종료는 시작 이후로 지정해주세요.");
+    if (v.sourceKey)
+      await readMemorySource(
+        db,
+        user,
+        {
+          visibility: v.visibility,
+          department: source?.department || user.department,
+        },
+        v.sourceKey,
+      );
+    if (v.supersedesId) {
+      const ref = (
+        await db.query("SELECT source_task_id FROM cr_memories WHERE id=$1", [
+          v.supersedesId,
+        ])
+      ).rows[0];
+      if (ref?.source_task_id)
+        await getTask(db, user, ref.source_task_id, true);
+      const old = (
+        await db.query(
+          "SELECT * FROM cr_memories WHERE id=$1 AND deleted_at IS NULL FOR UPDATE",
+          [v.supersedesId],
+        )
+      ).rows[0];
+      requireRead(user, old);
+      if (
+        (
+          await db.query(
+            "SELECT 1 FROM cr_memories WHERE supersedes_id=$1 AND deleted_at IS NULL",
+            [old.id],
+          )
+        ).rowCount
+      )
+        fail(
+          409,
+          "MEMORY_REPLACED",
+          "이미 대체된 결정입니다. 현재 결정을 선택해주세요.",
+        );
+      if (
+        old.owner_id !== user.id &&
+        !(user.role === "lead" && old.visibility !== "private")
+      )
+        fail(
+          403,
+          "MEMORY_OWNER_REQUIRED",
+          "대체할 기억의 관리 권한이 필요해요.",
+        );
+      if (
+        old.agent_id !== v.agentId ||
+        old.visibility !== v.visibility ||
+        (v.visibility === "department" &&
+          old.department !== (source?.department || user.department)) ||
+        old.project !== project ||
+        old.audience !== v.audience
+      )
+        fail(
+          400,
+          "MEMORY_REPLACEMENT_SCOPE",
+          "같은 동료·프로젝트·공개 범위의 기억을 대체해주세요.",
+        );
+      if (
+        !v.validFrom ||
+        (old.valid_from && new Date(v.validFrom) <= new Date(old.valid_from)) ||
+        (old.valid_to && new Date(v.validFrom) > new Date(old.valid_to))
+      )
+        fail(
+          400,
+          "MEMORY_INTERVAL",
+          "기존 기억의 적용 기간 안에서 새 적용 시작을 지정해주세요.",
+        );
+      await db.query("UPDATE cr_memories SET valid_to=$2 WHERE id=$1", [
+        old.id,
+        v.validFrom,
+      ]);
+    }
     const id = randomUUID();
     await db.query(
-      "INSERT INTO cr_memories(id,agent_id,owner_id,visibility,department,source_task_id,title,body,source,kind,pinned,project) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)",
+      "INSERT INTO cr_memories(id,agent_id,owner_id,visibility,department,source_task_id,title,body,source,kind,pinned,project,audience,valid_from,valid_to,supersedes_id,source_key) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)",
       [
         id,
         v.agentId,
@@ -281,7 +373,12 @@ export async function createMemory(pool, user, input) {
         v.source,
         v.kind,
         v.pinned,
-        source?.project || v.project,
+        project,
+        v.audience,
+        v.validFrom,
+        v.validTo,
+        v.supersedesId,
+        v.sourceKey,
       ],
     );
     // Private content is intentionally absent from global activity payloads.
@@ -293,7 +390,8 @@ export async function createMemory(pool, user, input) {
       { memoryId: id },
     );
     return { id };
-  });
+  };
+  return existingDb ? execute(existingDb) : transaction(pool, execute);
 }
 export async function changeMemory(pool, user, id, input, deleting = false) {
   const v = deleting
