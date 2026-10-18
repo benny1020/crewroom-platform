@@ -19,13 +19,31 @@
   "review": {
     "model": "gpt-6-astra",
     "baselineVersion": "0.8.0",
-    "memory": "research and integration completed; exact final commit review pending",
-    "runtime": "findings reproduced and lock fix tested; exact final commit review pending"
+    "codeVersion": "0.8.1",
+    "memory": "completed approval of the reviewed implementation; 30 focused tests plus independent/expanded migration regressions",
+    "runtime": "completed approval of the reviewed implementation; 32 focused tests plus fresh upgrade regression",
+    "remainingBlockingFindings": 0,
+    "scope": "memory lineage, migration, effective time, role boundaries, concurrency and dispatch; not a general production certification"
   },
   "limitations": [
     "real model and multilingual embedding quality",
     "provider-dependent cosine threshold calibration",
     "large corpus/serialized DB section throughput",
     "real team effectiveness"
-  ]
+  ],
+  "localDeployment": {
+    "release": "0.8.1",
+    "previousRelease": "0.8.0",
+    "encryptedBackupBeforeUpgrade": true,
+    "migrations": 7,
+    "migrationHashMatches": true,
+    "appReady": true,
+    "runnerHealthy": true,
+    "workerVersion": "0.8.1",
+    "workerReady": true,
+    "heartbeatFresh": true,
+    "appAndWorkerReviewedFilesMatched": 7,
+    "modelConfigured": false,
+    "embeddingConfigured": false
+  }
 }
