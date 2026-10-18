@@ -15,6 +15,8 @@
 
 OpenAI 호환 또는 Claude Messages API의 **URL·모델 ID·인증 방식**을 직접 지정합니다. 제공자 API, 게이트웨이, 자체 호스팅 endpoint를 같은 설정 방식으로 연결하고, GitLab URL과 사용할 프로젝트도 선택합니다. [커스텀 연결 설정](docs/CONFIGURATION.md)
 
+다음 단계는 **실제 모델 검증 + 서버 UX 정리 → 공동 사용 검증 → 안정 버전 운영 판단**입니다. [마일스톤과 완료 기준](docs/MILESTONES.md) · [GitHub 진행 현황](https://github.com/benny1020/crewroom-platform/milestones)
+
 ## 구현 구조
 
 [![구현 구조](docs/diagrams/platform-architecture.png)](docs/diagrams/platform-architecture.svg)
