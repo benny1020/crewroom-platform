@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { transaction, event } from "./db.js";
+import { transaction, event, lockContextMutation } from "./db.js";
 import { HttpError } from "./errors.js";
 import { canRead, requireRead } from "./permissions.js";
 import { getTask } from "./tasks.js";
@@ -9,6 +9,9 @@ import {
   sourceAllowed,
   validReferences,
   reference,
+  agentSourceAllowed,
+  effectiveAt,
+  sourceProvenance,
 } from "./memory.js";
 import { createMemory } from "./resources.js";
 
@@ -16,10 +19,16 @@ import { proposalSchema } from "./memory-protocol.js";
 export async function recordProposal(db, user, task, run, input, sequence) {
   const v = proposalSchema.parse(input),
     doc = (await documentsByKeys(db, [v.key])).get(v.key);
+  const provenance = doc ? await sourceProvenance(db, doc) : null;
   if (
     !doc ||
     (doc.kind === "episode" && doc.task_id === task.id) ||
     !sourceAllowed(user, task, doc) ||
+    !agentSourceAllowed(doc, run.agent_id) ||
+    !effectiveAt({
+      valid_from: provenance?.validFrom,
+      valid_to: provenance?.validTo,
+    }) ||
     new Date(doc.created_at) > new Date(run.created_at) ||
     !doc.body.includes(v.quote) ||
     !(await validReferences(
@@ -79,8 +88,8 @@ export async function recordProposal(db, user, task, run, input, sequence) {
     );
   const id = randomUUID();
   const result = await db.query(
-    `INSERT INTO cr_memory_candidates(id,run_id,generation,agent_id,owner_id,task_id,visibility,department,project,audience,title,body,kind,source_key,source_revision,source_quote)
- VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+    `INSERT INTO cr_memory_candidates(id,run_id,generation,agent_id,owner_id,task_id,visibility,department,project,audience,title,body,kind,source_key,source_revision,source_quote,valid_from,valid_to)
+ VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
  ON CONFLICT(run_id,generation,source_key,title) DO NOTHING RETURNING id`,
     [
       id,
@@ -99,6 +108,8 @@ export async function recordProposal(db, user, task, run, input, sequence) {
       doc.key,
       doc.revision,
       v.quote,
+      provenance.validFrom,
+      provenance.validTo,
     ],
   );
   return {
@@ -124,10 +135,17 @@ export async function listProposals(db, user) {
   const items = [];
   for (const c of rows) {
     const doc = docs.get(c.source_key);
+    const provenance = doc ? await sourceProvenance(db, doc) : null;
     if (
       doc &&
       doc.revision === c.source_revision &&
       sourceAllowed(user, c, doc) &&
+      agentSourceAllowed(doc, c.agent_id) &&
+      effectiveAt(c) &&
+      effectiveAt({
+        valid_from: provenance.validFrom,
+        valid_to: provenance.validTo,
+      }) &&
       (await validReferences(db, user, c, doc.dependencies || []))
     )
       items.push(c);
@@ -147,6 +165,7 @@ export async function resolveProposal(pool, user, id, input) {
     .strict()
     .parse(input);
   return transaction(pool, async (db) => {
+    await lockContextMutation(db);
     const ref = (
       await db.query("SELECT task_id FROM cr_memory_candidates WHERE id=$1", [
         id,
@@ -176,9 +195,16 @@ export async function resolveProposal(pool, user, id, input) {
     let memoryId = null;
     if (v.action === "accept") {
       const doc = (await documentsByKeys(db, [c.source_key])).get(c.source_key);
+      const provenance = doc ? await sourceProvenance(db, doc) : null;
       if (
         !doc ||
         !sourceAllowed(user, task, doc) ||
+        !agentSourceAllowed(doc, c.agent_id) ||
+        !effectiveAt(c) ||
+        !effectiveAt({
+          valid_from: provenance?.validFrom,
+          valid_to: provenance?.validTo,
+        }) ||
         doc.revision !== c.source_revision ||
         !doc.body.includes(c.source_quote) ||
         !(await validReferences(
@@ -206,6 +232,8 @@ export async function resolveProposal(pool, user, id, input) {
           source: "검토한 기억 제안 · " + doc.source,
           sourceTaskId: c.task_id,
           sourceKey: c.source_key,
+          validFrom: c.valid_from?.toISOString() || null,
+          validTo: c.valid_to?.toISOString() || null,
           kind: c.kind,
           audience: c.audience,
           project: c.project,

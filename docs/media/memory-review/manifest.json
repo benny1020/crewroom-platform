@@ -1,0 +1,12 @@
+{
+  "date": "2026-10-18",
+  "capture": "CUA in-app browser, isolated PostgreSQL fixture, 1280px viewport",
+  "actualModelInference": false,
+  "browserErrors": [],
+  "files": [
+    {
+      "file": "provenance-review.jpg",
+      "sha256": "4aaf29ebbf9205ca8b0ad35bea74c9442298c19ad6f9bee5efa510f09813a59d"
+    }
+  ]
+}

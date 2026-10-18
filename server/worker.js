@@ -8,6 +8,7 @@ import {
   event,
   digest,
   assertRuntimeReady,
+  lockContextMutation,
 } from "./db.js";
 import { configuration } from "./config.js";
 import { canRead } from "./permissions.js";
@@ -77,6 +78,7 @@ export async function contextAllowed(db, run, task) {
   return true;
 }
 async function lockedRun(db, id) {
+  await lockContextMutation(db);
   const ref = (await db.query("SELECT task_id FROM cr_runs WHERE id=$1", [id]))
     .rows[0];
   if (!ref) return {};
@@ -100,6 +102,7 @@ const owns = (run, owner, generation) =>
   run.lease_valid === true;
 export async function claimRun(pool, owner, config) {
   return transaction(pool, async (db) => {
+    await lockContextMutation(db);
     await db.query(
       "SELECT pg_advisory_xact_lock(hashtext('crewroom-run-claim'))",
     );
@@ -276,6 +279,7 @@ export async function failRun(pool, id, owner, generation, error) {
 }
 export async function expireRuns(pool) {
   return transaction(pool, async (db) => {
+    await lockContextMutation(db);
     const { rows } = await db.query(
       "SELECT r.id,r.task_id FROM cr_runs r JOIN cr_tasks t ON t.id=r.task_id WHERE r.status='running' AND r.lease_until<clock_timestamp() FOR UPDATE OF t SKIP LOCKED",
     );

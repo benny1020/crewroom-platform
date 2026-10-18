@@ -1,0 +1,43 @@
+{
+  "date": "2026-10-18",
+  "reviewer": "gpt-6-astra",
+  "scope": "independently downloaded selected source files, not whole repository audits",
+  "files": [
+    {
+      "repo": "getzep/graphiti",
+      "sha": "417c3a125ae3ac53c19b8e53fffaccf3e665a88e",
+      "path": "graphiti_core/edges.py",
+      "url": "https://raw.githubusercontent.com/getzep/graphiti/417c3a125ae3ac53c19b8e53fffaccf3e665a88e/graphiti_core/edges.py",
+      "bytes": 33822,
+      "sha256": "637732ae4291ca0e5b53e43dd92be6f46a91e352719cb7ea1570ebab7d5d0e33",
+      "actual_sha256": "637732ae4291ca0e5b53e43dd92be6f46a91e352719cb7ea1570ebab7d5d0e33"
+    },
+    {
+      "repo": "EverMind-AI/EverMemOS",
+      "sha": "736b82103557cc7d5886ae86c4fd0161e69983cd",
+      "path": "src/everos/memory/strategies/extract_agent_skill.py",
+      "url": "https://raw.githubusercontent.com/EverMind-AI/EverMemOS/736b82103557cc7d5886ae86c4fd0161e69983cd/src/everos/memory/strategies/extract_agent_skill.py",
+      "bytes": 23548,
+      "sha256": "04f563916909fa7c882423f262aaab9a19527da99f8f775c71978def1e07f5a6",
+      "actual_sha256": "04f563916909fa7c882423f262aaab9a19527da99f8f775c71978def1e07f5a6"
+    },
+    {
+      "repo": "vectorize-io/hindsight",
+      "sha": "5331da2f4db369528bb122075341a7de9c3df6df",
+      "path": "hindsight-api-slim/hindsight_api/engine/search/fusion.py",
+      "url": "https://raw.githubusercontent.com/vectorize-io/hindsight/5331da2f4db369528bb122075341a7de9c3df6df/hindsight-api-slim/hindsight_api/engine/search/fusion.py",
+      "bytes": 8000,
+      "sha256": "19ccdfd73e5c9da7c10561c92e4c86af2d6c7b6fed870f41a848fbce1d25dfa4",
+      "actual_sha256": "19ccdfd73e5c9da7c10561c92e4c86af2d6c7b6fed870f41a848fbce1d25dfa4"
+    },
+    {
+      "repo": "letta-ai/letta-code",
+      "sha": "7be3c81f9cfce481994fe4484d59a5bf17cdb48a",
+      "path": "src/agent/subagents/memory-worker.ts",
+      "url": "https://raw.githubusercontent.com/letta-ai/letta-code/7be3c81f9cfce481994fe4484d59a5bf17cdb48a/src/agent/subagents/memory-worker.ts",
+      "bytes": 9306,
+      "sha256": "f6d3f588399c01afa6d39407df6cd0c8a467a034cb387bdaf4ab856c189fbab8",
+      "actual_sha256": "f6d3f588399c01afa6d39407df6cd0c8a467a034cb387bdaf4ab856c189fbab8"
+    }
+  ]
+}

@@ -133,7 +133,7 @@ try {
   csrf = (
     await api("/auth/login", { email: "drill@example.invalid", password })
   ).csrfToken;
-  await api("/memories", {
+  const originalMemory = await api("/memories", {
     agentId: "dev",
     visibility: "private",
     pinned: true,
@@ -142,6 +142,14 @@ try {
     title: "복원 고유 기억",
     body: "지속 저장 확인",
     source: "합성 운영 훈련",
+  });
+  await api("/memories", {
+    agentId: "dev",
+    visibility: "private",
+    title: "Restored source-linked fact",
+    body: "Durable evidence",
+    source: "Synthetic drill",
+    sourceKey: "memory:" + originalMemory.id,
   });
   await api(
     "/tasks",
@@ -213,11 +221,14 @@ try {
     source,
     `INSERT INTO cr_memory_embeddings(source_key,source_revision,profile_id,status,vectors,lease_until) SELECT key,revision,'restore-test-profile','ready','[{"text":"synthetic memory vector","vector":[1,0]}]'::jsonb,now() FROM cr_recall_documents WHERE kind='decision' LIMIT 1`,
   );
-  await sql(source, `INSERT INTO cr_memory_candidates(id,run_id,generation,agent_id,owner_id,task_id,visibility,department,project,audience,title,body,kind,source_key,source_revision,source_quote)
+  await sql(
+    source,
+    `INSERT INTO cr_memory_candidates(id,run_id,generation,agent_id,owner_id,task_id,visibility,department,project,audience,title,body,kind,source_key,source_revision,source_quote)
  SELECT gen_random_uuid(),'${runId}',1,'dev',t.owner_id,t.id,t.visibility,t.department,t.project,'agent','Synthetic restore proposal',d.body,'fact',d.key,d.revision,d.body
- FROM cr_tasks t CROSS JOIN cr_recall_documents d WHERE t.id='${queued.id}' AND d.kind='decision' LIMIT 1`);
+ FROM cr_tasks t CROSS JOIN cr_recall_documents d WHERE t.id='${queued.id}' AND d.kind='decision' LIMIT 1`,
+  );
   const comparison =
-    "SELECT json_build_object('tasks',(SELECT json_agg(id ORDER BY id) FROM cr_tasks),'artifacts',(SELECT json_agg(content_hash ORDER BY id) FROM cr_artifacts),'memories',(SELECT json_agg(json_build_object('body',body,'kind',kind,'pinned',pinned,'audience',audience,'valid_from',valid_from,'valid_to',valid_to,'supersedes_id',supersedes_id,'source_key',source_key) ORDER BY id) FROM cr_memories),'proposals',(SELECT json_agg(json_build_object('id',id,'status',status,'source_key',source_key,'source_revision',source_revision,'source_quote',source_quote,'body',body) ORDER BY id) FROM cr_memory_candidates),'reads',(SELECT json_agg(refs ORDER BY run_id,generation,sequence) FROM cr_memory_reads),'vectors',(SELECT json_agg(json_build_object('key',source_key,'revision',source_revision,'profile',profile_id,'vectors',vectors) ORDER BY source_key) FROM cr_memory_embeddings),'documents',(SELECT json_agg(key||revision ORDER BY key) FROM cr_recall_documents))";
+    "SELECT json_build_object('tasks',(SELECT json_agg(id ORDER BY id) FROM cr_tasks),'artifacts',(SELECT json_agg(content_hash ORDER BY id) FROM cr_artifacts),'memories',(SELECT json_agg(json_build_object('body',body,'kind',kind,'pinned',pinned,'audience',audience,'valid_from',valid_from,'valid_to',valid_to,'supersedes_id',supersedes_id,'source_key',source_key,'source_refs',source_refs,'origin_task_id',origin_task_id,'source_corrected',source_corrected) ORDER BY id) FROM cr_memories),'proposals',(SELECT json_agg(json_build_object('id',id,'status',status,'source_key',source_key,'source_revision',source_revision,'source_quote',source_quote,'body',body,'valid_from',valid_from,'valid_to',valid_to) ORDER BY id) FROM cr_memory_candidates),'reads',(SELECT json_agg(refs ORDER BY run_id,generation,sequence) FROM cr_memory_reads),'vectors',(SELECT json_agg(json_build_object('key',source_key,'revision',source_revision,'profile',profile_id,'vectors',vectors) ORDER BY source_key) FROM cr_memory_embeddings),'documents',(SELECT json_agg(key||revision ORDER BY key) FROM cr_recall_documents))";
   const before = (await sql(source, comparison)).trim();
   const runtimePath = "/data/runs/restore-drill/input.json";
   await compose(source, [
@@ -378,7 +389,7 @@ try {
   );
   const receipt = {
     date: new Date().toISOString(),
-    release: "0.8.0",
+    release: "0.8.1",
     elapsedSeconds: Math.round((Date.now() - started) / 1000),
     checks: [
       "DB Task/Artifact hashes/Memory identical",

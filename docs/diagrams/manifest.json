@@ -15,7 +15,7 @@
     },
     {
       "file": "package-lock.json",
-      "sha256": "35abd8a0eaf0c98bbb39eecf0e235de6943a2d0cc6c37e470699cef51b7da14e"
+      "sha256": "cfd57c9566551cfbb05d17940f23ec70ab613e49ac0d4b638d41c67685d87dda"
     }
   ],
   "diagrams": [
@@ -567,16 +567,16 @@
       "renderer": "illustrated",
       "width": 1280,
       "height": 1030,
-      "sourceHash": "d51c2f34c846fbe4018f276ffec7b0e160e2de9c28c6cd0e4577495faeda0db6",
+      "sourceHash": "9821e63133dbe8e0ba059831ba61041b2472a3321ba40a6357856a58cf1cb0f1",
       "svg": {
         "file": "memory-retrieval.svg",
-        "bytes": 17920,
-        "sha256": "582d64d30ec761799c77883b73b98e061371c73187ee96220786a75bd9f6da26"
+        "bytes": 17941,
+        "sha256": "f05d931a23c2e85251a856f1563d7abcd7a4d3d153b65c289fffccd9d3e104d2"
       },
       "png": {
         "file": "memory-retrieval.png",
-        "bytes": 318684,
-        "sha256": "d4dca60a9490cb43a562e15fb89eabde08764e9c308336c005157db955a943d0"
+        "bytes": 320455,
+        "sha256": "cdccc32b53070b9534b6d1aa996d7a43f77e361f81f9250e5b860cee05fc9fcd"
       }
     },
     {
@@ -587,16 +587,16 @@
       "document": "docs/MEMORY_ARCHITECTURE.md",
       "width": 1280,
       "height": 1060,
-      "sourceHash": "cd7638c0886b9443449fcbb1550cdaf9aa581bfda045b203ddec890c559c9242",
+      "sourceHash": "609fad3e953a7f95e4f4c66188c9d4ca0b1ead5ca8759dfc21faa6e8ba2c2ff9",
       "svg": {
         "file": "memory-learning.svg",
-        "bytes": 15631,
-        "sha256": "ec4cf7bd67a963bc368a661fb4b129bd9336ce5c0440633af941f12929dbdea3"
+        "bytes": 15641,
+        "sha256": "08a53494d787ab4f67b976c4606856490c180cd952c48451345fff1bbe10c533"
       },
       "png": {
         "file": "memory-learning.png",
-        "bytes": 275977,
-        "sha256": "cb715c7db2891c3b25ba7f59e410a45e0437a08836a21fba327f83ca89aae16a"
+        "bytes": 266962,
+        "sha256": "77ea6fe9eca0422983d2b77710c8e037d8081081f4e5d617a8b47eddba9eda4b"
       }
     }
   ]

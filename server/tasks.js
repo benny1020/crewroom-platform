@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { transaction, digest, event } from "./db.js";
+import { transaction, digest, event, lockContextMutation } from "./db.js";
 import {
   canRead,
   requireRead,
@@ -14,6 +14,7 @@ import { embeddingProfile } from "./memory-embedding.js";
 import { WORK_TYPES } from "./work-types.js";
 
 export async function getTask(db, user, id, lock = false) {
+  if (lock) await lockContextMutation(db);
   const task = (
     await db.query(
       `SELECT * FROM cr_tasks WHERE id=$1${lock ? " FOR UPDATE" : ""}`,

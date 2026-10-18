@@ -20,6 +20,14 @@ export function database(
     statement_timeout: 15000,
   });
 }
+// Cross-task provenance checks must not invert an already-held task lock.
+// Acquire this transaction-scoped gate before any context-related row lock.
+// Only short database critical sections serialize; external response waits do not.
+export async function lockContextMutation(db) {
+  await db.query(
+    "SELECT pg_advisory_xact_lock(hashtext(current_schema()),hashtext('crewroom-context-mutation'))",
+  );
+}
 export async function transaction(pool, operation) {
   const client = await pool.connect();
   try {

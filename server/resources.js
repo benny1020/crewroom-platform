@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { transaction, event, digest } from "./db.js";
+import { transaction, event, digest, lockContextMutation } from "./db.js";
 import {
   requireLead,
   requireRead,
@@ -10,7 +10,12 @@ import {
 import { conflict, fail } from "./errors.js";
 import { getTask } from "./tasks.js";
 import { department, revision, memoryInput } from "./validation.js";
-import { readMemorySource } from "./memory.js";
+import {
+  readMemorySource,
+  sourceProvenance,
+  validReferences,
+  agentSourceAllowed,
+} from "./memory.js";
 
 export async function agents(db, user) {
   return (
@@ -230,7 +235,7 @@ export async function setSteward(pool, user, skillId, stewardId) {
   });
 }
 export async function listMemories(db, user, query = "") {
-  return (
+  const rows = (
     await db.query(
       `SELECT m.* FROM cr_memories m JOIN cr_agents a ON a.id=m.agent_id WHERE m.deleted_at IS NULL AND (a.owner_id IS NULL OR a.owner_id=$1) AND ${readPredicate("m")} AND ($3='' OR m.title ILIKE $4 OR m.body ILIKE $4) ORDER BY m.updated_at DESC LIMIT 100`,
       [
@@ -241,10 +246,42 @@ export async function listMemories(db, user, query = "") {
       ],
     )
   ).rows;
+  const items = [];
+  for (const m of rows) {
+    // A revoked origin must not leak via the management list or its history.
+    if (await validReferences(db, user, m, m.source_refs)) {
+      const history = [];
+      for (const h of m.history) {
+        history.push(
+          (await validReferences(db, user, m, h.sourceRefs || []))
+            ? h
+            : {
+                ...h,
+                title: "열람할 수 없는 이전 출처",
+                reason: "이전 출처 재검토 필요",
+                body: "이전 근거를 다시 확인해야 합니다.",
+                sourceRefs: [],
+              },
+        );
+      }
+      items.push({ ...m, history });
+    } else
+      items.push({
+        ...m,
+        title: "출처 재검토가 필요한 기억",
+        body: "출처가 변경되었거나 현재 열람할 수 없습니다. 새 근거로 바로잡아주세요.",
+        source: "출처 확인 필요",
+        history: [],
+        source_refs: [],
+        unavailable: true,
+      });
+  }
+  return items;
 }
 export async function createMemory(pool, user, input, existingDb = null) {
   const v = memoryInput.parse(input);
   const execute = async (db) => {
+    await lockContextMutation(db);
     const a = (
       await db.query("SELECT * FROM cr_agents WHERE id=$1", [v.agentId])
     ).rows[0];
@@ -283,17 +320,55 @@ export async function createMemory(pool, user, input, existingDb = null) {
       new Date(v.validFrom) >= new Date(v.validTo)
     )
       fail(400, "MEMORY_INTERVAL", "적용 종료는 시작 이후로 지정해주세요.");
-    if (v.sourceKey)
-      await readMemorySource(
-        db,
-        user,
-        {
-          visibility: v.visibility,
-          department: source?.department || user.department,
-        },
-        v.sourceKey,
-      );
+    let provenance = { refs: [], validFrom: null, validTo: null },
+      originTaskId = null;
+    if (v.sourceKey) {
+      const scope = {
+        visibility: v.visibility,
+        department: source?.department || user.department,
+      };
+      const doc = await readMemorySource(db, user, scope, v.sourceKey);
+      if (!agentSourceAllowed(doc, v.agentId))
+        fail(
+          409,
+          "MEMORY_PROOF_REQUIRED",
+          "이 동료가 사용할 수 있는 출처를 선택해주세요.",
+        );
+      provenance = await sourceProvenance(db, doc);
+      if (
+        !(await validReferences(db, user, scope, provenance.refs, {
+          lock: true,
+        }))
+      )
+        fail(409, "MEMORY_PROOF_CHANGED", "출처를 다시 확인해주세요.");
+      originTaskId = doc.task_id;
+      // A derived fact cannot outlive its evidence. Keep any narrower user bounds.
+      const starts = [v.validFrom, provenance.validFrom]
+        .filter(Boolean)
+        .map((x) => +new Date(x));
+      const ends = [v.validTo, provenance.validTo]
+        .filter(Boolean)
+        .map((x) => +new Date(x));
+      v.validFrom = starts.length
+        ? new Date(Math.max(...starts)).toISOString()
+        : null;
+      v.validTo = ends.length
+        ? new Date(Math.min(...ends)).toISOString()
+        : null;
+      if (
+        v.validFrom &&
+        v.validTo &&
+        new Date(v.validFrom) >= new Date(v.validTo)
+      )
+        fail(400, "MEMORY_INTERVAL", "출처와 겹치는 적용 기간이 필요해요.");
+    }
     if (v.supersedesId) {
+      if (provenance.refs.some((r) => r.key === "memory:" + v.supersedesId))
+        fail(
+          409,
+          "MEMORY_REPLACEMENT_SOURCE",
+          "대체할 결정에 의존하지 않는 새 근거가 필요해요.",
+        );
       const ref = (
         await db.query("SELECT source_task_id FROM cr_memories WHERE id=$1", [
           v.supersedesId,
@@ -360,7 +435,7 @@ export async function createMemory(pool, user, input, existingDb = null) {
     }
     const id = randomUUID();
     await db.query(
-      "INSERT INTO cr_memories(id,agent_id,owner_id,visibility,department,source_task_id,title,body,source,kind,pinned,project,audience,valid_from,valid_to,supersedes_id,source_key) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)",
+      "INSERT INTO cr_memories(id,agent_id,owner_id,visibility,department,source_task_id,title,body,source,kind,pinned,project,audience,valid_from,valid_to,supersedes_id,source_key,source_refs,origin_task_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)",
       [
         id,
         v.agentId,
@@ -379,6 +454,8 @@ export async function createMemory(pool, user, input, existingDb = null) {
         v.validTo,
         v.supersedesId,
         v.sourceKey,
+        JSON.stringify(provenance.refs),
+        originTaskId,
       ],
     );
     // Private content is intentionally absent from global activity payloads.
@@ -410,6 +487,7 @@ export async function changeMemory(pool, user, id, input, deleting = false) {
         .strict()
         .parse(input);
   return transaction(pool, async (db) => {
+    await lockContextMutation(db);
     const ref = (
       await db.query("SELECT source_task_id FROM cr_memories WHERE id=$1", [id])
     ).rows[0];
@@ -431,6 +509,22 @@ export async function changeMemory(pool, user, id, input, deleting = false) {
         "기억 작성자 또는 공유 기억 관리자만 수정할 수 있어요.",
       );
     if (m.revision !== v.revision) conflict();
+    if (
+      deleting &&
+      (m.supersedes_id ||
+        (
+          await db.query(
+            "SELECT 1 FROM cr_memories WHERE supersedes_id=$1 AND deleted_at IS NULL",
+            [m.id],
+          )
+        ).rowCount)
+    )
+      fail(
+        409,
+        "MEMORY_DECISION_CHAIN",
+        "대체 이력이 있는 결정은 삭제할 수 없어요. 바로잡거나 새 결정으로 대체해주세요.",
+      );
+    const detaching = !deleting && v.body !== m.body;
     const history = JSON.stringify([
       {
         revision: m.revision,
@@ -438,11 +532,14 @@ export async function changeMemory(pool, user, id, input, deleting = false) {
         body: m.body,
         actor: user.id,
         reason: v.reason || "삭제",
+        sourceRefs: m.source_refs,
+        originTaskId: m.origin_task_id,
+        provenanceDetached: detaching && m.source_refs.length > 0,
         at: new Date().toISOString(),
       },
     ]);
     await db.query(
-      "UPDATE cr_memories SET title=$2,body=$3,history=history || $4::jsonb,revision=revision+1,updated_at=now(),deleted_at=CASE WHEN $5 THEN now() ELSE NULL END,pinned=$6,kind=$7 WHERE id=$1",
+      "UPDATE cr_memories SET title=$2,body=$3,history=history || $4::jsonb,revision=revision+1,updated_at=now(),deleted_at=CASE WHEN $5 THEN now() ELSE NULL END,pinned=$6,kind=$7,source_refs=CASE WHEN $8 THEN '[]'::jsonb ELSE source_refs END,source_corrected=source_corrected OR $8 WHERE id=$1",
       [
         id,
         v.title || m.title,
@@ -451,6 +548,7 @@ export async function changeMemory(pool, user, id, input, deleting = false) {
         deleting,
         v.pinned ?? m.pinned,
         v.kind || m.kind,
+        detaching,
       ],
     );
     await db.query(

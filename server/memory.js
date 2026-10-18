@@ -31,6 +31,38 @@ export function sourceAllowed(user, scope, doc) {
   );
 }
 export const reference = (doc) => ({ key: doc.key, revision: doc.revision });
+// Explicit cross-project reads are supported; agent-only sources still belong to
+// their assigned role. Derived, reviewed project facts may be shared across roles.
+export const agentSourceAllowed = (doc, agentId) =>
+  !agentId || doc.agents.includes(agentId) || doc.audience === "project";
+export const effectiveAt = (doc, at = new Date()) =>
+  (!doc.valid_from || new Date(doc.valid_from) <= at) &&
+  (!doc.valid_to || new Date(doc.valid_to) > at);
+export async function sourceProvenance(db, doc) {
+  const refs = [reference(doc), ...(doc.dependencies || [])];
+  const sources = [
+    doc,
+    ...(
+      await documentsByKeys(
+        db,
+        refs.map((r) => r.key),
+      )
+    ).values(),
+  ];
+  const starts = sources
+    .filter((d) => d.valid_from)
+    .map((d) => +new Date(d.valid_from));
+  const ends = sources
+    .filter((d) => d.valid_to)
+    .map((d) => +new Date(d.valid_to));
+  return {
+    refs,
+    validFrom: starts.length
+      ? new Date(Math.max(...starts)).toISOString()
+      : null,
+    validTo: ends.length ? new Date(Math.min(...ends)).toISOString() : null,
+  };
+}
 export async function documentsByKeys(db, keys) {
   if (!keys.length) return new Map();
   return new Map(
