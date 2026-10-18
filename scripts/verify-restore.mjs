@@ -389,7 +389,7 @@ try {
   );
   const receipt = {
     date: new Date().toISOString(),
-    release: "0.8.1",
+    release: "0.9.0",
     elapsedSeconds: Math.round((Date.now() - started) / 1000),
     checks: [
       "DB Task/Artifact hashes/Memory identical",

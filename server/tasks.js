@@ -97,7 +97,7 @@ export async function taskDetail(db, user, id) {
 export async function listTasks(db, user) {
   return (
     await db.query(
-      `SELECT t.*,a.name AS agent_name FROM cr_tasks t JOIN cr_steps s ON s.task_id=t.id AND s.position=t.step_index JOIN cr_agents a ON a.id=s.agent_id WHERE ${readPredicate()} ORDER BY t.updated_at DESC LIMIT 200`,
+      `SELECT t.*,a.name AS agent_name,s.agent_id,s.name AS step_name FROM cr_tasks t JOIN cr_steps s ON s.task_id=t.id AND s.position=t.step_index JOIN cr_agents a ON a.id=s.agent_id WHERE ${readPredicate()} ORDER BY t.updated_at DESC LIMIT 200`,
       [user.id, user.department],
     )
   ).rows;

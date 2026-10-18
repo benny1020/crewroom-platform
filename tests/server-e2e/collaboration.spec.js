@@ -477,3 +477,57 @@ test("evidence proposal promotion, a future policy replacement and accepted-work
     /과거 결과의 검사·수용을 새 업무의 승인으로 사용하지 마세요./,
   );
 });
+
+test("office selects an agent by button, opens the applied skill and keeps motion/status understandable", async ({
+  page,
+}) => {
+  await login(page);
+  await page.getByRole("button", { name: /^노아 · 코드 리뷰/ }).click();
+  const side = page.getByLabel("선택한 동료", { exact: true });
+  await expect(
+    side.getByRole("heading", { name: "노아", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /^노아 · 코드 리뷰/ }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "모션 켜짐", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "모션 꺼짐", exact: true }),
+  ).toHaveAttribute("aria-pressed", "false");
+  await side.locator('[data-action="use-skill"]').first().click();
+  await expect(page).toHaveURL(/#\/agents\/review$/);
+  await expect(page.locator(".cr-skill-guide")).toContainText(
+    "이번 요청에 적용할 스킬 v",
+  );
+  await expect(page.getByLabel("맡길 일 또는 대화")).toBeVisible();
+  await page
+    .getByLabel("맡길 일 또는 대화")
+    .fill("오피스의 스킬 바로 실행 검증");
+  await page
+    .getByRole("button", { name: "업무방 열고 시작", exact: true })
+    .click();
+  await expect(page).toHaveURL(/#\/tasks\//);
+  await expect(page.locator(".g-page-head")).toContainText(
+    "오피스의 스킬 바로 실행 검증",
+  );
+});
+
+test("lead operations panel has scoped metrics and member cannot obtain it", async ({
+  page,
+  browser,
+}) => {
+  await login(page);
+  await page.getByRole("link", { name: "팀 관리", exact: true }).click();
+  const panel = page.getByLabel("운영 현황", { exact: true });
+  await expect(panel).toContainText("열람 가능한 업무 기준");
+  await expect(panel).toContainText("비용은 미측정");
+  await expect(panel).toContainText("실패");
+  const other = await browser.newContext(),
+    member = await other.newPage();
+  await login(member, "member@e2e.invalid");
+  const result = await member.request.get("/api/admin/operations");
+  expect(result.status()).toBe(403);
+  await member.goto("/#/admin");
+  await expect(member.getByLabel("운영 현황", { exact: true })).toHaveCount(0);
+  await other.close();
+});

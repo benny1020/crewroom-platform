@@ -32,6 +32,7 @@ import {
   sourceAllowed,
 } from "./memory.js";
 import * as resources from "./resources.js";
+import { operations } from "./operations.js";
 import { listProposals, resolveProposal } from "./memory-learning.js";
 
 export function buildApp(pool, config = configuration()) {
@@ -258,6 +259,7 @@ export function buildApp(pool, config = configuration()) {
       release: config.release,
     };
   });
+  app.get("/api/admin/operations", async (req) => operations(pool, req.member));
   app.get("/api/tasks", async (req) => ({
     tasks: await listTasks(pool, req.member),
   }));

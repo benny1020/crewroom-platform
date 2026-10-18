@@ -11,11 +11,17 @@
 
 </div>
 
-**0.8.1은 Astra의 독립 조사·리뷰를 반영해 승인된 기억의 출처 추적, 적용 기간, 역할 경계와 동시 실행을 보강했습니다.** [발견·수정·검증 기록](docs/ASTRA_MEMORY_REVIEW.md). GitHub Pages는 API 없는 0.4 화면 데모입니다. 실제 공동 사용은 아래 서버를 실행해야 합니다. 모델 키는 포함하지 않습니다. 외부 모델 추론과 실제 팀의 업무 절감 효과는 아직 검증하지 않았습니다. [배포별 시범 운영 가이드](docs/PILOT_GUIDE.md)를 별도로 관리합니다.
+**0.9.0은 실제 서버 오피스에서 동료·적용 스킬·현재 업무를 이어주고, 팀장용 운영 현황과 한국어 답변 평가 도구를 추가했습니다.** [변경·검증 기록](docs/SERVER_VERIFICATION.md) · [평가 사용법](docs/ANSWER_EVALUATION.md). GitHub Pages는 API 없는 0.4 화면 데모입니다. 실제 공동 사용은 아래 서버를 실행해야 합니다. 모델 키는 포함하지 않습니다. 외부 모델 추론과 실제 팀의 업무 절감 효과는 아직 검증하지 않았습니다. [배포별 시범 운영 가이드](docs/PILOT_GUIDE.md)를 별도로 관리합니다.
 
 OpenAI 호환 또는 Claude Messages API의 **URL·모델 ID·인증 방식**을 직접 지정합니다. 제공자 API, 게이트웨이, 자체 호스팅 endpoint를 같은 설정 방식으로 연결하고, GitLab URL과 사용할 프로젝트도 선택합니다. [커스텀 연결 설정](docs/CONFIGURATION.md)
 
-다음 단계는 **실제 모델 검증 + 서버 UX 정리 → 공동 사용 검증 → 안정 버전 운영 판단**입니다. [마일스톤과 완료 기준](docs/MILESTONES.md) · [GitHub 진행 현황](https://github.com/benny1020/crewroom-platform/milestones)
+지금은 **서버 UX·평가 준비를 구현한 상태**이며, 다음 단계는 실제 endpoint 검증과 소규모 공동 사용입니다. [마일스톤과 완료 기준](docs/MILESTONES.md) · [GitHub 진행 현황](https://github.com/benny1020/crewroom-platform/milestones)
+
+![실제 서버의 부서별 공용 동료와 스킬](docs/media/readiness/office.png)
+
+동료를 선택하면 현재 업무와 다음 행동, 적용한 스킬이 함께 열립니다. 스킬 요청 화면에는 실행에 고정할 버전과 완료 기준을 보여줍니다. 팀장은 열람 가능한 업무의 대기열·실패·처리 시간과 저장된 모델 사용 기록을 확인합니다. 아래 화면과 GIF는 격리된 PostgreSQL·App·Worker를 사용하며 모델 응답은 결정적 테스트 fixture입니다.
+
+![서버 오피스에서 스킬 요청·결과·운영 현황까지](docs/media/readiness/workflow.gif)
 
 ## 구현 구조
 
@@ -121,6 +127,8 @@ docker compose exec -T app node server/cli.js member member@example.com 민지 q
 ```bash
 npm run check
 npm run test:e2e
+# 기본 동작은 계획만 출력하며 모델 호출 0회입니다.
+npm run evaluate:answers
 # 운영 DB가 아닌, 테스트 전용 PostgreSQL을 지정합니다.
 npm run test:runner
 TEST_DATABASE_URL=postgresql://crewroom@127.0.0.1:5448/crewroom TEST_RUNNER_DOCKER=1 npm run test:server
@@ -148,6 +156,7 @@ TEST_DATABASE_URL=postgresql://crewroom@127.0.0.1:5448/crewroom npm run test:ser
 | [현재 서버 아키텍처](docs/SERVER_ARCHITECTURE.md)                     | 데이터 관계·API·실행·경쟁·권한·기억·실패 처리                 |
 | [런타임 채택 결정](docs/ADR_001_RUNTIME.md)                           | Paperclip/Hermes 코드 검토와 독립 큐 선택 근거                |
 | [운영 안내](docs/SERVER_OPERATIONS.md)                                | Compose·계정·모델 설정·백업·복원·종료 확인                    |
+| [한국어 답변 평가](docs/ANSWER_EVALUATION.md)                         | 합성 20문항·명시적 호출 예산·동일 조건 비교·수동 판정         |
 | [검증과 리뷰](docs/SERVER_VERIFICATION.md)                            | 실행한 검사·실제 증거·남은 범위                               |
 | [개발 계획](docs/DEVELOPMENT_PLAN.md)                                 | 이번 릴리스의 완료 기준과 진행 결과                           |
 | [0.4 기획·화면 설계 기록](docs/DESIGN_IMPLEMENTATION.md)              | 이전 설계·Astra 피드백. 서버 구현은 현재 문서 우선            |

@@ -1,3 +1,4 @@
+import { officeStation, agentTask, stationMode } from "./office-station.js";
 import "./styles.css";
 import "./refinements.css";
 import "./team.css";
@@ -54,6 +55,9 @@ const stamp = (v) =>
 const pill = (t) =>
   `<span class="g-pill ${t.status === "running" ? "blue" : ["failed", "paused", "result_ready"].includes(t.status) ? "amber" : t.status === "done" ? "green" : ""}"><span class="g-dot"></span>${statusName[t.status] || esc(t.status)}</span>`;
 let archiveResults = [];
+let selectedAgent = "dev",
+  workFilter = "all",
+  motionOff = false;
 let workspace = null,
   session = null,
   task = null,
@@ -86,6 +90,8 @@ function clearSession() {
   refreshing = false;
   pendingRefresh = false;
   deferred = false;
+  selectedAgent = "dev";
+  workFilter = "all";
   drafts.clear();
   archiveResults = [];
   modal.innerHTML = "";
@@ -200,7 +206,13 @@ async function load(force = false) {
     const proposals =
       page === "memory" ? (await api("/memory/proposals")).items : [];
     if (generation !== sessionGeneration || id !== refreshId) throw stale();
+    const ops =
+      page === "admin" && next.user.role === "lead"
+        ? await api("/admin/operations")
+        : null;
+    if (generation !== sessionGeneration || id !== refreshId) throw stale();
     workspace = next;
+    workspace.operations = ops;
     workspace.memoryProposals = proposals;
     session.user = next.user;
     task = nextTask;
@@ -269,7 +281,7 @@ function layout(content) {
     )
     .join(
       "",
-    )}</div><a class="cr-side-agent cr-personal" href="#/agents/personal-${u.id}">${portrait({})}<span><strong>나의 비서</strong><small>개인 대화와 기억</small></span>${icon("lock-keyhole")}</a></aside><main class="cr-main"><div class="cr-live-notice"><span>${icon("radio")} ${workspace.runtime.fixture ? "통합 테스트 실행기 · 실제 AI 미연결" : "읽기 전용 AI 업무 · 외부 변경 미허용"}</span><button class="g-text-button" data-action="refresh" data-live-refresh ${deferred ? "" : "hidden"}>새 변경 확인 ${icon("refresh-cw")}</button></div>${content}</main></div>`;
+    )}</div><a class="cr-side-agent cr-personal" href="#/agents/personal-${u.id}">${portrait({})}<span><strong>나의 비서</strong><small>개인 대화와 기억</small></span>${icon("lock-keyhole")}</a></aside><main class="cr-main"><div class="cr-live-notice"><span>${icon("radio")} ${workspace.runtime.fixture ? "통합 테스트 실행기 · 실제 AI 미연결" : workspace.runtime.codeExecution ? "코드 수정·QA 실행 가능 · 저장소 반영은 사람이 확인" : "분석·협업 모드 · 코드 실행 미연결"}</span><button class="g-text-button" data-action="refresh" data-live-refresh ${deferred ? "" : "hidden"}>새 변경 확인 ${icon("refresh-cw")}</button></div>${content}</main></div>`;
 }
 function heading(title, sub, actions = "") {
   return `<div class="g-page-head"><div><h1>${title}</h1><p class="g-page-sub">${sub}</p></div>${actions}</div>`;
@@ -284,36 +296,50 @@ function officeView() {
       (t) =>
         t.responsible_id === workspace.user.id &&
         ["result_ready", "failed", "paused"].includes(t.status),
-    );
+    ),
+    a = shared.find((a) => a.id === selectedAgent) || shared[0],
+    selected = a && agentTask(tasks, a.id);
   return (
     heading(
       "함께 일하는 오피스",
-      "네 부서의 동료와 같은 업무를 이어가세요.",
-      button("모션 전환", "motion", "", false, "sparkles"),
+      "동료를 고르면 이어갈 업무와 스킬이 함께 열려요.",
+      button(
+        motionOff ? "모션 꺼짐" : "모션 켜짐",
+        "motion",
+        `aria-pressed="${!motionOff}"`,
+        false,
+        "sparkles",
+      ),
     ) +
-    `<section class="cw-desk"><div class="cw-desk-intro"><span class="cw-desk-symbol">${icon("git-pull-request")}</span><div><h2>어떤 일을 함께 이어갈까요?</h2><p>대상과 원하는 결과를 입력하면 담당 동료를 준비해요.</p></div></div><div class="cw-actions">${button("새 업무 시작", "navigate", 'data-path="intake"', true, "plus")}${button("기존 결과 가져오기", "navigate", 'data-path="intake/import"', false, "file-check-2")}</div></section><section class="cr-work-preview">${tasks.slice(0, 2).map(taskRow).join("") || '<div class="cr-empty-inline">첫 업무를 맡겨보세요. 팀원이 같은 업무방에서 이어받을 수 있어요.</div>'}</section><div class="cr-overview"><span>${icon("activity")} 진행 중 <b>${tasks.filter((t) => t.status === "running").length}</b></span><span>${icon("circle-help")} 내가 확인할 일 <b>${mine.length}</b></span><span>${icon("file-check-2")} 수용한 결과 <b>${tasks.filter((t) => t.status === "done").length}</b></span><span class="g-muted">Worker ${workspace.workers.some((w) => w.healthy && w.state === "ready") ? "연결됨" : "연결 확인 필요"}</span></div><div class="cr-rooms">${departments
+    `<section class="cw-desk"><div class="cw-desk-intro"><span class="cw-desk-symbol">${icon("git-pull-request")}</span><div><h2>어떤 일을 함께 이어갈까요?</h2><p>새 업무를 맡기거나, 동료가 남긴 결과에서 이어가세요.</p></div></div><div class="cw-actions">${button("새 업무 시작", "navigate", 'data-path="intake"', true, "plus")}${button("기존 결과 가져오기", "navigate", 'data-path="intake/import"', false, "file-check-2")}</div></section>
+    ${mine.length ? `<section class="cr-attention"><h2>${icon("circle-help")} 내가 이어갈 일 <span>${mine.length}</span></h2>${mine.slice(0, 3).map(taskRow).join("")}</section>` : ""}
+    <div class="cr-overview"><button class="g-text-button" data-action="work-filter" data-filter="running">${icon("activity")} 작업 중 <b>${tasks.filter((t) => t.status === "running").length}</b></button><button class="g-text-button" data-action="work-filter" data-filter="queued">${icon("clock")} 실행 대기 <b>${tasks.filter((t) => t.status === "queued").length}</b></button><button class="g-text-button" data-action="work-filter" data-filter="mine">${icon("circle-help")} 내가 확인할 일 <b>${mine.length}</b></button><small class="g-muted">열람 가능한 최근 업무 최대 200건</small></div>
+    <div class="cr-office-layout"><div class="cr-rooms">${departments
       .map(
         (d) =>
           `<section class="cr-room"><header><h2>${icon(d.icon)} ${d.name}</h2><span>${d.description}</span></header><div class="cr-stations">${shared
             .filter((a) => a.department === d.id)
-            .map((a) => {
-              const work = tasks.find(
-                  (t) =>
-                    t.agent_name === a.name &&
-                    [
-                      "running",
-                      "queued",
-                      "result_ready",
-                      "paused",
-                      "failed",
-                    ].includes(t.status),
-                ),
-                working = work?.status === "running";
-              return `<a href="#/agents/${a.id}" class="cr-station ${working ? "working" : ""}"><div class="cr-desk-scene">${portrait(a, true)}<div class="cr-laptop">${working ? "<span></span><span></span><span></span>" : icon("minus")}</div><div class="cr-table"></div></div><strong>${esc(a.name)} <small>${esc(a.role)}</small></strong><span class="cr-station-status ${working ? "active" : ""}">${work ? statusName[work.status] : "새 업무를 맡길 수 있어요"}</span><p>${esc(work?.title || "업무 대기 중")}</p></a>`;
+            .map((person) => {
+              const t = agentTask(tasks, person.id);
+              return officeStation({
+                id: person.id,
+                name: person.name,
+                role: person.role,
+                portrait: portrait(person, true),
+                mode: stationMode(t?.status),
+                label: t ? statusName[t.status] : "표시할 업무 없음",
+                stage: t?.step_name,
+                taskTitle: t?.title || "스킬을 골라 새 업무를 맡겨보세요.",
+                selected: person.id === a?.id,
+                motion: ["chief", "research", "review"].includes(person.id)
+                  ? "read"
+                  : "type",
+              });
             })
             .join("")}</div></section>`,
       )
-      .join("")}</div>`
+      .join("")}</div>
+    <aside class="cr-office-side" aria-label="선택한 동료">${a ? `<div class="cr-office-person">${portrait(a, true)}<div><h2>${esc(a.name)}</h2><p>${esc(a.role)}</p></div></div>${selected ? `<div class="cr-selected-work">${pill(selected)}<h3>${esc(selected.title)}</h3><p>${esc(selected.step_name)} · ${esc(person(selected.responsible_id))} 책임</p><a class="g-button g-primary" href="#/tasks/${selected.id}">${["result_ready", "done"].includes(selected.status) ? "결과 확인" : selected.status === "failed" ? "실패 원인 확인" : "업무 이어가기"} ${icon("arrow-up-right")}</a></div>` : '<p class="cr-note">현재 목록에서 이 동료의 업무를 찾지 못했어요. 새 업무를 시작할 수 있습니다.</p>'}<a class="g-button" href="#/agents/${a.id}">${icon("message-circle")} ${esc(a.name)}에게 말 걸기</a><section class="cr-office-skills"><h3>스킬로 바로 요청</h3>${a.skills.map((b) => `<button class="cr-skill-trigger" data-action="use-skill" data-agent="${a.id}" data-skill="${esc(b.skillId)}"><span>${esc(workspace.skills.find((s) => s.id === b.skillId)?.name || b.skillId)}<small>적용 v${b.version}</small></span>${icon("arrow-up-right")}</button>`).join("") || '<p class="g-muted">적용한 스킬이 없습니다.</p>'}</section><p class="cr-note">실제 서버 상태를 표시합니다. 모션을 꺼도 업무 상태와 다음 행동을 확인할 수 있어요.</p>` : ""}</aside></div>`
   );
 }
 function intakeView(importing = false) {
@@ -344,13 +370,38 @@ function intakeView(importing = false) {
   );
 }
 function workView() {
+  const rows = workspace.tasks.filter(
+    (t) =>
+      workFilter === "all" ||
+      (workFilter === "mine"
+        ? t.responsible_id === workspace.user.id &&
+          ["failed", "paused", "result_ready"].includes(t.status)
+        : t.status === workFilter),
+  );
   return (
     heading(
       "함께 이어가는 업무",
       "요청·대화·결과를 하나의 업무방에서 확인하세요.",
       button("새 업무", "navigate", 'data-path="intake"', true, "plus"),
     ) +
-    `<section class="cr-work-preview">${workspace.tasks.map(taskRow).join("") || '<div class="g-empty">접수된 업무가 없어요.</div>'}</section>`
+    `<div class="cr-work-filters" aria-label="업무 필터">${[
+      ["all", "전체"],
+      ["mine", "내가 확인할 일"],
+      ["running", "작업 중"],
+      ["queued", "실행 대기"],
+      ["failed", "실패"],
+    ]
+      .map(([id, label]) =>
+        button(
+          label,
+          "work-filter",
+          `data-filter="${id}" aria-pressed="${workFilter === id}"`,
+          workFilter === id,
+        ),
+      )
+      .join(
+        "",
+      )}</div><section class="cr-work-preview">${rows.map(taskRow).join("") || '<div class="g-empty">이 조건에 맞는 업무가 없어요. 전체 업무에서 확인하거나 새 업무를 시작하세요.</div>'}</section>`
   );
 }
 function resultView(a) {
@@ -460,11 +511,11 @@ function agentView(id) {
       workspace.skills.find((s) => s.id === b.skillId)?.name || b.skillId,
     ]),
     "conversation",
-  )}${area("맡길 일 또는 대화", "goal", "", 'required maxlength="4000"')}${a.owner_id ? '<input type="hidden" name="visibility" value="private">' : scopes("team")}<p class="g-error" data-error></p><button type="submit" class="g-button g-primary">업무방 열고 시작 ${icon("arrow-right")}</button></form><div class="cr-agent-work"><h3>연결된 업무</h3>${
+  )}<div class="cr-skill-guide" aria-live="polite"></div>${area("맡길 일 또는 대화", "goal", "", 'required maxlength="4000"')}${a.owner_id ? '<input type="hidden" name="visibility" value="private">' : scopes("team")}<p class="g-error" data-error></p><button type="submit" class="g-button g-primary">업무방 열고 시작 ${icon("arrow-right")}</button></form><div class="cr-agent-work"><h3>연결된 업무</h3>${
     workspace.tasks
       .filter(
         (t) =>
-          t.agent_name === a.name ||
+          t.agent_id === a.id ||
           (t.work_type === "pr-qa" && ["review", "qa"].includes(a.id)),
       )
       .map(taskRow)
@@ -538,6 +589,16 @@ function skillsView() {
       .join("")}</div>`
   );
 }
+function operationsView() {
+  const o = workspace.operations;
+  if (!o) return "";
+  const duration =
+    o.mean_duration_ms == null
+      ? "기록 없음"
+      : `${(o.mean_duration_ms / 1000).toFixed(1)}초`;
+  const u = o.usage;
+  return `<section class="cw-paper cr-admin-section cr-operations" aria-label="운영 현황"><div class="cw-section-heading"><h2>운영 현황</h2><span class="g-muted">열람 가능한 업무 기준</span></div><div class="cr-op-metrics"><div><span>실행 대기</span><strong>${o.queued}</strong><small>${o.oldest_queued_at ? "가장 오래된 요청 " + stamp(o.oldest_queued_at) : "대기 요청 없음"}</small></div><div><span>실행 중</span><strong>${o.running}</strong><small>전체 동시 실행 한도 ${o.capacity.global} · 동료별 ${o.capacity.perAgent}</small></div><div><span>최근 24시간 실패 / 종료 실행</span><strong>${o.failed} / ${o.finished}</strong><small>평균 처리시간 ${duration}</small></div></div><h3>최근 24시간 저장된 모델 사용 기록</h3><p>성공 결과에 저장된 요청 ${u.recordedCalls}건 · 토큰 사용량 제공 ${u.usageReported}건 · 미제공 ${u.usageMissing}건</p><p class="cr-note">${u.inputTokens == null ? "토큰 사용량 기록이 없습니다." : `입력 ${u.inputTokens.toLocaleString()} · 출력 ${u.outputTokens.toLocaleString()} 토큰`} 비용은 미측정입니다. 실패·취소된 요청의 사용량은 포함하지 않으므로 전체 청구 사용량과 다를 수 있어요.</p><h3>확인이 필요한 업무</h3>${o.attention.map((t) => `<a class="cr-op-alert" href="#/tasks/${t.id}"><span>W-${t.number} ${esc(t.title)}</span><small>${statusName[t.status]}${t.error_code ? " · " + esc(t.error_code) : ""}</small>${icon("arrow-up-right")}</a>`).join("") || '<p class="cr-empty-inline">열람 가능한 업무에 실패·재개 대기 요청이 없습니다.</p>'}</section>`;
+}
 function adminView() {
   if (workspace.user.role !== "lead")
     return '<div class="g-empty">팀장 권한이 필요해요.</div>';
@@ -555,7 +616,7 @@ function adminView() {
         .slice(0, 5)
         .map(taskRow)
         .join("") || '<p class="cr-empty-inline">확인할 공유 업무가 없어요.</p>'
-    }</section><section class="cw-paper cr-admin-section"><h2>구성원과 역할 요청</h2><p class="g-small g-muted">팀원 계정과 소속 부서는 운영 CLI에서 사전 발급합니다. 팀장 요청은 역할 승인 전까지 권한을 부여하지 않습니다.</p>${workspace.members
+    }</section>${operationsView()}<section class="cw-paper cr-admin-section"><h2>구성원과 역할 요청</h2><p class="g-small g-muted">팀원 계정과 소속 부서는 운영 CLI에서 사전 발급합니다. 팀장 요청은 역할 승인 전까지 권한을 부여하지 않습니다.</p>${workspace.members
       .map(
         (m) =>
           `<form data-form="member" data-id="${m.id}" class="cr-member-row"><div><strong>${esc(m.name)}</strong><small>${esc(m.email)}</small>${m.leadRequested ? '<span class="cw-role-request">팀장 권한 요청</span>' : ""}</div>${select(
@@ -624,6 +685,9 @@ function render() {
                   : officeView();
   frame.innerHTML = layout(content);
   restoreDrafts();
+  frame
+    .querySelectorAll('form[data-form="agent-chat"]')
+    .forEach(updateSkillGuide);
   icons();
 }
 function icons() {
@@ -638,6 +702,15 @@ function restoreDrafts() {
       if (input && input.type !== "password") input.value = value;
     }
   });
+}
+function updateSkillGuide(form) {
+  const a = agent(form.dataset.agent),
+    b = a?.skills.find((b) => b.skillId === form.elements.skillId.value);
+  const guide = form.querySelector(".cr-skill-guide");
+  if (guide)
+    guide.innerHTML = b
+      ? `<strong>이번 요청에 적용할 스킬 v${b.version}</strong><p>${esc(b.doneCriteria || "완료 기준은 실행을 시작할 때 고정합니다.")}</p><small>대상·확인할 범위·원하는 결과를 적어주세요. 진행 중인 다른 업무의 버전은 바뀌지 않아요.</small>`
+      : "";
 }
 function closeDialog() {
   dialog = null;
@@ -942,6 +1015,13 @@ root.addEventListener("input", (e) => {
   )
     drafts.set(draftKey(form), Object.fromEntries(new FormData(form)));
 });
+root.addEventListener("change", (e) => {
+  if (
+    e.target.name === "skillId" &&
+    e.target.form?.dataset.form === "agent-chat"
+  )
+    updateSkillGuide(e.target.form);
+});
 root.addEventListener("click", async (e) => {
   const el = e.target.closest("[data-action]");
   if (!el || busy) return;
@@ -990,8 +1070,38 @@ root.addEventListener("click", async (e) => {
       await load(true);
       toast("기존 팀장이 요청을 확인하면 역할을 부여합니다.");
     }
+    if (action === "office-select") {
+      selectedAgent = el.dataset.id;
+      render();
+      frame
+        .querySelector(
+          `.g-office-station[data-id="${CSS.escape(selectedAgent)}"]`,
+        )
+        ?.focus();
+      return;
+    }
+    if (action === "use-skill") {
+      drafts.set("agent-chat:" + el.dataset.agent, {
+        skillId: el.dataset.skill,
+        goal: "",
+        visibility: "team",
+      });
+      navigate("agents/" + el.dataset.agent);
+      return;
+    }
+    if (action === "work-filter") {
+      workFilter = ["all", "mine", "running", "queued", "failed"].includes(
+        el.dataset.filter,
+      )
+        ? el.dataset.filter
+        : "all";
+      navigate("work");
+      return;
+    }
     if (action === "motion") {
-      root.classList.toggle("cr-no-motion");
+      motionOff = !motionOff;
+      root.classList.toggle("cr-no-motion", motionOff);
+      render();
       return;
     }
     if (action === "logout") {

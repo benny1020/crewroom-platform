@@ -20,7 +20,7 @@ import {
 export async function agents(db, user) {
   return (
     await db.query(
-      "SELECT a.*,coalesce(jsonb_agg(jsonb_build_object('skillId',b.skill_id,'version',b.version)) FILTER(WHERE b.skill_id IS NOT NULL),'[]') AS skills FROM cr_agents a LEFT JOIN cr_skill_bindings b ON b.agent_id=a.id WHERE a.owner_id IS NULL OR a.owner_id=$1 GROUP BY a.id ORDER BY a.created_at",
+      "SELECT a.*,coalesce(jsonb_agg(jsonb_build_object('skillId',b.skill_id,'version',b.version,'doneCriteria',v.done_criteria)) FILTER(WHERE b.skill_id IS NOT NULL),'[]') AS skills FROM cr_agents a LEFT JOIN cr_skill_bindings b ON b.agent_id=a.id LEFT JOIN cr_skill_versions v ON v.skill_id=b.skill_id AND v.version=b.version WHERE a.owner_id IS NULL OR a.owner_id=$1 GROUP BY a.id ORDER BY a.created_at",
       [user.id],
     )
   ).rows;

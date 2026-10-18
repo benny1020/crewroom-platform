@@ -1,0 +1,84 @@
+{
+  "release": "0.9.0",
+  "date": "2026-10-18",
+  "counts": {
+    "unit": 54,
+    "postgres": 64,
+    "dockerRunner": 5,
+    "staticBrowser": 31,
+    "serverBrowser": 15,
+    "total": 169,
+    "skipped": 0
+  },
+  "environment": "macOS Node26, Docker Node24/PostgreSQL18; CI uses Node24",
+  "logHashes": {
+    "unit": "1b94b4ae03ecb7d143ef871abcceb5cb36aa059145a3a9fcadbed4e8cc1696fa",
+    "postgres": "2b6d2baf2a3119c39271edac7204905ab4449a61be2ee5702d3de4ee176d5fec",
+    "dockerRunner": "4d246c90b0bcd22f6b0ec130dbfa1dd2dea2f2bc62d0897a2930801d3d519549",
+    "staticBrowser": "c8b4d951f1bba27e90cc36d2b5f5819fe5d8336a9990a8740d49b0aedb16682f",
+    "serverBrowser": "54b9ebaebb2bdb72d350ffd9be663c0d8274ce40ddb4281e1a89b16f1888b30f"
+  },
+  "actualExternalModelCalls": 0,
+  "actualExternalEmbeddingCalls": 0,
+  "answerEvaluation": {
+    "syntheticCases": 20,
+    "configuredEndpointExecuted": false,
+    "defaultMode": "plan-only",
+    "defaultNetworkCalls": 0,
+    "protocolTests": "loopback OpenAI-compatible and Claude fixtures",
+    "limits": "provided context only; heuristic checks and human review, no retrieval/ACL/Worker/Docker quality claim"
+  },
+  "queueRegression": {
+    "tasks": 10,
+    "globalSlots": 2,
+    "perAgentSlots": 1,
+    "batches": 5,
+    "uniqueResults": 10,
+    "mode": "isolated PostgreSQL and deterministic fixture; no host/model load performance claim"
+  },
+  "review": {
+    "model": "gpt-6-astra",
+    "initialFindings": [
+      {
+        "severity": "P2",
+        "issue": "aborted final call could be accepted as complete comparison",
+        "resolution": "reject aborted baseline and suppress comparison on current cancellation; regression passed"
+      }
+    ],
+    "remainingActionableFindings": 0,
+    "scope": "working-tree operations ACL/receipts, agent IDs/applied skill version, answer budget/comparison and listed files; not full product certification"
+  },
+  "secretOwnership": "passed Linux service-specific isolation and restaging",
+  "restore": "passed isolated encrypted backup/restore including active Job edit checkpoint and fail-closed restore",
+  "publishableFileScan": {
+    "tool": "gitleaks",
+    "findings": 0,
+    "scope": "publishable tracked and non-ignored files"
+  },
+  "localDeployment": {
+    "release": "0.9.0",
+    "encryptedBackupBeforeUpgrade": true,
+    "previousRelease": "0.8.1",
+    "appReady": true,
+    "runnerHealthy": true,
+    "migrations": 7,
+    "workers": [
+      {
+        "version": "0.9.0",
+        "state": "ready",
+        "age_seconds": 0
+      }
+    ],
+    "reviewedServerFileChecks": 12,
+    "actualExternalModelCalls": 0,
+    "modelConfigured": false,
+    "embeddingConfigured": false,
+    "gitlabConfigured": false
+  },
+  "limitations": [
+    "actual configured model and embedding quality/cost/latency",
+    "large corpus/real provider and host load",
+    "real team effectiveness",
+    "full demo/server screen and test scenario unification"
+  ]
+}

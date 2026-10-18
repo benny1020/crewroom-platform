@@ -1,0 +1,47 @@
+{
+  "release": "0.9.0",
+  "capturedAt": "2026-10-18T14:26:59.215Z",
+  "mode": "isolated PostgreSQL/App/Worker + deterministic model fixture; no external model calls",
+  "viewport": {
+    "width": 1440,
+    "height": 1080
+  },
+  "checkedDesktopWidths": [
+    1440,
+    1280,
+    1024
+  ],
+  "pageErrors": [],
+  "files": [
+    {
+      "name": "office.png",
+      "bytes": 241095,
+      "sha256": "996852cc77b2804a06b6c1dee1e5ebde31455025483f7922c7286135e39ec62a"
+    },
+    {
+      "name": "office-1024.png",
+      "bytes": 201150,
+      "sha256": "17f2556bea8097c8172078a3fda91fd91e9b8869b888a493be0c90b21951ba19"
+    },
+    {
+      "name": "skill-request.png",
+      "bytes": 144310,
+      "sha256": "7167209ee081d1edb089abf2dfc310f72332f69fb5ddab6e3cd0024c8799960d"
+    },
+    {
+      "name": "workroom.png",
+      "bytes": 224063,
+      "sha256": "fb3cb7e3db39267c61ae6e27644ade34a7941bbd30a69ea3236f154d139fee16"
+    },
+    {
+      "name": "operations.png",
+      "bytes": 229037,
+      "sha256": "772d934d919cd3b855f27b963e93003a80b911641af479087726e4071480035d"
+    },
+    {
+      "name": "workflow.gif",
+      "bytes": 1041574,
+      "sha256": "d26c1a3523f619842586908a1652568270d37c3946b443e4b60839d127b56e94"
+    }
+  ]
+}

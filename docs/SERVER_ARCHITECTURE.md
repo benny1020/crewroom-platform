@@ -53,10 +53,15 @@ GitHub PR은 7~40자리 head SHA를 받는다. head를 확인하고 불변 base/
 
 ## API와 소스
 
+0.9.0의 오피스는 `src/office-station.js`를 데모와 서버에서 공유한다. 실제 서버는 Task의 현재 단계에 연결된 `agent_id`로 업무와 동료를 연결한다. 최근 열람 가능한 업무 최대 200건을 표시하며, 목록에 없음을 유휴 상태로 단정하지 않는다. 스킬 요청 화면의 완료 기준은 최신 게시본이 아닌 에이전트에 적용한 버전에서 읽는다.
+
+`GET /api/admin/operations`는 팀장 역할을 확인한 뒤 기존 Task 열람 조건으로 대기·실행·실패·24시간 처리 시간과 성공 산출물의 모델 영수증을 집계한다. 집계도 비공개 업무 권한을 확대하지 않는다. 누락된 사용량은 0으로 채우지 않으며, 실패/취소의 전체 청구량과 금액은 측정하지 않는다. [답변 평가·사용량의 범위](ANSWER_EVALUATION.md)
+
 | 경로                                                | 역할                           | 구현                          |
 | --------------------------------------------------- | ------------------------------ | ----------------------------- |
 | `/api/auth/*`                                       | 로그인·세션·로그아웃·팀장 요청 | auth.js, app.js               |
 | `/api/workspace`, `/api/events`                     | 범위별 목록·실시간 갱신        | app.js, permissions.js        |
+| `/api/admin/operations`                             | 팀장용 열람 범위 내 운영 집계  | operations.js, permissions.js |
 | `/api/tasks`, `/:id/commands`, `/:id/messages`      | 접수·상태·책임·대화            | tasks.js                      |
 | `/api/artifacts/:id`                                | 범위 검사 후 Markdown 다운로드 | app.js                        |
 | `/api/memories`                                     | 검색·출처·정정·삭제            | resources.js                  |

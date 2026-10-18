@@ -1,3 +1,4 @@
+import { officeStation as sharedOfficeStation } from "./office-station.js";
 import "./styles.css";
 import "./refinements.css";
 import "./team.css";
@@ -1138,16 +1139,20 @@ import { renderRolePage } from "./team-views.js";
   function officeStation(a) {
     const activity = officeActivity(a),
       reading = ["chief", "research", "review"].includes(a.id);
-    const bubble =
-      activity.mode === "waiting"
-        ? "!"
-        : activity.mode === "done"
-          ? icon("check")
-          : activity.mode === "working"
-            ? '<span class="g-dot"></span><span class="g-dot"></span><span class="g-dot"></span>'
-            : icon(activity.mode === "paused" ? "pause" : "coffee");
-    return `<button type="button" class="g-office-station cursor-interaction is-${activity.mode}" data-action="office-select" data-id="${a.id}" data-motion="${reading ? "read" : "type"}" aria-pressed="${state.office.selected === a.id}" aria-label="${esc(a.name)} · ${esc(a.role)} · ${activity.label}"><span class="g-desk-scene" aria-hidden="true"><span class="g-desk-floor"></span>${characterPortrait(a.character, a.color)}<span class="g-station-bubble">${bubble}</span><span class="g-work-desk"></span><span class="g-office-monitor"><span class="g-code-line"></span><span class="g-code-line"></span><span class="g-code-line"></span></span><span class="g-office-keyboard"></span><span class="g-office-paw"></span><span class="g-office-paw second"></span></span><span class="g-station-name">${esc(a.name)}<span class="g-station-role">${esc(a.role)}</span></span><span class="g-station-state"><span class="g-dot"></span>${activity.label}${activity.mode === "working" ? " · " + esc(activity.stage) : ""}</span><span class="g-station-task" data-tooltip="${esc(activity.task?.title || a.personality)}">${esc(activity.task?.title || a.personality)}</span></button>`;
+    return sharedOfficeStation({
+      id: a.id,
+      name: a.name,
+      role: a.role,
+      portrait: characterPortrait(a.character, a.color),
+      mode: activity.mode,
+      label: activity.label,
+      stage: activity.stage,
+      taskTitle: activity.task?.title || a.personality,
+      selected: state.office.selected === a.id,
+      motion: reading ? "read" : "type",
+    });
   }
+
   function officeSide() {
     const a = actorBy(state.office.selected) || actorBy("dev"),
       activity = officeActivity(a, true),

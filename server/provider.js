@@ -210,20 +210,21 @@ export async function runModel(
       requestId:
         response.headers.get("request-id") ||
         response.headers.get("x-request-id"),
-      usage: payload.usage
-        ? {
-            promptTokens:
-              (anthropic
-                ? payload.usage.input_tokens
-                : payload.usage.prompt_tokens) || 0,
-            completionTokens:
-              (anthropic
-                ? payload.usage.output_tokens
-                : payload.usage.completion_tokens) || 0,
-          }
-        : null,
+      usage: reportedUsage(payload.usage, anthropic),
       toolCalls: 0,
       receivedAt: new Date().toISOString(),
     },
   };
+}
+
+function reportedUsage(usage, anthropic) {
+  const promptTokens = anthropic ? usage?.input_tokens : usage?.prompt_tokens;
+  const completionTokens = anthropic
+    ? usage?.output_tokens
+    : usage?.completion_tokens;
+  return [promptTokens, completionTokens].every(
+    (n) => Number.isSafeInteger(n) && n >= 0,
+  )
+    ? { promptTokens, completionTokens }
+    : null;
 }
