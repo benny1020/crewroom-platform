@@ -7,6 +7,7 @@ import { resolve, join } from "node:path";
 import { backupKey, encryptFile, fileHash } from "./backup-crypto.mjs";
 import assert from "node:assert/strict";
 import { tarFiles } from "../runner/broker.mjs";
+import { acquireComposeOperationLock } from "./compose-operation-lock.mjs";
 const suffix = randomBytes(5).toString("hex"),
   base = `crewroom-drill-${suffix}`,
   directory = resolve(`.local/restore-drill-${suffix}`);
@@ -269,6 +270,16 @@ try {
   const originalFileHash = (await compose(source, fileDigest)).trim();
   const backup = join(directory, "backup"),
     keyFile = join(directory, "secrets", "backup_key");
+  const heldBackup = await acquireComposeOperationLock(source, "drill-guard");
+  try {
+    await assert.rejects(
+      script(source, "backup", [join(directory, "blocked-backup"), keyFile]),
+      /COMPOSE_OPERATION_BUSY/,
+    );
+    assert.equal((await api("/health")).ok, true);
+  } finally {
+    await heldBackup();
+  }
   await script(source, "backup", [backup, keyFile]);
   const checkpoint = (
     await sql(
@@ -289,6 +300,24 @@ try {
     /module.exports = 2/,
   );
   await fresh(good);
+  const heldRestore = await acquireComposeOperationLock(good, "drill-guard");
+  try {
+    await assert.rejects(
+      script(good, "restore", [backup, keyFile, "--confirm-empty"]),
+      /COMPOSE_OPERATION_BUSY/,
+    );
+    assert.equal(
+      (
+        await sql(
+          good,
+          "SELECT count(*) FROM pg_class WHERE relnamespace='public'::regnamespace AND relkind='r'",
+        )
+      ).trim(),
+      "0",
+    );
+  } finally {
+    await heldRestore();
+  }
   await script(good, "restore", [backup, keyFile, "--confirm-empty"]);
   assert.equal((await sql(good, comparison)).trim(), before);
   assert.equal(
@@ -404,9 +433,10 @@ try {
   );
   const receipt = {
     date: new Date().toISOString(),
-    release: "0.12.0",
+    release: "0.13.0",
     elapsedSeconds: Math.round((Date.now() - started) / 1000),
     checks: [
+      "concurrent backup and restore commands refused before service or database mutation",
       "DB Task/Artifact hashes/Memory identical",
       "private skill studio conversation, manual draft, saved version and selected binding identical",
       "normalized brief revisions and indexed recall projection identical",

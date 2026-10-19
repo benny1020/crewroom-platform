@@ -1,5 +1,13 @@
 // NOTIFY is a wake-up signal, never an authorization decision or durable cursor.
 // A single listener serves all browsers; bounded ID batches are reauthorized by SQL.
+export function writeEvent(stream, body) {
+  if (stream.destroyed || stream.writableEnded) return false;
+  if (stream.write(body)) return true;
+  // Reconnect/resync is safe; buffering indefinitely for a stalled client is not.
+  stream.destroy();
+  return false;
+}
+
 export class EventHub {
   constructor(pool) {
     this.pool = pool;
@@ -16,10 +24,10 @@ export class EventHub {
       let client;
       try {
         client = await this.pool.connect();
-        const schema = (await client.query("SELECT current_schema() AS name"))
-          .rows[0].name;
         client.on("error", () => this.disconnect(client));
         client.on("end", () => this.disconnect(client));
+        const schema = (await client.query("SELECT current_schema() AS name"))
+          .rows[0].name;
         client.on("notification", (n) => {
           if (this.stopped || this.client !== client) return;
           try {

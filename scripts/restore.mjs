@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { resolve, join } from "node:path";
 import { pipeline } from "node:stream/promises";
 import { backupKey, decryptFile, fileHash } from "./backup-crypto.mjs";
+import { acquireComposeOperationLock } from "./compose-operation-lock.mjs";
 const [source, keyFile, confirmation] = process.argv.slice(2);
 if (!source || !keyFile || confirmation !== "--confirm-empty")
   throw new Error(
@@ -28,6 +29,7 @@ if (
     "0.11.0",
     "0.11.1",
     "0.12.0",
+    "0.13.0",
   ].includes(manifest.release) ||
   manifest.files?.length !== 2
 )
@@ -61,7 +63,10 @@ async function command(args, input = null, target = null) {
     throw new Error(`Compose operation failed (${code}): ${error}`);
   return Buffer.concat(output).toString("utf8");
 }
+let releaseLock;
 try {
+  const settings = JSON.parse(await command(["config", "--format", "json"]));
+  releaseLock = await acquireComposeOperationLock(settings.name, "restore");
   await decryptFile(
     join(directory, "database.dump.enc"),
     join(temp, "database.dump"),
@@ -167,4 +172,5 @@ UPDATE cr_tasks t SET status='failed',revision=revision+1 FROM cr_runs r WHERE t
   );
 } finally {
   await rm(temp, { recursive: true, force: true });
+  if (releaseLock) await releaseLock();
 }

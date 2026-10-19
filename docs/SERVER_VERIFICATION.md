@@ -1,3 +1,29 @@
+# 0.13.0 장기 운영 복구 검증
+
+2026-10-19. [장기 운영 계약](LONG_TERM_OPERATIONS.md)의 대기열·만료 데이터 정리·기억 색인 복구·Worker 상태·백업 잠금을 보강했다. 아래 0.12.0 이하는 이전 릴리스 기록이다.
+
+| 검사 | 결과 | 범위 |
+| --- | --- | --- |
+| 단위·HTTP adapter·빌드 | 59 통과 | 기존 계약 + SSE backpressure·프로젝트 잠금·교체/잔류 잠금 보호 |
+| 실제 PostgreSQL + Docker 개발/QA | 123 통과, skip 0 | 신규 운영 회귀 10개와 기존 전체 회귀. 실패/만료 색인 복구·늦은 성공/실패 차단·인덱싱 공정성·schema 분리·원문 보존·정리 실패 중 업무 완료 |
+| 실제 Docker Runner | 6 통과 | 기존 수정·검사·취소·재시작·원장 보존 |
+| 정적/서버 브라우저 | 31 + 23 통과 | 마지막 정상 tick과 자동 정리 표시, 기존 대화·스킬 작성·권한·협업·데스크톱 회귀 |
+| Linux 비밀 파일·암호화 복원 | 통과 | 중복 백업/복원의 변경 전 거절, 원문·기억·스킬 설계·checkpoint 동일성, 미완료 격리·실패 차단 |
+
+총 **242개 자동 검사**와 별도 비밀 파일·복원 훈련을 통과했다. 실제 idle PostgreSQL backend를 종료해 같은 Pool의 재연결과 프로세스 생존을 확인했다. 정리 쿼리를 보류·실패시킨 동안 queued Run이 완료되고, 같은 정리를 매 tick 재시도하지 않는 것도 확인했다. [기계 판독 기록](evidence/0.13/verification.json) · [복원 영수증](evidence/0.13/restore.json) · [화면 manifest](media/resilience/manifest.json)
+
+별도 schema에 **종료 Run 100,000개·미확인 실패 1개·대기 Run 1개**를 넣어 실제 쿼리 계획을 비교했다. 새 인덱스가 없을 때 12.020ms의 전체 순회였고, 인덱스가 있을 때 0.021ms로 관측했다. planner 강제 설정 없이 `cr_runs_capacity`가 선택됐다. claim 두 번+expiry 묶음 20회의 로컬 p95는 17.9ms였다. 미확인 실패는 계속 슬롯을 점유하고 두 슬롯 이후 claim은 거절됐다. [조건·EXPLAIN·소스 hash 원자료](evidence/0.13/runtime-scale.json). 다른 로컬 검사도 실행 중인 짧은 합성 측정이며 큰 snapshot·전체 관리자 집계·동시 대규모 부하·운영 SLO의 증명이 아니다.
+
+Astra는 최종 동결 소스 **23개**를 검사 전후 대조했다. 독립 검사 **운영 10/10 + 단위 3/3**, 남은 필수 P0/P1/P2 발견은 없었다. 독립 재실행을 위 242개에 중복 합산하지 않는다. [리뷰 결과](reviews/ASTRA_OPERATIONAL_RESILIENCE.md) · [동결 소스](evidence/0.13/reviewed-files.json)
+
+로컬 서버는 암호화 사전 백업 후 0.12.0에서 0.13.0으로 갱신했다. migration 12개, App ready·DB/Runner healthy·Worker 정상 tick과 자동 정리 성공을 확인했다. App/Worker의 검토 서버 파일 각 9개 hash가 일치한다. [배포 영수증](evidence/0.13/deployment.json)
+
+**실제 외부 생성·embedding 호출은 0회**다. 외부 프로토콜은 fixture·loopback HTTP 응답으로 검사했다. 실제 모델 품질·수년 무중단·무한 디스크·대규모 의미 검색·분산 잠금·PITR/HA를 제공한다는 판정은 아니다. 최종 커밋의 CI는 GitHub Actions에서 확인한다.
+
+![Worker 진행과 자동 정리 상태](media/resilience/worker-status.jpg)
+
+---
+
 # 0.12.0 대화형 스킬 설계 검증
 
 2026-10-19. [AI와 스킬 만들기](SKILL_STUDIO.md)는 기존 영속 Task·Message·Run·Artifact와 Worker를 재사용한다. 아래 0.11.1 이하는 이전 릴리스 기록이다.

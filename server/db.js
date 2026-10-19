@@ -13,12 +13,23 @@ export function database(
     : process.env.DATABASE_URL,
 ) {
   if (!url) throw new Error("DATABASE_URL is required");
-  return new pg.Pool({
+  const pool = new pg.Pool({
     connectionString: url,
     max: 10,
     connectionTimeoutMillis: 10000,
     statement_timeout: 15000,
   });
+  pool.on("error", (error) => {
+    // pg removes the failed idle client; the next query can open a fresh one.
+    // Do not log connection strings, query text or task contents.
+    console.error(
+      "Database idle connection closed:",
+      /^[A-Z0-9_]{1,64}$/.test(error.code || "")
+        ? error.code
+        : "DB_CONNECTION_CLOSED",
+    );
+  });
+  return pool;
 }
 // Cross-task provenance checks must not invert an already-held task lock.
 // Acquire this transaction-scoped gate before any context-related row lock.

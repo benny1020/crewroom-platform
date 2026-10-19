@@ -34,8 +34,8 @@ import {
 } from "./memory.js";
 import * as resources from "./resources.js";
 import { taskHistory, taskArchive } from "./history.js";
-import { EventHub } from "./event-hub.js";
-import { operations } from "./operations.js";
+import { EventHub, writeEvent } from "./event-hub.js";
+import { operations, workerStatus } from "./operations.js";
 import { listProposals, resolveProposal } from "./memory-learning.js";
 import {
   listSkillStudios,
@@ -240,9 +240,7 @@ export function buildApp(pool, config = configuration()) {
         resources.listSkills(pool, user),
         listTasks(pool, user),
         resources.listMemories(pool, user),
-        pool.query(
-          "SELECT id,heartbeat_at,version,state,(heartbeat_at>now()-interval '45 seconds') AS healthy FROM cr_workers ORDER BY heartbeat_at DESC LIMIT 10",
-        ),
+        workerStatus(pool),
       ]);
     return {
       user: publicMember(user),
@@ -256,9 +254,12 @@ export function buildApp(pool, config = configuration()) {
       tasks,
       questions: await listQuestions(pool, user),
       memories,
-      workers: workers.rows.map((w) => ({
+      workers: workers.map((w) => ({
         ...w,
         id: user.role === "lead" ? w.id : undefined,
+        last_error_code: user.role === "lead" ? w.last_error_code : undefined,
+        maintenance_error_code:
+          user.role === "lead" ? w.maintenance_error_code : undefined,
       })),
       runtime: {
         provider: config.provider,
@@ -659,7 +660,7 @@ export function buildApp(pool, config = configuration()) {
       Connection: "keep-alive",
       "X-Accel-Buffering": "no",
     });
-    reply.raw.write("retry: 2000\n\n");
+    if (!writeEvent(reply.raw, "retry: 2000\n\n")) return;
     let closed = false,
       busy = false,
       lastEpoch = -1,
@@ -684,8 +685,8 @@ export function buildApp(pool, config = configuration()) {
         if (force || changed) {
           lastEpoch = eventHub.epoch;
           lastSync = Date.now();
-          reply.raw.write(`event: refresh\ndata: {"resync":true}\n\n`);
-        } else reply.raw.write(": heartbeat\n\n");
+          writeEvent(reply.raw, `event: refresh\ndata: {"resync":true}\n\n`);
+        } else writeEvent(reply.raw, ": heartbeat\n\n");
       } catch {
         reply.raw.end();
       } finally {

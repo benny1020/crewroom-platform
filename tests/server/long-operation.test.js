@@ -87,8 +87,12 @@ test("exact semantic search stops at corpus ceiling without reading vector bodie
     lead = await h.client("lead@example.com"),
     task = await newTask(lead);
   await h.pool.query(
-    `INSERT INTO cr_memory_embeddings(source_key,source_revision,profile_id,status,vectors,lease_until) SELECT 'synthetic:'||i,'rev','capacity-profile','ready','[{"text":"x","vector":[1,0]}]'::jsonb,now() FROM generate_series(1,$1)i`,
-    [EXACT_VECTOR_DOCUMENT_LIMIT + 1],
+    "INSERT INTO cr_messages(task_id,user_id,body) SELECT $1,$2,'capacity-source-'||i FROM generate_series(1,$3)i",
+    [task.id, lead.user.id, EXACT_VECTOR_DOCUMENT_LIMIT + 1],
+  );
+  await h.pool.query(
+    `INSERT INTO cr_memory_embeddings(source_key,source_revision,profile_id,status,vectors,lease_until) SELECT key,revision,'capacity-profile','ready','[{"text":"x","vector":[1,0]}]'::jsonb,now() FROM cr_recall_documents WHERE task_id=$1 AND kind='conversation'`,
+    [task.id],
   );
   const sql = [],
     db = {
@@ -145,6 +149,10 @@ test("maintenance is bounded, dry by default, expires sessions only and reports 
     mode: "dry-run",
     expiredSessionCandidates: 3,
     removed: 0,
+    expiredAuthAttemptCandidates: 0,
+    removedAuthAttempts: 0,
+    staleEmbeddingCandidates: 0,
+    removedStaleEmbeddings: 0,
     hasMore: true,
     batch: 3,
   });
@@ -205,9 +213,13 @@ test("coordinate and byte ceilings also agree with operator diagnostics below th
     ["bytes", 26, "x".repeat(2400), 999999.1234567899],
   ]) {
     await h.pool.query(
+      "INSERT INTO cr_messages(task_id,user_id,body) SELECT $1,$2,$3||'-source-'||i FROM generate_series(1,$4::int)i",
+      [task.id, lead.user.id, profile, n],
+    );
+    await h.pool.query(
       `WITH chunk AS (SELECT jsonb_build_object('text',$3::text,'vector',(SELECT jsonb_agg($4::numeric) FROM generate_series(1,4096))) AS v),payload AS (SELECT jsonb_agg(v) AS vectors FROM chunk CROSS JOIN generate_series(1,16))
-   INSERT INTO cr_memory_embeddings(source_key,source_revision,profile_id,status,vectors,lease_until) SELECT $1||':'||i,'rev',$1,'ready',vectors,now() FROM payload CROSS JOIN generate_series(1,$2::int)i`,
-      [profile, n, text, String(value)],
+   INSERT INTO cr_memory_embeddings(source_key,source_revision,profile_id,status,vectors,lease_until) SELECT key,revision,$1,'ready',vectors,now() FROM payload CROSS JOIN cr_recall_documents d WHERE d.task_id=$2::uuid AND d.kind='conversation' AND d.body LIKE $1||'-source-%'`,
+      [profile, task.id, text, String(value)],
     );
     const result = await searchMemory(h.pool, lead.user, task, {
       query: "none",

@@ -11,7 +11,9 @@
 
 </div>
 
-**0.12.0은 AI와 대화하며 스킬을 만드는 흐름을 추가했습니다.** 짧은 업무 설명에서 초안을 만들고, 대화로 수정하고 예시를 본 뒤 선택한 동료에 저장·적용합니다. [스킬 만들기와 구현 구조](docs/SKILL_STUDIO.md). 기존 [품질 유지 기준](docs/QUALITY.md)·[장기 운영 구조](docs/LONG_TERM_OPERATIONS.md)를 이어갑니다. [검증·리뷰](docs/SERVER_VERIFICATION.md). GitHub Pages는 API 없는 화면 데모입니다. 실제 공동 사용과 AI 스킬 생성은 아래 서버를 실행해야 합니다. 모델 키는 포함하지 않습니다. 실제 외부 모델의 품질과 업무 절감 효과는 별도 [시범 운영](docs/PILOT_GUIDE.md)에서 검증합니다.
+**0.13.0은 장기 운영의 대기열·기억 색인·백업 복구를 보강했습니다.** 종료 이력과 분리된 활성 조회, 만료 인증 데이터의 자동 정리, 색인 재시도·임대 보호, Worker 장애 표시, 느린 실시간 연결 종료와 백업/복원 중복 실행 차단을 추가했습니다. [장기 운영 계약](docs/LONG_TERM_OPERATIONS.md).
+
+0.12.0에서 추가한 AI 대화형 스킬 작성도 유지합니다. 짧은 업무 설명에서 초안을 만들고, 대화로 수정하고 예시를 본 뒤 선택한 동료에 저장·적용합니다. [스킬 만들기와 구현 구조](docs/SKILL_STUDIO.md). 기존 [품질 유지 기준](docs/QUALITY.md)·[장기 운영 구조](docs/LONG_TERM_OPERATIONS.md)를 이어갑니다. [검증·리뷰](docs/SERVER_VERIFICATION.md). GitHub Pages는 API 없는 화면 데모입니다. 실제 공동 사용과 AI 스킬 생성은 아래 서버를 실행해야 합니다. 모델 키는 포함하지 않습니다. 실제 외부 모델의 품질과 업무 절감 효과는 별도 [시범 운영](docs/PILOT_GUIDE.md)에서 검증합니다.
 
 ![AI와 스킬 만들기 — 격리된 서버의 fixture 시연](docs/media/skill-studio/walkthrough.gif)
 

@@ -8,6 +8,64 @@ import {
   EXACT_VECTOR_BYTE_LIMIT,
 } from "./memory.js";
 import { limitedText } from "./inputs.js";
+import { randomUUID } from "node:crypto";
+
+export async function pruneStaleEmbeddings(
+  db,
+  { apply = false, batch = 100 } = {},
+) {
+  const stale = (
+    await db.query(
+      `SELECT e.source_key FROM cr_memory_embeddings e
+     WHERE NOT EXISTS(SELECT 1 FROM cr_recall_documents d WHERE d.key=e.source_key AND d.revision=e.source_revision)
+     ORDER BY e.source_key LIMIT $1`,
+      [batch],
+    )
+  ).rows;
+  const removed =
+    apply && stale.length
+      ? (
+          await db.query(
+            `DELETE FROM cr_memory_embeddings e WHERE e.source_key=ANY($1::text[])
+     AND NOT EXISTS(SELECT 1 FROM cr_recall_documents d WHERE d.key=e.source_key AND d.revision=e.source_revision)`,
+            [stale.map((r) => r.source_key)],
+          )
+        ).rowCount
+      : 0;
+  return { candidates: stale.length, removed, hasMore: stale.length === batch };
+}
+
+export async function retryFailedEmbeddings(
+  db,
+  config,
+  { apply = false } = {},
+) {
+  const profile = embeddingProfile(config);
+  if (!profile) throw Error("EMBEDDING_NOT_CONFIGURED");
+  const rows = (
+    await db.query(
+      "SELECT source_key FROM cr_memory_embeddings WHERE profile_id=$1 AND status IN ('failed','indexing') AND lease_until<clock_timestamp() ORDER BY updated_at,source_key LIMIT 100",
+      [profile.id],
+    )
+  ).rows;
+  const requeued =
+    apply && rows.length
+      ? (
+          await db.query(
+            `UPDATE cr_memory_embeddings SET status='failed',vectors=NULL,attempts=0,lease_until=clock_timestamp()-interval '1 second',lease_token=NULL,error_code=NULL
+     WHERE source_key=ANY($1::text[]) AND profile_id=$2 AND status IN ('failed','indexing') AND lease_until<clock_timestamp()`,
+            [rows.map((r) => r.source_key), profile.id],
+          )
+        ).rowCount
+      : 0;
+  return {
+    mode: apply ? "apply" : "dry-run",
+    candidates: rows.length,
+    requeued,
+    hasMore: rows.length === 100,
+    batch: 100,
+  };
+}
 
 export function embeddingProfile(config) {
   if (!config.embeddingUrl) return null;
@@ -114,6 +172,8 @@ export async function embedTexts(
   return sorted.map((r) => r.embedding);
 }
 export async function indexNextMemoryDocument(pool, config, options = {}) {
+  await assertRuntimeReady(pool);
+  await pruneStaleEmbeddings(pool, { apply: true });
   const profile = embeddingProfile(config);
   if (!profile) return false;
   const capacity = (
@@ -132,7 +192,7 @@ export async function indexNextMemoryDocument(pool, config, options = {}) {
     await assertRuntimeReady(db);
     const acquired = (
       await db.query(
-        "SELECT pg_try_advisory_xact_lock(hashtext('crewroom-memory-index')) AS acquired",
+        "SELECT pg_try_advisory_xact_lock(hashtext(current_schema()),hashtext('crewroom-memory-index')) AS acquired",
       )
     ).rows[0].acquired;
     if (!acquired) return null;
@@ -141,19 +201,20 @@ export async function indexNextMemoryDocument(pool, config, options = {}) {
         `SELECT d.* FROM cr_recall_documents d LEFT JOIN cr_memory_embeddings e ON e.source_key=d.key
       WHERE e.source_key IS NULL OR e.source_revision<>d.revision OR e.profile_id<>$1
        OR (e.status<>'ready' AND e.attempts<3 AND e.lease_until<clock_timestamp())
-      ORDER BY d.created_at DESC,d.key LIMIT 1`,
+      ORDER BY d.created_at,d.key LIMIT 1`,
         [profile.id],
       )
     ).rows[0];
     if (!row) return null;
+    const token = randomUUID();
     await db.query(
-      `INSERT INTO cr_memory_embeddings(source_key,source_revision,profile_id,status,lease_until) VALUES($1,$2,$3,'indexing',clock_timestamp()+interval '1 minute')
+      `INSERT INTO cr_memory_embeddings(source_key,source_revision,profile_id,status,lease_until,lease_token) VALUES($1,$2,$3,'indexing',clock_timestamp()+interval '1 minute',$4)
       ON CONFLICT(source_key) DO UPDATE SET source_revision=$2,profile_id=$3,status='indexing',vectors=NULL,
       attempts=CASE WHEN cr_memory_embeddings.source_revision=$2 AND cr_memory_embeddings.profile_id=$3 THEN cr_memory_embeddings.attempts+1 ELSE 1 END,
-      error_code=NULL,lease_until=clock_timestamp()+interval '1 minute',updated_at=now()`,
-      [row.key, row.revision, profile.id],
+      error_code=NULL,lease_until=clock_timestamp()+interval '1 minute',lease_token=$4,updated_at=now()`,
+      [row.key, row.revision, profile.id, token],
     );
-    return row;
+    return { ...row, leaseToken: token };
   });
   if (!doc) return false;
   try {
@@ -170,7 +231,8 @@ export async function indexNextMemoryDocument(pool, config, options = {}) {
       vectors = await embedTexts(chunks, config, options);
     await pool.query(
       `UPDATE cr_memory_embeddings SET status='ready',vectors=$4,error_code=NULL,updated_at=now()
-      WHERE source_key=$1 AND source_revision=$2 AND profile_id=$3 AND EXISTS(SELECT 1 FROM cr_recall_documents d WHERE d.key=$1 AND d.revision=$2)`,
+      WHERE source_key=$1 AND source_revision=$2 AND profile_id=$3 AND lease_token=$5 AND status='indexing' AND lease_until>clock_timestamp()
+      AND EXISTS(SELECT 1 FROM cr_recall_documents d WHERE d.key=$1 AND d.revision=$2)`,
       [
         doc.key,
         doc.revision,
@@ -178,11 +240,12 @@ export async function indexNextMemoryDocument(pool, config, options = {}) {
         JSON.stringify(
           vectors.map((vector, i) => ({ text: chunks[i], vector })),
         ),
+        doc.leaseToken,
       ],
     );
   } catch (error) {
     await pool.query(
-      "UPDATE cr_memory_embeddings SET status='failed',error_code=$4,lease_until=clock_timestamp()+interval '1 minute',updated_at=now() WHERE source_key=$1 AND source_revision=$2 AND profile_id=$3",
+      "UPDATE cr_memory_embeddings SET status='failed',error_code=$4,lease_until=clock_timestamp()+interval '1 minute',updated_at=now() WHERE source_key=$1 AND source_revision=$2 AND profile_id=$3 AND lease_token=$5 AND status='indexing' AND lease_until>clock_timestamp()",
       [
         doc.key,
         doc.revision,
@@ -190,12 +253,10 @@ export async function indexNextMemoryDocument(pool, config, options = {}) {
         error.code?.startsWith("EMBEDDING_")
           ? error.code
           : "EMBEDDING_UNAVAILABLE",
+        doc.leaseToken,
       ],
     );
   }
-  // Cached text must not outlive a deleted/corrected source.
-  await pool.query(
-    "DELETE FROM cr_memory_embeddings WHERE source_key IN (SELECT e.source_key FROM cr_memory_embeddings e WHERE NOT EXISTS(SELECT 1 FROM cr_recall_documents d WHERE d.key=e.source_key AND d.revision=e.source_revision) LIMIT 100)",
-  );
+  await pruneStaleEmbeddings(pool, { apply: true });
   return true;
 }

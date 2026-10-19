@@ -1,8 +1,48 @@
-# 장기 운영과 긴 대화 · 0.11.1
+# 장기 운영과 긴 대화 · 0.13.0
 
 데이터가 쌓여도 매번 전체 이력을 웹이나 모델에 싣지 않는다. 원본의 영속 보존, 조회할 분량, 모델의 문맥 예산을 각각 관리한다. 한 서버의 단일 팀 배포를 위한 개선이며 수년간 무중단 운영을 입증한 것은 아니다.
 
 [![장기 운영의 저장·조회·관리 경계](diagrams/long-operation.png)](diagrams/long-operation.svg)
+
+## 0.13 운영 복구 보강
+
+| 누적·장애 경계 | 구현 |
+| --- | --- |
+| 종료 Run 증가 | 실제 활성 조건 전체(`running`, 시작한 `paused`, 미확인 `lease_owner`)에 맞는 작은 partial index. 전역 한도 조회는 두 행에서 멈춘다. 미확인 실패도 슬롯을 계속 점유한다. 만료 Run 처리는 한 번에 최대 100개다. |
+| 인증 보조 데이터 증가 | Worker가 시작 시와 이후 최소 60초 간격으로 만료 세션 500개, 24시간이 지난 인증 창 500개, 오래된 embedding 캐시 100개까지 정리한다. 후보 선택 후 삭제 직전에도 만료/현재 원문을 다시 검사한다. 최근 로그인 제한은 유지한다. |
+| 정리 지연·실패 | 업무 큐와 별도의 background 작업으로 실행한다. 실패하면 오류 코드만 기록하며 다음 주기까지 즉시 재시도하지 않는다. 종료 시 진행 중 정리를 기다린다. 대화·산출물·기억·스킬 버전·발송/복구 원장은 삭제하지 않는다. |
+| 오래된 색인 대기 | 현재 profile의 가장 오래된 미준비 원문부터 처리해 새 메시지가 오래된 원문을 계속 뒤로 미루지 않게 한다. 같은 schema의 claim만 직렬화한다. |
+| stale 캐시·용량 초과 | 조기 반환 전에 제한된 stale 정리를 수행한다. 내용/버전이 바뀐 episode, 없는 원문, 연결 해제 후 남은 캐시를 재생성 대상으로 처리한다. 현재 유효한 캐시를 임의 삭제해 용량 한도를 우회하지 않는다. |
+| 실패/만료 색인 복구 | `retry-embeddings`는 현재 profile의 실패·임대 만료 indexing만 최대 100개 재등록한다. 기본은 dry-run이며 `--apply`가 필요하다. 3회째 중 종료된 시도도 포함하고 살아 있는 lease·ready·다른 profile은 유지한다. |
+| 늦은 embedding 응답 | claim마다 새 token을 고정한다. 같은 원문/설정이라도 다른 token·만료 lease의 성공/실패는 새 캐시를 덮어쓸 수 없다. 의미 검색의 coverage·권한·품질 차단은 유지한다. |
+| 살아 있지만 큐가 실패하는 Worker | heartbeat와 마지막 정상 tick을 분리한다. 정상 tick이 45초 이내이고 state가 ready여야 healthy다. 큐 오류는 degraded, 선택적 정리 오류는 별도 코드로 표시한다. SQL·원문·접속 문자열은 오류 표시/로그에 넣지 않는다. |
+| DB/실시간 연결 장애 | idle DB 연결 오류가 프로세스를 비정상 종료시키지 않게 처리하며 다음 연결을 사용한다. SSE write가 backpressure를 보이면 연결을 종료한다. EventSource가 재연결해 현재 상태를 재동기화한다. |
+| 겹친 백업·복원 | 같은 로컬 사용자/Compose 프로젝트의 공통 파일 잠금을 최초 서비스 상태 조회 전에 획득하고 복구 작업이 끝날 때까지 유지한다. 다른 checkout에서도 같은 잠금을 사용한다. 중복 명령은 서비스 중지·DB 변경 전에 거절한다. |
+
+`maintain`은 기존처럼 기본 dry-run이며, Worker의 자동 실행만 `apply`를 사용한다. 여러 Worker가 같은 후보를 잡아도 현재 만료 조건을 다시 검사한다. 큰 정리 backlog는 한 번에 끝내지 않고 배치로 줄인다. Worker 등록 기록은 보존하며 최근 10개를 시간 인덱스로 조회한다. 관리자 화면의 **서버와 실행 상태**와 `stats`에서 마지막 정상 처리·정리 성공 시각·별도 오류를 확인한다. App의 `/api/ready`는 App→DB 연결 준비 검사이며 Worker 전체 건강도의 대체 지표가 아니다.
+
+```bash
+docker compose exec -T worker node server/cli.js stats
+docker compose exec -T worker node server/cli.js maintain
+# embedding 연결을 복구한 뒤 후보 확인 → 필요 시 해당 캐시만 재등록
+docker compose exec -T worker node server/cli.js retry-embeddings
+docker compose exec -T worker node server/cli.js retry-embeddings --apply
+```
+
+백업/복원 잠금은 사용자 홈의 `.crewroom/compose-locks/<프로젝트 hash>/owner.json`에 작업·시각·PID를 남긴다. 중단/강제 종료로 남은 잠금을 시간만 보고 자동 해제하지 않는다. 운영자가 해당 프로세스·Docker 작업·서비스 상태가 종료되었는지 확인한 뒤 그 프로젝트의 잠금 디렉터리만 정리한다. 오래된 소유자가 교체된 잠금을 지울 수도 없다. 여러 호스트·다른 사용자·서로 다른 Compose 이름으로 동일 volume을 공유하는 배포의 분산 잠금을 제공하지 않는다. 제공하는 단일 팀 Compose 경계에서 사용한다.
+
+인덱스는 [PostgreSQL partial index 계약](https://www.postgresql.org/docs/18/indexes-partial.html)에 따라 실제 조회 predicate와 맞췄다. [검증 기록](SERVER_VERIFICATION.md)에는 종료 Run 10만 개의 쿼리 계획·로컬 측정과 장애 주입 검사를 보관한다. 이 측정은 운영 SLO·장기간 무중단·대규모 의미 검색 품질의 증명이 아니다.
+
+![마지막 정상 처리와 자동 정리 상태 — 격리된 테스트 계정](media/resilience/worker-status.jpg)
+
+[화면 manifest](media/resilience/manifest.json) · [Astra 독립 리뷰](reviews/ASTRA_OPERATIONAL_RESILIENCE.md) · [종료 실행 10만 건의 측정 원자료](evidence/0.13/runtime-scale.json)
+
+```bash
+BENCHMARK_DATABASE_URL=postgresql://crewroom@127.0.0.1:5448/crewroom \
+  node scripts/benchmark-runtime.mjs
+```
+
+별도 임시 schema에서 종료 Run 100,000개·미확인 실패 1개·대기 실행 1개를 만든다. 새 인덱스를 임시 트랜잭션에서 제거한 쿼리 계획과 rollback 후 계획을 비교하며, 원본/미확인 슬롯을 보존한 채 claim 두 번+expiry를 20회 측정한다. 결과는 기본 `.local/runtime-benchmark.json`에 저장하며 `RUNTIME_BENCHMARK_OUTPUT`으로 경로를 지정할 수 있다. 이 검사는 전체 관리자 집계·큰 snapshot·대규모 embedding·실제 모델을 측정하지 않는다.
 
 ## 긴 업무방
 
@@ -50,8 +90,8 @@ Compose App/Worker/Runner/DB와 제공하는 Caddy는 Docker `local` 로그 드�
 # DATA_DIR의 파일시스템 통계이며 DB/백업 volume의 여유 공간은 별도 확인
 docker compose exec -T worker node server/cli.js stats
 
-# 만료 세션만 최대 500개: 기본은 dry-run
-# 데이터 양에 맞게 운영 스케줄러에서 반복하며 실패·완료를 기록
+# 만료 세션/지난 인증 창 각 최대 500개, stale 캐시 최대 100개: 기본은 dry-run
+# Worker의 자동 배치와 별개로 상태 점검 또는 추가 수동 배치에 사용
 docker compose exec -T worker node server/cli.js maintain
 docker compose exec -T worker node server/cli.js maintain --apply
 
@@ -72,7 +112,7 @@ docker compose logs --tail 100 app worker runner db
 
 ## 백업과 확장 경계
 
-현재 백업은 App/Worker/Runner를 정지하고 Job 종료/checkpoint를 확인한 뒤 DB dump + runtime + Runner state를 암호화한다. 데이터가 많아지면 중단 시간과 백업/복원 시간이 증가한다. RPO/RTO는 실제 데이터 크기로 실측해야 한다.
+현재 백업은 App/Worker/Runner를 정지하고 Job 종료/checkpoint를 확인한 뒤 DB dump와 runtime을 암호화한다. Runner의 별도 state volume은 복원하지 않으며, 종료된 Job의 checkpoint는 DB/runtime으로 보존한다. 데이터가 많아지면 중단 시간과 백업/복원 시간이 증가한다. RPO/RTO는 실제 데이터 크기로 실측해야 한다.
 
 무중단·짧은 RPO가 필요해지면 온라인 base backup + 연속 WAL archive/PITR, runtime/Runner 파일과 DB의 일관된 복구 경계, 외부 암호화 저장·수명 정책·복원 리허설을 설계한다. PostgreSQL만 PITR해도 외부 Job이 자동 안전해지는 것은 아니다. 복구한 실행은 격리하고 기존 Worker/Runner 종료를 검증한다. **이번 Compose에는 WAL 보관/PITR/고가용성/자동 failover를 설치하지 않았다.** [PostgreSQL PITR 요구사항](https://www.postgresql.org/docs/18/continuous-archiving.html)
 

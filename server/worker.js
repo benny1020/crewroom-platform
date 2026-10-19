@@ -31,6 +31,7 @@ import {
 import { runCodeAgent } from "./runner-client.js";
 import { insertArtifact } from "./tasks.js";
 import { HttpError } from "./errors.js";
+import { maintain } from "./operations.js";
 
 export async function contextAllowed(db, run, task) {
   try {
@@ -111,7 +112,7 @@ export async function claimRun(pool, owner, config) {
     const active = Number(
       (
         await db.query(
-          "SELECT count(*) FROM cr_runs WHERE status='running' OR (status='paused' AND started_at IS NOT NULL) OR lease_owner IS NOT NULL",
+          "SELECT count(*) FROM (SELECT 1 FROM cr_runs WHERE status='running' OR (status='paused' AND started_at IS NOT NULL) OR lease_owner IS NOT NULL LIMIT 2) active",
         )
       ).rows[0].count,
     );
@@ -299,7 +300,7 @@ export async function expireRuns(pool) {
   return transaction(pool, async (db) => {
     await lockContextMutation(db);
     const { rows } = await db.query(
-      "SELECT r.id,r.task_id FROM cr_runs r JOIN cr_tasks t ON t.id=r.task_id WHERE r.status='running' AND r.lease_until<clock_timestamp() FOR UPDATE OF t SKIP LOCKED",
+      "SELECT r.id,r.task_id FROM cr_runs r JOIN cr_tasks t ON t.id=r.task_id WHERE r.status='running' AND r.lease_until<clock_timestamp() ORDER BY r.lease_until,r.id FOR UPDATE OF t SKIP LOCKED LIMIT 100",
     );
     for (const ref of rows) {
       await db.query(
@@ -782,7 +783,9 @@ export async function startWorker(
     pending = new Set(),
     shutdown = new AbortController();
   let indexing = null,
-    lastIndex = 0;
+    maintenance = null,
+    lastIndex = 0,
+    lastMaintenance = 0;
   let stopping = false,
     ticking = false,
     tickPromise = Promise.resolve();
@@ -795,10 +798,36 @@ export async function startWorker(
     ticking = true;
     try {
       await pool.query(
-        "UPDATE cr_workers SET heartbeat_at=now(),state='ready' WHERE id=$1",
+        "UPDATE cr_workers SET heartbeat_at=clock_timestamp() WHERE id=$1",
         [owner],
       );
       await expireRuns(pool);
+      if (!maintenance && Date.now() - lastMaintenance >= 60000) {
+        lastMaintenance = Date.now();
+        maintenance = maintain(pool, { apply: true })
+          .then((result) =>
+            pool.query(
+              "UPDATE cr_workers SET maintenance_at=clock_timestamp(),maintenance=$2,maintenance_error_code=NULL WHERE id=$1",
+              [owner, result],
+            ),
+          )
+          .catch((error) =>
+            pool
+              .query(
+                "UPDATE cr_workers SET maintenance_error_code=$2 WHERE id=$1",
+                [
+                  owner,
+                  /^[A-Z0-9_]{1,64}$/.test(error.code || "")
+                    ? error.code
+                    : "MAINTENANCE_FAILED",
+                ],
+              )
+              .catch(() => {}),
+          )
+          .finally(() => {
+            maintenance = null;
+          });
+      }
       if (config.embeddingUrl && !indexing && Date.now() - lastIndex >= 5000) {
         lastIndex = Date.now();
         indexing = indexNextMemoryDocument(pool, config, {
@@ -836,6 +865,20 @@ export async function startWorker(
           pending.add(work);
         }
       }
+      await pool.query(
+        "UPDATE cr_workers SET heartbeat_at=clock_timestamp(),last_tick_at=clock_timestamp(),state='ready',last_error_code=NULL WHERE id=$1",
+        [owner],
+      );
+    } catch (error) {
+      const code = /^[A-Z0-9_]{1,64}$/.test(error.code || "")
+        ? error.code
+        : "WORKER_TICK_FAILED";
+      await pool
+        .query(
+          "UPDATE cr_workers SET heartbeat_at=clock_timestamp(),state='degraded',last_error_code=$2 WHERE id=$1",
+          [owner, code],
+        )
+        .catch(() => {});
     } finally {
       ticking = false;
     }
@@ -854,7 +897,11 @@ export async function startWorker(
       clearInterval(interval);
       shutdown.abort();
       await tickPromise;
-      await Promise.allSettled([...pending, ...(indexing ? [indexing] : [])]);
+      await Promise.allSettled([
+        ...pending,
+        ...(indexing ? [indexing] : []),
+        ...(maintenance ? [maintenance] : []),
+      ]);
       await pool.query(
         "UPDATE cr_workers SET state='stopped',heartbeat_at=now() WHERE id=$1",
         [owner],

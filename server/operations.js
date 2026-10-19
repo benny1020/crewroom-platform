@@ -1,5 +1,13 @@
 import { requireLead, readPredicate } from "./permissions.js";
 
+export async function workerStatus(db) {
+  return (
+    await db.query(
+      "SELECT id,heartbeat_at,last_tick_at,last_error_code,maintenance_at,maintenance,maintenance_error_code,version,state,coalesce((heartbeat_at>now()-interval '45 seconds' AND last_tick_at>now()-interval '45 seconds' AND state='ready'),false) AS healthy FROM cr_workers ORDER BY heartbeat_at DESC LIMIT 10",
+    )
+  ).rows;
+}
+
 // Only tasks visible to this operator participate, including historical runs.
 export async function operations(db, user) {
   requireLead(user);
@@ -62,6 +70,7 @@ export async function operations(db, user) {
 }
 
 import { statfs } from "node:fs/promises";
+import { pruneStaleEmbeddings } from "./memory-embedding.js";
 import {
   EXACT_VECTOR_DOCUMENT_LIMIT,
   EXACT_VECTOR_VALUE_LIMIT,
@@ -123,6 +132,7 @@ export async function operationStats(db, dataDir) {
     tables,
     vectorProfiles,
     embeddingIndex,
+    workers: await workerStatus(db),
     limits: {
       messagePage: 40,
       runPage: 12,
@@ -139,7 +149,7 @@ export async function operationStats(db, dataDir) {
     ],
   };
 }
-// Bounded and opt-in. Original records and recovery evidence are never candidates.
+// Only expired authentication state is disposable. Preserve all work/recovery data.
 export async function maintain(db, { apply = false, batch = 500 } = {}) {
   if (!Number.isInteger(batch) || batch < 1 || batch > 1000)
     throw Error("INVALID_MAINTENANCE_BATCH");
@@ -157,11 +167,34 @@ export async function maintain(db, { apply = false, batch = 500 } = {}) {
         [candidates.map((r) => r.token_hash)],
       )
     ).rowCount;
+  const attempts = (
+    await db.query(
+      "SELECT key FROM cr_auth_attempts WHERE window_start<clock_timestamp()-interval '24 hours' ORDER BY window_start,key LIMIT $1",
+      [batch],
+    )
+  ).rows;
+  let removedAuthAttempts = 0;
+  if (apply && attempts.length)
+    removedAuthAttempts = (
+      await db.query(
+        "DELETE FROM cr_auth_attempts WHERE key=ANY($1::text[]) AND window_start<clock_timestamp()-interval '24 hours'",
+        [attempts.map((r) => r.key)],
+      )
+    ).rowCount;
+  const cache = await pruneStaleEmbeddings(db, {
+    apply,
+    batch: Math.min(batch, 100),
+  });
   return {
     mode: apply ? "apply" : "dry-run",
     expiredSessionCandidates: candidates.length,
     removed,
-    hasMore: candidates.length === batch,
+    expiredAuthAttemptCandidates: attempts.length,
+    removedAuthAttempts,
+    staleEmbeddingCandidates: cache.candidates,
+    removedStaleEmbeddings: cache.removed,
+    hasMore:
+      candidates.length === batch || attempts.length === batch || cache.hasMore,
     batch,
   };
 }

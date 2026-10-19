@@ -478,7 +478,19 @@ test("real HTTP embedding + native analysis lookup + result storage retain evide
       body: "인프라 담당자는 다연입니다.",
     })
   ).json();
-  await indexNextMemoryDocument(h.pool, h.config, { apiKey: "" });
+  for (let i = 0; i < 2; i++)
+    assert.equal(
+      await indexNextMemoryDocument(h.pool, h.config, { apiKey: "" }),
+      true,
+    );
+  assert.equal(
+    (
+      await h.pool.query(
+        "SELECT count(*)::int n FROM cr_memory_embeddings WHERE status='ready'",
+      )
+    ).rows[0].n,
+    2,
+  );
   const task = await newTask(lead, values({ goal: "datacenter owner" }));
   await command(lead, task, "start");
   const run = await claimRun(h.pool, "http-recall", h.config);

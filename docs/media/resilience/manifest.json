@@ -1,0 +1,23 @@
+{
+  "release": "0.13.0",
+  "capturedAt": "2026-10-19T11:52:06.266112+00:00",
+  "mode": "isolated PostgreSQL/App/Worker admin UI; fixture model; no real inference",
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "pageErrors": [],
+  "actualExternalModelCalls": 0,
+  "files": [
+    {
+      "name": "admin.jpg",
+      "bytes": 159446,
+      "sha256": "697d31c07db91ba035a1df423717a4f031f238891e0971ac0b7b319eb8ce8396"
+    },
+    {
+      "name": "worker-status.jpg",
+      "bytes": 45788,
+      "sha256": "ac2c5a397ce359d871316ec600acc8c6eb491073fb82afc42fe18fe231a91632"
+    }
+  ]
+}

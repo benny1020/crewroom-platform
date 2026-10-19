@@ -303,7 +303,12 @@ test("graceful Worker stop waits for an in-flight tick and dispatches nothing af
   const wrapped = {
     connect: h.pool.connect.bind(h.pool),
     query: async (sql, args) => {
-      if (sql.startsWith("UPDATE cr_workers") && ++heartbeats === 2) {
+      if (
+        sql.startsWith(
+          "UPDATE cr_workers SET heartbeat_at=clock_timestamp() WHERE",
+        ) &&
+        ++heartbeats === 2
+      ) {
         entered();
         await gate;
       }

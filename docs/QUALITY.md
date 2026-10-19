@@ -34,6 +34,8 @@
 
 검색 성공과 원문 인덱스 완성은 별개다. 질문 embedding이 성공했더라도 해당 업무 범위의 원문 embedding이 덜 준비되면 실행을 완료하지 않는다. 범위 밖 비공개 자료와 유효하지 않은 의존 근거는 coverage 대상에 넣지 않는다. 준비가 끝난 원문이 없고 해당 범위에 원문 자체도 없으면 정상적인 `no_matches`다.
 
-`docker compose exec -T worker node server/cli.js stats`의 `embeddingIndex`에서 상태·오류별 문서 수를 확인한다. 아직 pending인 원문은 캐시 행이 없을 수도 있으므로 이 개수만으로 coverage 완성을 판정하지 않는다. background indexer가 최신 원본을 준비한 뒤 책임자가 새 실행을 시작한다. 실패 후 자동 재시도는 기존 최대 3회이며, 연결을 복구해도 실패 행이 재시도 한도에 도달했다면 운영자가 해당 실패 캐시만 검토해 재등록해야 한다. 캐시는 재생성 대상이고 원문·답변·근거는 삭제하지 않는다.
+`docker compose exec -T worker node server/cli.js stats`의 `embeddingIndex`에서 상태·오류별 문서 수를 확인한다. 아직 pending인 원문은 캐시 행이 없을 수도 있으므로 이 개수만으로 coverage 완성을 판정하지 않는다. background indexer가 최신 원본을 준비한 뒤 책임자가 새 실행을 시작한다. 실패 후 자동 재시도는 기존 최대 3회이며, 연결을 복구해도 실패 행이 재시도 한도에 도달했다면 운영자가 아래 명령으로 해당 profile의 실패·임대 만료 색인을 검토해 재등록한다. 캐시는 재생성 대상이고 원문·답변·근거는 삭제하지 않는다.
 
 이 정책 때문에 준비가 덜 된 대규모 corpus에서 실행이 중단될 수 있다. 조용히 품질을 낮추는 동작을 막았다는 뜻이며, 해당 규모의 검색 성능과 품질을 확보했다는 뜻이 아니다. 충분한 인덱싱 처리량과 확장된 검색을 구현·비교 검증해야 지원 범위를 넓힌다.
+
+0.13.0부터 `docker compose exec -T worker node server/cli.js retry-embeddings`가 현재 profile의 재시도 후보를 최대 100개 표시한다. `--apply`를 붙이면 실패 또는 임대가 만료된 indexing만 새 시도가 가능하도록 바꾼다. 살아 있는 lease·ready·다른 profile은 변경하지 않는다. 같은 원문/설정의 세 번째 시도 중 Worker가 종료된 경우도 복구할 수 있다. 이는 embedding 캐시 재생성 경로이며, 결과 불명의 생성 모델 요청을 재발송하는 명령이 아니다. 이전 응답은 claim token으로 차단하며 정상 의미 검색 coverage 검사와 원문·근거 보존을 유지한다.

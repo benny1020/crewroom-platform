@@ -7,6 +7,7 @@ import { database, migrate } from "./db.js";
 import { operationStats, maintain } from "./operations.js";
 import { configuration } from "./config.js";
 import { seed } from "./seed.js";
+import { retryFailedEmbeddings } from "./memory-embedding.js";
 import { bootstrap, createMember, resetPassword } from "./auth.js";
 const pool = database();
 try {
@@ -26,6 +27,14 @@ try {
     console.log(
       JSON.stringify(
         await maintain(pool, { apply: process.argv.includes("--apply") }),
+      ),
+    );
+  } else if (process.argv[2] === "retry-embeddings") {
+    console.log(
+      JSON.stringify(
+        await retryFailedEmbeddings(pool, configuration(), {
+          apply: process.argv.includes("--apply"),
+        }),
       ),
     );
   } else if (process.argv[2] === "bootstrap") {
@@ -73,7 +82,7 @@ try {
     console.log(JSON.stringify(await confirmStopped(pool, runId, evidence)));
   } else
     throw new Error(
-      "Commands: migrate | stats | maintain [--apply] | bootstrap EMAIL NAME PASSWORD_FILE | member EMAIL NAME DEPARTMENT PASSWORD_FILE | confirm-stopped RUN_ID EVIDENCE_FILE",
+      "Commands: migrate | stats | maintain [--apply] | retry-embeddings [--apply] | bootstrap EMAIL NAME PASSWORD_FILE | member EMAIL NAME DEPARTMENT PASSWORD_FILE | confirm-stopped RUN_ID EVIDENCE_FILE",
     );
 } catch (error) {
   console.error(error.message);

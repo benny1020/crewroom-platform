@@ -5,6 +5,7 @@ import { mkdir, writeFile, unlink } from "node:fs/promises";
 import { resolve, join } from "node:path";
 import { pipeline } from "node:stream/promises";
 import { backupKey, encryptFile, fileHash } from "./backup-crypto.mjs";
+import { acquireComposeOperationLock } from "./compose-operation-lock.mjs";
 const [destination, keyFile] = process.argv.slice(2);
 if (!destination || !keyFile)
   throw new Error(
@@ -12,7 +13,6 @@ if (!destination || !keyFile)
   );
 const directory = resolve(destination),
   key = await backupKey(keyFile);
-await mkdir(directory, { recursive: false, mode: 0o700 });
 async function command(args, target = null, raw = false) {
   const child = spawn("docker", raw ? args : ["compose", ...args], {
       stdio: ["ignore", "pipe", "pipe"],
@@ -33,13 +33,19 @@ async function command(args, target = null, raw = false) {
     throw new Error(`Compose operation failed (${code}): ${error}`);
   return Buffer.concat(chunks).toString("utf8");
 }
-const running = (await command(["ps", "--services", "--status", "running"]))
-  .trim()
-  .split("\n")
-  .filter((x) => ["app", "worker", "runner"].includes(x));
+const settings = JSON.parse(await command(["config", "--format", "json"])),
+  releaseLock = await acquireComposeOperationLock(settings.name, "backup");
+let running = [],
+  directoryCreated = false;
 const rawDb = join(directory, "database.dump"),
   rawFiles = join(directory, "runtime.tgz");
 try {
+  await mkdir(directory, { recursive: false, mode: 0o700 });
+  directoryCreated = true;
+  running = (await command(["ps", "--services", "--status", "running"]))
+    .trim()
+    .split("\n")
+    .filter((x) => ["app", "worker", "runner"].includes(x));
   const front = running.filter((s) => s !== "runner");
   if (front.length) await command(["stop", "--timeout", "150", ...front]);
   await command([
@@ -53,7 +59,6 @@ try {
   ]);
   if (running.includes("runner"))
     await command(["stop", "--timeout", "90", "runner"]);
-  const settings = JSON.parse(await command(["config", "--format", "json"]));
   const namespace = settings.services.runner.environment.RUNNER_NAMESPACE;
   if (
     (
@@ -143,7 +148,7 @@ try {
     JSON.stringify(
       {
         format: 1,
-        release: "0.12.0",
+        release: "0.13.0",
         createdAt: new Date().toISOString(),
         migrations,
         nativeSessions:
@@ -157,17 +162,23 @@ try {
   );
   console.log(`Encrypted database and runtime snapshot created: ${directory}`);
 } finally {
-  await unlink(rawDb).catch(() => {});
-  await unlink(rawFiles).catch(() => {});
-  if (running.includes("runner"))
-    await command([
-      "up",
-      "-d",
-      "--wait",
-      "--no-deps",
-      "--no-recreate",
-      "runner",
-    ]);
-  const front = running.filter((s) => s !== "runner");
-  if (front.length) await command(["start", ...front]);
+  try {
+    if (directoryCreated) {
+      await unlink(rawDb).catch(() => {});
+      await unlink(rawFiles).catch(() => {});
+    }
+    if (running.includes("runner"))
+      await command([
+        "up",
+        "-d",
+        "--wait",
+        "--no-deps",
+        "--no-recreate",
+        "runner",
+      ]);
+    const front = running.filter((s) => s !== "runner");
+    if (front.length) await command(["start", ...front]);
+  } finally {
+    await releaseLock();
+  }
 }
