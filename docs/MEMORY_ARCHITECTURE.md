@@ -92,7 +92,9 @@ migration 007은 이전 후보의 저장된 revision과 조회 ledger로 출처�
 
 `npm run evaluate:memory -- --baseline`은 별도 테스트 DB에 한국어 합성 corpus를 만들고 0.7 검색 모듈/원래 view와 현재 구현을 같은 결과 5개 한도로 비교한다. 20문항은 이번 변경의 검색 범위를 검증하기 위한 회귀이며 공개 벤치마크나 무작위 실사용 표본이 아니다. 기존 버전이 지원하지 않던 프로젝트 공유·과거 답변·적용 시점 문항이 많아 전체 수치로 일반 검색 정확도 향상을 주장할 수 없다. Recall@5는 필요한 출처 key를 찾는지 측정하며 생성 답변의 정확도를 측정하지 않는다.
 
-`--embeddings`를 명시하면 환경의 embedding URL/모델/키로 이 합성 corpus의 인덱싱·검색을 수행한다. 설정이 없거나 인덱스가 실패하면 평가를 거부한다. 이 모드는 실제 요청과 비용이 발생한다. 기본 평가와 CI는 외부 모델을 호출하지 않는다. [평가 원본](../tests/fixtures/memory-retrieval.ko.json) · [기록](evidence/0.8/memory-evaluation.json)
+`--baseline`은 전체 Git 이력의 0.7 소스를 사용하는 **키워드 전용** 비교다. Git 이력 없는 소스 패키지는 평가 전에 거절하며 `--embeddings`와 함께 사용할 수 없다.
+
+`--embeddings --max-calls=80`을 명시하면 환경의 embedding URL/모델/키로 이 합성 corpus의 인덱싱·검색을 수행한다. 1~240회의 명시적 호출 예산이 필요하며, 같은 평가의 색인·질문 요청을 모두 합산한다. 설정 누락·원문 cache coverage 누락·차원 불일치·용량 초과·미검증 semantic 상태는 평가를 거부한다. 키워드로 대체된 점수를 정상 의미 검색 점수로 집계하지 않는다. 이 모드는 실제 요청과 비용이 발생한다. 기본 평가와 CI는 외부 모델을 호출하지 않는다. 보고서는 `.local/memory-evaluation/`의 새 0600 파일에 저장하며 코퍼스 hash·사례별 semantic 상태·품질 gate를 남긴다. Recall@5 평균 0.8 미만, 필수 출처 누락, 금지 정보 또는 미검증 검색은 종료 코드 1이다. 의미가 비슷한 표현 문항은 별도 집계하며 이 기준만으로 의미 이해 품질을 승인하지 않는다. [평가 원본](../tests/fixtures/memory-retrieval.ko.json) · [기록](evidence/0.8/memory-evaluation.json)
 
 ## 선택적 embedding 연결
 

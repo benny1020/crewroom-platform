@@ -1,4 +1,4 @@
-# 서버 실행과 운영 · 0.11
+# 서버 실행과 운영 · 0.13.1
 
 실제 코드 실행의 이미지·검사·중단 계약은 [실행 운영 안내](CODE_EXECUTION.md)를 함께 따른다. 첫 설치는 `docker compose --profile images build app runner job-image`로 Job 이미지를 먼저 준비한다.
 
@@ -15,7 +15,7 @@ docker compose logs --tail 100 app worker runner
 docker compose stop
 ```
 
-`health`는 프로세스 응답, `ready`는 DB와 복원 완료 여부다. Worker 상태·heartbeat는 팀 관리 화면에서 확인한다. key가 없으면 Worker가 떠 있어도 실제 모델 실행은 성공하지 않는다. 컨테이너 PID만으로 업무 성공을 판단하지 않는다.
+`health`는 프로세스 응답, `ready`는 DB와 복원 완료 여부다. Worker 상태·heartbeat는 팀 관리 화면에서 확인한다. 모델 URL·모델 ID가 없거나 endpoint에서 요구하는 인증이 없으면 실제 모델 실행은 성공하지 않는다. 인증이 필요 없는 커스텀 endpoint는 빈 키 파일을 사용할 수 있다. 컨테이너 PID만으로 업무 성공을 판단하지 않는다.
 
 DB는 외부 포트를 열지 않는다. App만 기본 loopback에 바인딩한다. App/Worker는 non-root, read-only root filesystem, no-new-privileges, capability 제거로 실행한다. Worker에 Docker socket·호스트 홈·개인 도구 자격증명을 마운트하지 않는다. init-data 작업만 named volume 권한 초기화를 위해 제한된 CHOWN/FOWNER를 가진다. PostgreSQL 18 volume은 `/var/lib/postgresql`에 마운트한다.
 
@@ -49,13 +49,13 @@ Caddy가 80/443을 사용한다. 방화벽에서 80/443만 팀 정책에 맞게 
 
 ## 백업
 
-저장 대상은 DB와 Run 입력·Runner state volume이다. `backup_key`는 32-byte key의 64자리 hex 파일이다. 키를 잃으면 복원할 수 없다. DB/모델 비밀은 백업 archive에 포함하지 않으므로 별도 보관한다.
+저장 대상은 DB와 Run 입력을 포함한 runtime volume이다. Runner의 별도 state volume은 백업·복원하지 않으며, 종료된 Job의 checkpoint는 DB/runtime에 보존한다. `backup_key`는 32-byte key의 64자리 hex 파일이다. 키를 잃으면 복원할 수 없다. DB/모델 비밀은 백업 archive에 포함하지 않으므로 별도 보관한다.
 
 ```bash
 node scripts/backup.mjs /secure-backups/crewroom-20261017 .local/secrets/backup_key
 ```
 
-현재 Compose 프로젝트의 App/Worker를 정상 정지하고 Job 종료/checkpoint를 확인한 뒤 Runner도 정지한다. DB dump + runtime/Runner state tar를 만든다. AES-256-GCM으로 암호화한 파일과 SHA-256 manifest를 남기고 평문 임시 파일을 제거한다. 기존 실행 중이던 서비스만 다시 시작한다. 목적지는 새 디렉터리여야 한다. 완성된 백업과 키를 서로 분리해 서버 밖으로 옮기고 복원 훈련을 반복한다. 자동 외부 백업 업로드·스케줄링은 이번 구현에 포함하지 않는다.
+현재 Compose 프로젝트의 App/Worker를 정상 정지하고 Job 종료/checkpoint를 확인한 뒤 Runner도 정지한다. DB dump + runtime tar를 만든다. AES-256-GCM으로 암호화한 파일과 SHA-256 manifest를 남기고 평문 임시 파일을 제거한다. 기존 실행 중이던 서비스만 다시 시작한다. 목적지는 새 디렉터리여야 한다. 완성된 백업과 키를 서로 분리해 서버 밖으로 옮기고 복원 훈련을 반복한다. 자동 외부 백업 업로드·스케줄링은 이번 구현에 포함하지 않는다.
 
 업무량에 따른 RPO/RTO는 운영 실측으로 정한다. App/Worker가 중단된 동안 요청을 받지 못한다. 대용량 무중단 백업·WAL/PITR은 제공하지 않는다.
 
@@ -82,15 +82,15 @@ docker compose run --rm --no-deps -v "$PWD/.local/operator-evidence.txt:/run/ope
 
 ## 장애와 재개
 
-| 상태                                 | 조치                                                            |
-| ------------------------------------ | --------------------------------------------------------------- |
-| `MODEL_NOT_CONFIGURED` / 제공자 오류 | 설정·키·지원 형식을 확인하고 책임자가 다시 요청                 |
-| `CONTEXT_REVOKED`                    | 기억 정정·삭제·소속 변경을 반영한 새 실행 준비                  |
-| `LEASE_EXPIRED`                      | 이전 Worker 종료 확인. 자동 재발송하지 않음                     |
-| `DISPATCH_UNKNOWN` / 미해결 intent   | 외부 제공자의 요청 처리 상태와 Worker 종료를 확인한 뒤 운영 CLI |
-| `RESTORE_CONFIRMATION_REQUIRED`      | 원래 실행 종료 확인 후 운영 CLI                                 |
-| `RESTORE_INCOMPLETE`                 | 파일 복원 실패 원인 확인, 새 빈 target에서 전체 복원            |
-| migration hash 불일치                | 적용한 SQL 수정 금지. 새 migration 작성·일치한 release 사용     |
+| 상태                                                                                            | 조치                                                            |
+| ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `MODEL_NOT_CONFIGURED` / `MODEL_AUTH_REJECTED` / `MODEL_RATE_LIMITED` / `MODEL_ENDPOINT_FAILED` | 설정·키·지원 형식을 확인하고 책임자가 다시 요청                 |
+| `CONTEXT_REVOKED`                                                                               | 기억 정정·삭제·소속 변경을 반영한 새 실행 준비                  |
+| `LEASE_EXPIRED`                                                                                 | 이전 Worker 종료 확인. 자동 재발송하지 않음                     |
+| `DISPATCH_UNKNOWN` / 미해결 intent                                                              | 외부 제공자의 요청 처리 상태와 Worker 종료를 확인한 뒤 운영 CLI |
+| `RESTORE_CONFIRMATION_REQUIRED`                                                                 | 원래 실행 종료 확인 후 운영 CLI                                 |
+| `RESTORE_INCOMPLETE`                                                                            | 파일 복원 실패 원인 확인, 새 빈 target에서 전체 복원            |
+| migration hash 불일치                                                                           | 적용한 SQL 수정 금지. 새 migration 작성·일치한 release 사용     |
 
 일시정지·취소는 이미 외부에 보낸 내용을 회수하지 않는다. 중지 이후 결과 게시를 막고 발송 불명 상태를 보존한다. 외부 요청과 DB 사이의 exactly-once는 보장하지 않는다.
 
@@ -110,3 +110,5 @@ npm run doctor
 백업은 App/Worker를 먼저 정지하고 Worker 권한으로 남은 Job의 checkpoint를 DB에 저장한 뒤 Runner를 정지한다. namespace의 살아 있는 Job이 하나라도 남으면 백업을 거절한다. 수동 갱신도 Worker→Runner 순으로 정지하고 Runner→Worker 순으로 시작한다.
 
 0.6은 `init-secrets`가 호스트의 0600 파일을 서비스별 읽기 전용 비밀 볼륨으로 복사한다. 키 파일 변경 후에는 `docker compose run --rm --no-deps init-secrets`로 다시 준비하고 해당 서비스를 재시작한다. App에는 Runner token을 넣지 않는다.
+
+`npm run doctor`는 App의 현재 release/ready, migration hash, 최근 정상 Worker tick과 모델 설정을 검사한다. GitLab·Runner는 기본 진단에 필요 없다. 코드 실행을 쓸 때 `npm run doctor -- --code`로 두 구성의 준비도 추가 검사한다. 모델 추론·저장소 접근권은 직접 호출하지 않으며 URL·키·제공자 오류 본문을 출력하지 않는다. 실제 호출·평가·첫 업무 순서는 [사용 준비 안내](READINESS.md)를 따른다.

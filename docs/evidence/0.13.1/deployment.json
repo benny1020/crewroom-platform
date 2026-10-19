@@ -1,0 +1,31 @@
+{
+  "release": "0.13.1",
+  "at": "2026-10-19T14:40:33.205Z",
+  "previousRelease": "0.13.0",
+  "migrations": 12,
+  "ready": true,
+  "runningServices": 4,
+  "healthyServices": [
+    "app",
+    "db",
+    "runner"
+  ],
+  "workerHealthy": true,
+  "workerVersion": "0.13.1",
+  "workerSuccessfulTickFresh": true,
+  "automaticMaintenanceSucceeded": true,
+  "encryptedPreUpgradeBackup": true,
+  "currentTasks": 0,
+  "currentMessages": 0,
+  "reviewedSourceMatches": {
+    "app": {
+      "filesMatched": 2
+    },
+    "worker": {
+      "filesMatched": 2
+    }
+  },
+  "modelConfigured": false,
+  "embeddingConfigured": false,
+  "actualExternalModelCalls": 0
+}

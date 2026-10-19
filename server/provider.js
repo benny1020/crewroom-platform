@@ -158,7 +158,36 @@ export async function runModel(
       ),
     }),
   );
-  const payload = JSON.parse(await limitedText(response, 2000000));
+  if (!response.ok) {
+    await response.body?.cancel().catch(() => {});
+    throw new HttpError(
+      502,
+      [401, 403].includes(response.status)
+        ? "MODEL_AUTH_REJECTED"
+        : response.status === 429
+          ? "MODEL_RATE_LIMITED"
+          : "MODEL_ENDPOINT_FAILED",
+      "모델 연결에서 오류를 반환했어요. 인증·요청 한도·제공자 상태를 확인한 뒤 새 실행을 준비해주세요.",
+    );
+  }
+  let payload;
+  try {
+    payload = JSON.parse(await limitedText(response, 2000000));
+  } catch (error) {
+    // Preserve abort/size failures and their dispatch uncertainty handling.
+    if (!(error instanceof SyntaxError)) throw error;
+    throw new HttpError(
+      502,
+      "INVALID_MODEL_RESULT",
+      "모델 응답이 JSON 형식이 아니에요.",
+    );
+  }
+  if (!payload || typeof payload !== "object" || Array.isArray(payload))
+    throw new HttpError(
+      502,
+      "INVALID_MODEL_RESULT",
+      "모델 응답 구조를 확인해주세요.",
+    );
   const message = payload.choices?.[0]?.message;
   if (
     message?.tool_calls?.length ||

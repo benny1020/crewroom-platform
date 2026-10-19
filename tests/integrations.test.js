@@ -358,3 +358,68 @@ test("GitLab preserves mode changes, renames and empty file creation/deletion; u
     { code: "DIFF_INCOMPLETE" },
   );
 });
+
+for (const provider of ["openai-compatible", "anthropic"])
+  test(`${provider} rejects HTTP failure envelopes, malformed JSON and empty response bodies`, async (t) => {
+    secret(t, "MODEL_API_KEY", "");
+    const config = configuration({
+      MODEL_PROVIDER: provider,
+      MODEL_ENDPOINT_URL: "http://127.0.0.1:1/protocol-only",
+      MODEL_NAME: "protocol-only",
+    });
+    const body =
+      provider === "anthropic"
+        ? {
+            content: [{ type: "text", text: JSON.stringify(result) }],
+            stop_reason: "end_turn",
+          }
+        : {
+            choices: [
+              {
+                message: { content: JSON.stringify(result) },
+                finish_reason: "stop",
+              },
+            ],
+          };
+    for (const [status, code] of [
+      [401, "MODEL_AUTH_REJECTED"],
+      [403, "MODEL_AUTH_REJECTED"],
+      [429, "MODEL_RATE_LIMITED"],
+      [500, "MODEL_ENDPOINT_FAILED"],
+    ]) {
+      let calls = 0;
+      await assert.rejects(
+        runModel(snapshot(config), config, {
+          fetchImpl: async () => {
+            calls++;
+            return Response.json(body, { status });
+          },
+        }),
+        { code },
+      );
+      assert.equal(calls, 1);
+    }
+    for (const invalid of [
+      "<html>private error body</html>",
+      "null",
+      "[]",
+      "",
+    ]) {
+      await assert.rejects(
+        runModel(snapshot(config), config, {
+          fetchImpl: async () => new Response(invalid),
+        }),
+        { code: "INVALID_MODEL_RESULT" },
+      );
+    }
+    const truncated =
+      provider === "anthropic"
+        ? { ...body, stop_reason: "max_tokens" }
+        : { choices: [{ ...body.choices[0], finish_reason: "length" }] };
+    await assert.rejects(
+      runModel(snapshot(config), config, {
+        fetchImpl: async () => Response.json(truncated),
+      }),
+      { code: "MODEL_OUTPUT_TRUNCATED" },
+    );
+  });

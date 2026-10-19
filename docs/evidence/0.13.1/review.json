@@ -1,0 +1,131 @@
+{
+  "release": "0.13.1",
+  "baseHead": "e9e9a9f6cd85db80dba6c732c90d700396929670",
+  "scope": "capability-aware bounded diagnostics, memory evaluation semantic coverage/call budget/exit status, provider error classification, setup and first-use instructions",
+  "verdict": "No remaining mandatory P0/P1/P2 findings in the frozen scope",
+  "before": {
+    "phase": "before",
+    "at": "2026-10-19T14:36:51.556Z",
+    "manifestSha256": "d85b9a22b1053c027b851b62ea4c7aca5adbc2af7d0b7dc9bc639d8a10c088f9",
+    "count": 24,
+    "mismatch": []
+  },
+  "after": {
+    "phase": "after",
+    "at": "2026-10-19T14:38:11.152Z",
+    "manifestSha256": "d85b9a22b1053c027b851b62ea4c7aca5adbc2af7d0b7dc9bc639d8a10c088f9",
+    "count": 24,
+    "mismatch": []
+  },
+  "unchanged": true,
+  "independentTests": {
+    "unit": 16,
+    "postgresLoopback": 5,
+    "total": 21,
+    "failed": 0,
+    "skipped": 0
+  },
+  "externalModelCalls": 0,
+  "limitations": [
+    "Full suite, browser, Docker Runner and encrypted restore are parent-task checks",
+    "No real model inference, embedding quality, repository credentials, production endpoint or team-usage effectiveness approval"
+  ],
+  "files": [
+    {
+      "path": "README.md",
+      "sha256": "55b24a37cb32cf2fd32f13d0ad9402b55f2e108dbc8785f1a2207960401980e9"
+    },
+    {
+      "path": "compose.yaml",
+      "sha256": "bbb897cf9a647c4ed45de0097629ed95a64d654c744925a0624f6183af743982"
+    },
+    {
+      "path": "docs/MEMORY_ARCHITECTURE.md",
+      "sha256": "77a742b7bf48d230649b9f234af2840a988104eaca1adcf093544a0b3635cefd"
+    },
+    {
+      "path": "docs/MILESTONES.md",
+      "sha256": "8d4f389af873a0c9ed25ef437d4685abd0a34a2979989a16d4ae5149766c549f"
+    },
+    {
+      "path": "docs/PILOT_GUIDE.md",
+      "sha256": "2d243c7834dddf4f3b99b4f558ea27467f1f68e7eed522f3b93a447c96cba99b"
+    },
+    {
+      "path": "docs/QUALITY.md",
+      "sha256": "19ab65d22eb337ce17ef516825e731bce3ade51b55e67f37ef4ab5717c0f08c9"
+    },
+    {
+      "path": "docs/READINESS.md",
+      "sha256": "e46d3c3df547d4539f2b3a15743b26ad629d3a4082775b2662963162dcf1d364"
+    },
+    {
+      "path": "docs/SERVER_OPERATIONS.md",
+      "sha256": "7c7d43e4ef57cd5563113457c5cb8fec69d5e4f91c575e1aeedf7f36d4e93453"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "eba77b8b0c345d30b6181a6e98226e49bab798d4b63f680eb677820e907156ee"
+    },
+    {
+      "path": "package.json",
+      "sha256": "7a201f4cdee8d742c66ed3a58a05a9295889e45c02859a1284792f3191814f9b"
+    },
+    {
+      "path": "scripts/backup.mjs",
+      "sha256": "7edfac586cd2837f9f8220314ee961e357ed36afc7c71ac0ac75b470ae579d1a"
+    },
+    {
+      "path": "scripts/doctor.mjs",
+      "sha256": "eb0176bc360c4988a162af13c88fcedcc094c5ca8114156fc848efe9f8477462"
+    },
+    {
+      "path": "scripts/evaluate-memory.mjs",
+      "sha256": "f6c1f5e127cbb74dc489857f8fc2077de21d725e0abe4d460d5d3d7067340ae2"
+    },
+    {
+      "path": "scripts/restore.mjs",
+      "sha256": "c92f06d396b5197674b06f6dadc9f26c8954ca247bdf0325ffb49885aab4e723"
+    },
+    {
+      "path": "scripts/verify-restore.mjs",
+      "sha256": "30578764b4cfc018b4a744abfcdae16e7b3f9afa4b42f0207e887733eb3d616f"
+    },
+    {
+      "path": "scripts/verify-secret-ownership.mjs",
+      "sha256": "38307b7bd5b0d182023c48ed57e6d96d55646d7c5353979553e02f774478d342"
+    },
+    {
+      "path": "server/config.js",
+      "sha256": "559f6e9328f031ef4d6f8da65bfef9f4b18b061f26278f4069ae0b36c7ab600a"
+    },
+    {
+      "path": "server/provider.js",
+      "sha256": "15121b7d91ea3b49bedb1ac190a164ae92c35cb5ea1af06abdc5d6872f33ddf0"
+    },
+    {
+      "path": "tests/doctor.test.js",
+      "sha256": "d437051a0edbf593b9f4b47f503ca4f4a55fce36a996b48760d7d941778b038e"
+    },
+    {
+      "path": "tests/integrations.test.js",
+      "sha256": "ae5993e4cc2e2a8f108de7aa08d70e5602bb39854f8358d45315d9de26e4218c"
+    },
+    {
+      "path": "tests/memory-evaluation-cli.test.js",
+      "sha256": "eeda3aacef3634d23446e6b530deb3456fe0408d6ff2b4746ea35d07467459c4"
+    },
+    {
+      "path": "tests/server/memory-evaluation.test.js",
+      "sha256": "0b879a5826b768565b5c6e3e94acf2d221680217081054d6cfaaa22aa36a211b"
+    },
+    {
+      "path": "tests/server/provider-failures.test.js",
+      "sha256": "1e9a74235c5b094bc2afb761ed8141d6424d6002ff6c5b57bd5ea2eca734c39c"
+    },
+    {
+      "path": "tests/support/memory-evaluation.js",
+      "sha256": "58af131cd590e67c43c1388d56d516db8b88033bdf875a310978a88108428c0b"
+    }
+  ]
+}

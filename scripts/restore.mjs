@@ -30,6 +30,7 @@ if (
     "0.11.1",
     "0.12.0",
     "0.13.0",
+    "0.13.1",
   ].includes(manifest.release) ||
   manifest.files?.length !== 2
 )

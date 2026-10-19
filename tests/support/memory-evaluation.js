@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { harness, newTask, values } from "../server/helpers.js";
 import { insertArtifact } from "../../server/tasks.js";
 import { searchMemory } from "../../server/memory.js";
@@ -9,8 +10,25 @@ import {
 } from "../../server/memory-embedding.js";
 export async function evaluateMemory(
   t,
-  { search = searchMemory, legacyView = false, embeddingConfig = null } = {},
+  {
+    search = searchMemory,
+    legacyView = false,
+    embeddingConfig = null,
+    embeddingBudget = null,
+    embeddingFetch = fetch,
+  } = {},
 ) {
+  if (
+    embeddingConfig &&
+    (!Number.isInteger(embeddingBudget?.maxCalls) ||
+      embeddingBudget.maxCalls < 1 ||
+      embeddingBudget.maxCalls > 240 ||
+      !Number.isInteger(embeddingBudget.calls) ||
+      embeddingBudget.calls < 0)
+  )
+    throw new Error(
+      "An explicit shared embedding call budget (1–240) is required",
+    );
   const data = JSON.parse(
       await readFile(
         new URL("../fixtures/memory-retrieval.ko.json", import.meta.url),
@@ -77,19 +95,28 @@ export async function evaluateMemory(
   }
   let embeddingCalls = 0;
   const fetchImpl = async (...args) => {
+    if (embeddingBudget.calls >= embeddingBudget.maxCalls)
+      throw new Error("EMBEDDING_EVALUATION_BUDGET");
+    embeddingBudget.calls++;
     embeddingCalls++;
-    return fetch(...args);
+    return embeddingFetch(...args);
   };
   if (embeddingConfig) {
-    for (let i = 0; i < 100; i++)
+    for (let i = 0; i < 100; i++) {
+      if (embeddingBudget.calls >= embeddingBudget.maxCalls)
+        throw new Error("EMBEDDING_EVALUATION_BUDGET");
       if (
         !(await indexNextMemoryDocument(h.pool, embeddingConfig, { fetchImpl }))
       )
         break;
+    }
     const failed = Number(
       (
         await h.pool.query(
-          "SELECT count(*) FROM cr_memory_embeddings WHERE status<>'ready'",
+          `SELECT count(*) FROM cr_recall_documents d LEFT JOIN cr_memory_embeddings e
+            ON e.source_key=d.key AND e.source_revision=d.revision AND e.profile_id=$1 AND e.status='ready'
+            WHERE e.source_key IS NULL`,
+          [embeddingProfile(embeddingConfig).id],
         )
       ).rows[0].count,
     );
@@ -117,6 +144,14 @@ export async function evaluateMemory(
         ...semantic,
       },
     );
+    if (
+      embeddingConfig &&
+      (docs.semanticCoverageVersion !== 1 ||
+        !["matched", "no_matches"].includes(docs.semanticStatus))
+    )
+      throw new Error(
+        "Semantic retrieval not verified; quality evaluation refused",
+      );
     const expected = q.expected.map((k) => keys.get(k));
     const hit = expected.filter((k) => docs.some((d) => d.key === k)).length;
     const found = docs.map((d) => d.key);
@@ -133,12 +168,16 @@ export async function evaluateMemory(
         docs.some((d) => d.body.includes(v)),
       ).length,
       returned: docs.length,
+      semanticStatus: docs.semanticStatus || "disabled",
+      semanticCoverageVersion: docs.semanticCoverageVersion || 0,
     });
   }
   const positive = rows.filter((r) => r.expected),
     semantic = rows.filter((r) => r.category === "semantic-paraphrase");
   return {
     corpus: "hand-authored Korean synthetic retrieval regression",
+    corpusHash: createHash("sha256").update(JSON.stringify(data)).digest("hex"),
+    mode: embeddingConfig ? "configured-embeddings" : "keyword",
     queries: rows.length,
     positiveQueries: positive.length,
     meanRecallAt5:
@@ -146,8 +185,27 @@ export async function evaluateMemory(
     allEvidenceQueries: rows.filter((r) => r.allEvidence).length,
     forbiddenMatches: rows.reduce((a, r) => a + r.forbiddenMatches, 0),
     semanticParaphraseHits: semantic.reduce((a, r) => a + r.hits, 0),
-    realEmbeddingCalls: embeddingCalls,
+    embeddingEndpointCalls: embeddingCalls,
     realAnswerModelCalls: 0,
     rows,
   };
+}
+
+export function memoryQualityGate(result) {
+  const checks = {
+    casesComplete: result.queries > 0 && result.rows.length === result.queries,
+    deniedSourcesAbsent: result.forbiddenMatches === 0,
+    meanRecallAt5: result.meanRecallAt5 >= 0.8,
+    requiredEvidence: result.rows
+      .filter((r) => r.category !== "semantic-paraphrase")
+      .every((r) => r.allEvidence),
+    semanticVerified:
+      result.mode === "keyword" ||
+      result.rows.every(
+        (r) =>
+          r.semanticCoverageVersion === 1 &&
+          ["matched", "no_matches"].includes(r.semanticStatus),
+      ),
+  };
+  return { passed: Object.values(checks).every(Boolean), checks };
 }

@@ -433,7 +433,7 @@ try {
   );
   const receipt = {
     date: new Date().toISOString(),
-    release: "0.13.0",
+    release: "0.13.1",
     elapsedSeconds: Math.round((Date.now() - started) / 1000),
     checks: [
       "concurrent backup and restore commands refused before service or database mutation",
