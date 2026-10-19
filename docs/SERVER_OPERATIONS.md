@@ -1,8 +1,8 @@
-# 서버 실행과 운영 · 0.6
+# 서버 실행과 운영 · 0.11
 
 실제 코드 실행의 이미지·검사·중단 계약은 [실행 운영 안내](CODE_EXECUTION.md)를 함께 따른다. 첫 설치는 `docker compose --profile images build app runner job-image`로 Job 이미지를 먼저 준비한다.
 
-기본 배포는 한 서버의 Docker Compose다. App/Worker/DB는 같은 release를 사용한다. 이 문서는 실제 구현된 읽기 전용 분석 런타임을 다룬다. 자율 코드 실행은 포함하지 않는다.
+기본 배포는 한 서버의 Docker Compose다. App/Worker/Runner는 같은 release를 사용하고 DB는 PostgreSQL 18을 사용한다. 읽기 전용 분석과 별도 Runner의 격리 코드 실행을 지원한다. [장기 운영·긴 대화·보관 경계](LONG_TERM_OPERATIONS.md)를 함께 따른다.
 
 ## 시작·확인·종료
 
@@ -23,7 +23,7 @@ DB는 외부 포트를 열지 않는다. App만 기본 loopback에 바인딩한�
 
 초기 첫 팀장은 `bootstrap`, 이후 구성원은 `member` CLI로 발급한다. 비밀번호는 stdin 또는 접근 제한 파일로만 전달한다. 부서는 운영자가 정한다. 공개 가입 API는 403이며 이메일 allowlist만으로 신원을 보장하지 않는다.
 
-팀원은 팀장 권한을 요청할 수 있으나 승인 전에는 일반 팀원이다. 기존 팀장이 구성원의 역할/부서/활성 상태를 바꾼다. 비활성화하면 기존 세션도 폐기한다. 마지막 활성 팀장을 없앨 수 없다. 비밀번호 변경/메일 재설정 UI·SSO·이메일 인증은 후속 기능이다. 시범 도입 중 분실 계정은 운영자가 새 계정을 발급하고 기존 계정을 비활성화한다. 데이터 소유권 이전은 별도 운영 작업으로 검토한다.
+팀원은 팀장 권한을 요청할 수 있으나 승인 전에는 일반 팀원이다. 기존 팀장이 구성원의 역할/부서/활성 상태를 바꾼다. 비활성화하면 기존 세션도 폐기한다. 마지막 활성 팀장을 없앨 수 없다. 본인 비밀번호 변경 UI와 운영자 reset-password CLI를 제공하고 변경 시 기존 세션을 폐기한다. 이메일 재설정·SSO·이메일 인증은 후속 기능이다. 데이터 소유권 이전은 별도 운영 작업으로 검토한다.
 
 ## 모델 설정과 변경
 
@@ -49,19 +49,19 @@ Caddy가 80/443을 사용한다. 방화벽에서 80/443만 팀 정책에 맞게 
 
 ## 백업
 
-저장 대상은 DB와 Run 입력 volume이다. `backup_key`는 32-byte key의 64자리 hex 파일이다. 키를 잃으면 복원할 수 없다. DB/모델 비밀은 백업 archive에 포함하지 않으므로 별도 보관한다.
+저장 대상은 DB와 Run 입력·Runner state volume이다. `backup_key`는 32-byte key의 64자리 hex 파일이다. 키를 잃으면 복원할 수 없다. DB/모델 비밀은 백업 archive에 포함하지 않으므로 별도 보관한다.
 
 ```bash
 node scripts/backup.mjs /secure-backups/crewroom-20261017 .local/secrets/backup_key
 ```
 
-현재 Compose 프로젝트의 App/Worker를 정상 정지하고 DB dump + runtime tar를 만든다. AES-256-GCM으로 암호화한 파일과 SHA-256 manifest를 남기고 평문 임시 파일을 제거한다. 기존 실행 중이던 서비스만 다시 시작한다. 목적지는 새 디렉터리여야 한다. 완성된 백업과 키를 서로 분리해 서버 밖으로 옮기고 복원 훈련을 반복한다. 자동 외부 백업 업로드·스케줄링은 이번 구현에 포함하지 않는다.
+현재 Compose 프로젝트의 App/Worker를 정상 정지하고 Job 종료/checkpoint를 확인한 뒤 Runner도 정지한다. DB dump + runtime/Runner state tar를 만든다. AES-256-GCM으로 암호화한 파일과 SHA-256 manifest를 남기고 평문 임시 파일을 제거한다. 기존 실행 중이던 서비스만 다시 시작한다. 목적지는 새 디렉터리여야 한다. 완성된 백업과 키를 서로 분리해 서버 밖으로 옮기고 복원 훈련을 반복한다. 자동 외부 백업 업로드·스케줄링은 이번 구현에 포함하지 않는다.
 
 업무량에 따른 RPO/RTO는 운영 실측으로 정한다. App/Worker가 중단된 동안 요청을 받지 못한다. 대용량 무중단 백업·WAL/PITR은 제공하지 않는다.
 
 ## 빈 서버 복원
 
-원래 서버의 Worker가 종료됐는지 먼저 확인한다. 같은 0.6 코드와 새 Compose project·빈 DB/새 runtime volume을 사용한다. 이 명령은 기존 테이블이 있거나 App/Worker가 실행 중이면 거부한다.
+원래 서버의 Worker가 종료됐는지 먼저 확인한다. 백업 manifest가 지원하는 release의 코드와 새 Compose project·빈 DB/새 runtime volume을 사용한다. 이 명령은 기존 테이블이 있거나 App/Worker가 실행 중이면 거부한다.
 
 ```bash
 # .env 및 비밀 파일을 준비한 새 checkout/서버에서 실행

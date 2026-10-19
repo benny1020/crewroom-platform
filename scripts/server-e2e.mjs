@@ -95,6 +95,26 @@ await recallForRun(pool, seedRun, "proposal-e2e-seed", {
   audience: "project",
 });
 await processRun(pool, seedRun, "proposal-e2e-seed", config);
+const longTask = await createTask(
+  pool,
+  lead,
+  {
+    workType: "chat",
+    agentId: `personal-${lead.id}`,
+    skillId: "conversation",
+    title: "긴 대화 회귀 전용",
+    project: "history-fixture",
+    target: "synthetic long conversation",
+    targetVersion: "history-v1",
+    goal: "긴 대화의 원문 조회와 화면 보존",
+    visibility: "private",
+  },
+  randomUUID(),
+);
+await pool.query(
+  "INSERT INTO cr_messages(task_id,user_id,body,target_version) SELECT $1,$2,CASE WHEN n=1 THEN 'ARCHIVE_NEEDLE_OLD 최초 합의 원문' ELSE '대화 기록 '||n END,'history-v1' FROM generate_series(1,1007)n",
+  [longTask.id, lead.id],
+);
 const app = buildApp(pool, config),
   worker = await startWorker(pool, config);
 await app.listen({ host: config.host, port: config.port });

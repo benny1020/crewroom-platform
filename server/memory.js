@@ -1,7 +1,14 @@
+import { createHash } from "node:crypto";
+import { indexedRecallCandidates } from "./recall-index.js";
 import { canRead } from "./permissions.js";
 import { HttpError } from "./errors.js";
 
 export const MEMORY_CHARS = 16000;
+// Exact-vector search has an explicit corpus ceiling. Large installations keep
+// indexed lexical recall rather than allocating every cached vector in the app.
+export const EXACT_VECTOR_DOCUMENT_LIMIT = 2000;
+export const EXACT_VECTOR_VALUE_LIMIT = 2000000;
+export const EXACT_VECTOR_BYTE_LIMIT = 32000000;
 export function queryTerms(query) {
   const words = [
     ...new Set(
@@ -164,9 +171,10 @@ export async function searchMemory(
       asOf,
     ];
   // Scope filters precede ranking. No recency preselection: an old exact match can win.
-  const rows = (
-    await db.query(
-      `WITH allowed AS (
+  const rows = keys
+    ? (
+        await db.query(
+          `WITH allowed AS (
     SELECT d.* FROM cr_recall_documents d WHERE
     (d.owner_id=$1 OR d.visibility='team' OR (d.visibility='department' AND d.department=$2))
     AND (d.agent_owner_id IS NULL OR d.agent_owner_id=$1)
@@ -181,9 +189,38 @@ export async function searchMemory(
     FROM allowed d
   ) SELECT * FROM scored WHERE cardinality($7::text[])=0 OR lexical>0 OR pinned
     ORDER BY pinned DESC,lexical DESC,created_at DESC,key LIMIT 160`,
-      args,
-    )
-  ).rows;
+          args,
+        )
+      ).rows
+    : await (async () => {
+        const candidates = await indexedRecallCandidates(db, user, scope, {
+          terms,
+          patterns: patterns(terms),
+          agentId,
+          project,
+          before,
+          asOf,
+        });
+        const live = await documentsByKeys(
+          db,
+          candidates.map((x) => x.key),
+        );
+        return candidates.flatMap((c) => {
+          const d = live.get(c.key);
+          return d &&
+            c.content_fingerprint ===
+              createHash("md5")
+                .update(d.title + "\n" + d.body)
+                .digest("hex") &&
+            agentSourceAllowed(d, agentId) &&
+            (!project || !d.project || d.project === project) &&
+            (!before || new Date(d.created_at) <= new Date(before)) &&
+            (d.memory_id || new Date(d.created_at) <= new Date(asOf)) &&
+            effectiveAt(d, new Date(asOf))
+            ? [{ ...d, lexical: c.lexical }]
+            : [];
+        });
+      })();
   const rankedLists = [
     rows
       .slice()
@@ -193,16 +230,25 @@ export async function searchMemory(
           new Date(b.created_at) - new Date(a.created_at),
       ),
   ];
+  let semanticStatus = vector && profileId ? "no_matches" : "disabled";
   if (vector && profileId) {
-    // Caches may lag or contain revoked documents: join live documents and reapply ACLs.
-    const semantic = (
+    // One statement snapshot decides capacity and reads its cache. There is no
+    // check-then-search race with the embedding indexer.
+    const result = (
       await db.query(
-        `SELECT d.*,e.vectors FROM cr_memory_embeddings e JOIN cr_recall_documents d ON d.key=e.source_key AND d.revision=e.source_revision
-      WHERE e.status='ready' AND e.profile_id=$1 AND ($2='' OR $2=ANY(d.agents) OR (d.audience='project' AND ($3='' OR d.project=$3))) AND ($3='' OR d.project='' OR d.project=$3)
+        `WITH bounded AS MATERIALIZED (
+      SELECT * FROM cr_memory_embeddings WHERE status='ready' AND profile_id=$1 ORDER BY source_key LIMIT 2001
+    ), capacity AS MATERIALIZED (
+      SELECT count(*)>2000 OR coalesce(sum(vector_values),0)>2000000 OR coalesce(sum(vector_bytes),0)>32000000 AS limited FROM bounded
+    ), found AS (
+      SELECT d.*,e.vectors FROM bounded e JOIN cr_recall_documents d ON d.key=e.source_key AND d.revision=e.source_revision
+      CROSS JOIN capacity
+      WHERE NOT capacity.limited AND e.status='ready' AND e.profile_id=$1 AND ($2='' OR $2=ANY(d.agents) OR (d.audience='project' AND ($3='' OR d.project=$3))) AND ($3='' OR d.project='' OR d.project=$3)
       AND (d.owner_id=$4 OR d.visibility='team' OR (d.visibility='department' AND d.department=$5))
       AND (d.agent_owner_id IS NULL OR d.agent_owner_id=$4)
       AND ($6='private' OR d.visibility='team' OR ($6='department' AND d.visibility='department' AND d.department=$7)) AND ($8::timestamptz IS NULL OR d.created_at<=$8)
-      AND (d.valid_from IS NULL OR d.valid_from<=$9::timestamptz) AND (d.valid_to IS NULL OR d.valid_to>$9::timestamptz) AND (d.memory_id IS NOT NULL OR d.created_at<=$9::timestamptz)`,
+      AND (d.valid_from IS NULL OR d.valid_from<=$9::timestamptz) AND (d.valid_to IS NULL OR d.valid_to>$9::timestamptz) AND (d.memory_id IS NOT NULL OR d.created_at<=$9::timestamptz)
+    ) SELECT limited,coalesce((SELECT jsonb_agg(to_jsonb(found)) FROM found),'[]'::jsonb) AS documents FROM capacity`,
         [
           profileId,
           agentId,
@@ -215,7 +261,9 @@ export async function searchMemory(
           asOf,
         ],
       )
-    ).rows;
+    ).rows[0];
+    if (result.limited) semanticStatus = "capacity_limited";
+    const semantic = result.documents;
     const semanticRank = [];
     for (const doc of semantic) {
       const best = doc.vectors
@@ -233,6 +281,7 @@ export async function searchMemory(
       } else rows.push({ ...doc, lexical: 0 });
     }
     rankedLists.push(semanticRank.sort((a, b) => b.semantic - a.semantic));
+    if (semanticRank.length) semanticStatus = "matched";
   }
   const fused = reciprocalRankFusion(rankedLists);
   rows.sort(
@@ -259,13 +308,15 @@ export async function searchMemory(
         );
       }),
   );
-  return valid.slice(0, limit).map((d) => ({
+  const output = valid.slice(0, limit).map((d) => ({
     ...d,
     excerpt: d.lexical
       ? excerpt(d.body, terms)
       : d.semanticExcerpt || excerpt(d.body, terms),
     vectors: undefined,
   }));
+  Object.defineProperty(output, "semanticStatus", { value: semanticStatus });
+  return output;
 }
 export function reciprocalRankFusion(lists, k = 60) {
   const scores = new Map();

@@ -4,6 +4,8 @@ import { transaction } from "./db.js";
 import { confirmStopped, checkpointJobs } from "./recovery.js";
 import { register, id } from "./validation.js";
 import { database, migrate } from "./db.js";
+import { operationStats, maintain } from "./operations.js";
+import { configuration } from "./config.js";
 import { seed } from "./seed.js";
 import { bootstrap, createMember, resetPassword } from "./auth.js";
 const pool = database();
@@ -12,6 +14,20 @@ try {
     await migrate(pool);
     await seed(pool);
     console.log("Schema and initial agents/skills ready.");
+  } else if (process.argv[2] === "stats") {
+    console.log(
+      JSON.stringify(
+        await operationStats(pool, configuration().dataDir),
+        null,
+        2,
+      ),
+    );
+  } else if (process.argv[2] === "maintain") {
+    console.log(
+      JSON.stringify(
+        await maintain(pool, { apply: process.argv.includes("--apply") }),
+      ),
+    );
   } else if (process.argv[2] === "bootstrap") {
     const [email, name, passwordFile] = process.argv.slice(3);
     if (!email || !name || !passwordFile)
@@ -57,7 +73,7 @@ try {
     console.log(JSON.stringify(await confirmStopped(pool, runId, evidence)));
   } else
     throw new Error(
-      "Commands: migrate | bootstrap EMAIL NAME PASSWORD_FILE | member EMAIL NAME DEPARTMENT PASSWORD_FILE | confirm-stopped RUN_ID EVIDENCE_FILE",
+      "Commands: migrate | stats | maintain [--apply] | bootstrap EMAIL NAME PASSWORD_FILE | member EMAIL NAME DEPARTMENT PASSWORD_FILE | confirm-stopped RUN_ID EVIDENCE_FILE",
     );
 } catch (error) {
   console.error(error.message);

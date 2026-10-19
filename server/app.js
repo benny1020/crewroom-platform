@@ -33,6 +33,8 @@ import {
   sourceAllowed,
 } from "./memory.js";
 import * as resources from "./resources.js";
+import { taskHistory, taskArchive } from "./history.js";
+import { EventHub } from "./event-hub.js";
 import { operations } from "./operations.js";
 import { listProposals, resolveProposal } from "./memory-learning.js";
 
@@ -262,9 +264,9 @@ export function buildApp(pool, config = configuration()) {
     };
   });
   app.get("/api/admin/operations", async (req) => operations(pool, req.member));
-  app.get("/api/tasks", async (req) => ({
-    tasks: await listTasks(pool, req.member),
-  }));
+  app.get("/api/tasks", async (req) =>
+    taskArchive(pool, req.member, req.query),
+  );
   app.post("/api/tasks", async (req, reply) => {
     const task = await createTask(
       pool,
@@ -278,6 +280,15 @@ export function buildApp(pool, config = configuration()) {
   app.get("/api/tasks/:id", async (req) => ({
     task: await taskDetail(pool, req.member, id.parse(req.params.id)),
   }));
+  app.get("/api/tasks/:id/history/:kind", async (req) =>
+    taskHistory(
+      pool,
+      req.member,
+      id.parse(req.params.id),
+      req.params.kind,
+      req.query,
+    ),
+  );
   app.post("/api/tasks/:id/questions", async (req, reply) => {
     const question = await createQuestion(
       pool,
@@ -457,6 +468,7 @@ export function buildApp(pool, config = configuration()) {
       items,
       unavailable: new Set(refs.map((r) => r.key)).size - items.length,
       method: run.snapshot.memoryContext?.method || "legacy",
+      semanticStatus: run.snapshot.memoryContext?.semanticStatus || "disabled",
     };
   });
   app.get("/api/memory/search", async (req) => {
@@ -598,7 +610,9 @@ export function buildApp(pool, config = configuration()) {
       return { ok: true };
     });
   });
-  const streams = new Set();
+  const streams = new Set(),
+    eventHub = new EventHub(pool);
+  app.addHook("onReady", () => eventHub.start());
   app.get("/api/events", async (req, reply) => {
     reply.hijack();
     reply.raw.writeHead(200, {
@@ -610,23 +624,29 @@ export function buildApp(pool, config = configuration()) {
     reply.raw.write("retry: 2000\n\n");
     let closed = false,
       busy = false,
-      last = "";
+      lastEpoch = -1,
+      lastSync = 0;
+    const subscription = eventHub.subscribe();
     const tick = async () => {
       if (closed || busy) return;
       busy = true;
       try {
         const user = await authenticate(pool, req);
-        const value = (
-          await pool.query(
-            `SELECT coalesce(max(e.id),0)::text AS id FROM cr_events e LEFT JOIN cr_tasks t ON t.id=e.task_id WHERE (${readPredicate("t")}) OR (e.task_id IS NULL AND e.actor_id=$1::text)`,
-            [user.id, user.department],
-          )
-        ).rows[0].id;
-        if (value !== last) {
-          reply.raw.write(
-            `id: ${value}\nevent: refresh\ndata: ${JSON.stringify({ revision: value })}\n\n`,
-          );
-          last = value;
+        const ids = eventHub.drain(subscription),
+          force =
+            lastEpoch !== eventHub.epoch || Date.now() - lastSync >= 60000;
+        const changed =
+          ids.length &&
+          (
+            await pool.query(
+              `SELECT 1 FROM cr_events e LEFT JOIN cr_tasks t ON t.id=e.task_id WHERE e.id=ANY($3::bigint[]) AND ((${readPredicate("t")}) OR (e.task_id IS NULL AND e.actor_id=$1::text)) LIMIT 1`,
+              [user.id, user.department, ids],
+            )
+          ).rowCount;
+        if (force || changed) {
+          lastEpoch = eventHub.epoch;
+          lastSync = Date.now();
+          reply.raw.write(`event: refresh\ndata: {"resync":true}\n\n`);
         } else reply.raw.write(": heartbeat\n\n");
       } catch {
         reply.raw.end();
@@ -640,11 +660,13 @@ export function buildApp(pool, config = configuration()) {
       closed = true;
       clearInterval(interval);
       streams.delete(reply.raw);
+      eventHub.unsubscribe(subscription);
     });
     await tick();
   });
   app.addHook("preClose", async () => {
     for (const stream of streams) stream.end();
+    await eventHub.close();
   });
   if (config.serveDist) {
     const dist = resolve("dist"),

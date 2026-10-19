@@ -8,6 +8,9 @@ services:
       NODE_ENV: production
       PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:?Set the HTTPS origin}
   proxy:
+    logging:
+      driver: local
+      options: { max-size: "10m", max-file: "3" }
     image: caddy:2-alpine
     environment:
       SITE_ADDRESS: ${SITE_ADDRESS:?Set the service hostname}

@@ -281,7 +281,8 @@ test("broker restart kills orphan execution, preserves tombstone and never repea
     };
     await first.save(record);
     next = await new Broker(options).init();
-    assert.equal(next.jobs.get(job.id).status, "stopped");
+    assert.equal((await next.readJob(job.id)).status, "stopped");
+    assert.equal(next.jobs.size, 0);
     await assert.rejects(
       next.action(job.id, job.capability, {
         sequence: 1,
@@ -358,6 +359,61 @@ test("pinned execution image survives removal of its mutable deployment tag", as
     if (broker) await broker.close();
     await command("docker", ["rm", "-f", temporary]).catch(() => {});
     await command("docker", ["image", "rm", sourceTag]).catch(() => {});
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("terminal jobs release base archives and RAM but retain retry outcomes and generation fences", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "crewroom-cold-jobs-"));
+  const namespace = "crewroom-cold-" + Date.now();
+  let broker = await new Broker({ stateDir: dir, namespace }).init();
+  try {
+    const input = {
+      runId: randomUUID(),
+      generation: 2,
+      baseSha: "a".repeat(40),
+      mode: "edit",
+      profileId: broker.profile.id,
+      archive: tarFiles(baseline).toString("base64"),
+    };
+    const job = await broker.create(input);
+    const read = { sequence: 1, action: "read_file", path: "sum.js" };
+    const outcome = await broker.action(job.id, job.capability, read);
+    const stopped = await broker.stop(job.id, job.capability);
+    assert.ok(stopped.checkpoint.patchHash);
+    await broker.sweep();
+    assert.equal(broker.jobs.size, 0);
+    const { access, readFile } = await import("node:fs/promises");
+    await assert.rejects(access(join(dir, job.id + ".base.tgz")), {
+      code: "ENOENT",
+    });
+    assert.deepEqual(
+      await broker.action(job.id, job.capability, read),
+      outcome,
+    );
+    assert.deepEqual(await broker.stopById(job.id), stopped);
+    await assert.rejects(broker.create(input), /JOB_NOT_REUSABLE/);
+    await assert.rejects(
+      broker.create({ ...input, generation: 1 }),
+      /STALE_GENERATION/,
+    );
+    // Cold terminal records never fill the process Map, including after restart.
+    for (let i = 0; i < 80; i++) await broker.stopById(randomUUID() + "-1");
+    await broker.close();
+    broker = await new Broker({ stateDir: dir, namespace }).init();
+    assert.equal(broker.jobs.size, 0);
+    assert.deepEqual(await broker.stop(job.id, job.capability), stopped);
+    assert.deepEqual(
+      await broker.action(job.id, job.capability, read),
+      outcome,
+    );
+    assert.equal(
+      JSON.parse(await readFile(join(dir, "run-" + input.runId + ".json")))
+        .generation,
+      2,
+    );
+  } finally {
+    await broker.close();
     await rm(dir, { recursive: true, force: true });
   }
 });

@@ -11,6 +11,7 @@ import { fail, conflict } from "./errors.js";
 import { modelProfile, sourceProfile } from "./config.js";
 import { buildMemoryContext } from "./memory.js";
 import { embeddingProfile } from "./memory-embedding.js";
+import { historyPage, pinnedHistory } from "./history.js";
 import { WORK_TYPES } from "./work-types.js";
 import { requestContract } from "../src/request-contract.js";
 
@@ -25,95 +26,127 @@ export async function getTask(db, user, id, lock = false) {
   requireRead(user, task);
   return task;
 }
-export async function taskDetail(db, user, id) {
-  const task = await getTask(db, user, id);
-  const [
-    steps,
-    runs,
-    artifacts,
-    messages,
-    events,
-    claims,
-    acceptances,
-    questions,
-  ] = await Promise.all([
-    db.query(
-      "SELECT s.*,a.name AS agent_name FROM cr_steps s JOIN cr_agents a ON a.id=s.agent_id WHERE task_id=$1 ORDER BY position",
-      [id],
-    ),
-    db.query(
-      "SELECT id,task_id,agent_id,step_index,status,generation,lease_owner,lease_until,snapshot,progress,error_code,error_message,created_at,started_at,finished_at FROM cr_runs WHERE task_id=$1 ORDER BY created_at",
-      [id],
-    ),
-    db.query(
-      "SELECT * FROM cr_artifacts WHERE task_id=$1 ORDER BY created_at",
-      [id],
-    ),
-    db.query(
-      "SELECT m.*,u.name AS author FROM cr_messages m JOIN cr_members u ON u.id=m.user_id WHERE task_id=$1 ORDER BY id",
-      [id],
-    ),
-    db.query("SELECT * FROM cr_events WHERE task_id=$1 ORDER BY id", [id]),
-    db.query(
-      "SELECT c.*,u.name FROM cr_claims c JOIN cr_members u ON u.id=c.user_id WHERE task_id=$1",
-      [id],
-    ),
-    db.query(
-      "SELECT * FROM cr_acceptances WHERE task_id=$1 ORDER BY created_at",
-      [id],
-    ),
-    db.query(
-      "SELECT * FROM cr_questions WHERE task_id=$1 ORDER BY created_at",
-      [id],
-    ),
-  ]);
-  // Context can contain personal memory. Run snapshots returned to viewers omit it.
-  return {
-    ...task,
-    steps: steps.rows,
-    runs: runs.rows.map((r) => ({
-      ...r,
-      snapshot: {
-        agent: r.snapshot.agent,
-        skill: r.snapshot.skill,
-        targetVersion: r.snapshot.targetVersion,
-        inputArtifactId: r.snapshot.inputArtifactId,
-        provider: r.snapshot.provider,
-        model: r.snapshot.model,
-        outputSchema: r.snapshot.outputSchema,
-        inputHash: r.snapshot.inputHash,
-        questionRevision: r.snapshot.questionRevision || 0,
-        rework: r.snapshot.rework,
-        memoryContext: r.snapshot.memoryContext
-          ? {
-              version: r.snapshot.memoryContext.version,
-              count: r.snapshot.memoryContext.items.length,
-              method: r.snapshot.memoryContext.method,
-              characters: r.snapshot.memoryContext.characters,
-            }
-          : null,
-        execution: r.snapshot.execution,
-        source: r.snapshot.source
-          ? {
-              url: r.snapshot.source.url,
-              sha: r.snapshot.source.sha,
-              hash: r.snapshot.source.hash,
-            }
-          : null,
-      },
-    })),
-    artifacts: artifacts.rows,
-    messages: messages.rows,
-    events: events.rows,
-    claims: claims.rows,
-    acceptances: acceptances.rows,
-    questions: questions.rows,
-  };
+export async function taskDetail(pool, user, id) {
+  const db = await pool.connect();
+  try {
+    await db.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
+    const task = await getTask(db, user, id),
+      steps = (
+        await db.query(
+          "SELECT s.*,a.name AS agent_name FROM cr_steps s JOIN cr_agents a ON a.id=s.agent_id WHERE task_id=$1 ORDER BY position",
+          [id],
+        )
+      ).rows;
+    const kinds = [
+        "runs",
+        "artifacts",
+        "messages",
+        "events",
+        "acceptances",
+        "questions",
+        "briefs",
+      ],
+      pages = {};
+    for (const kind of kinds) pages[kind] = await historyPage(db, id, kind);
+    const artifactIds = new Set(
+      steps
+        .flatMap((s) => [s.current_artifact_id, s.input_artifact_id])
+        .filter(Boolean),
+    );
+    if (task.rework?.previous?.artifactId)
+      artifactIds.add(task.rework.previous.artifactId);
+    const currentAcceptance = (
+      await db.query(
+        "SELECT * FROM cr_acceptances WHERE task_id=$1 AND revoked_at IS NULL",
+        [id],
+      )
+    ).rows;
+    for (const a of currentAcceptance) artifactIds.add(a.artifact_id);
+    const pinnedArtifacts = await pinnedHistory(db, id, "artifacts", [
+      ...artifactIds,
+    ]);
+    const current = pinnedArtifacts.find(
+      (a) =>
+        a.id === steps[task.step_index].current_artifact_id &&
+        a.target_version === task.target_version,
+    );
+    if (current) {
+      const previous = (
+        await db.query(
+          "SELECT * FROM cr_artifacts WHERE task_id=$1 AND step_index=$2 AND version<$3 ORDER BY version DESC LIMIT 1",
+          [id, current.step_index, current.version],
+        )
+      ).rows[0];
+      if (previous) pinnedArtifacts.push(previous);
+    }
+    const merge = (rows, extra) =>
+      [...new Map([...rows, ...extra].map((x) => [x.id, x])).values()].sort(
+        (a, b) =>
+          new Date(a.created_at) - new Date(b.created_at) ||
+          String(a.id).localeCompare(String(b.id)),
+      );
+    const artifacts = merge(pages.artifacts.items, pinnedArtifacts),
+      runIds = [
+        ...new Set(
+          [task.current_run_id, ...pinnedArtifacts.map((a) => a.run_id)].filter(
+            Boolean,
+          ),
+        ),
+      ];
+    const runs = merge(
+      pages.runs.items,
+      await pinnedHistory(db, id, "runs", runIds),
+    );
+    const questions = merge(
+      pages.questions.items,
+      (
+        await db.query(
+          "SELECT * FROM cr_questions WHERE task_id=$1 AND target_version=$2",
+          [id, task.target_version],
+        )
+      ).rows,
+    );
+    const claims = (
+      await db.query(
+        "SELECT c.*,u.name FROM cr_claims c JOIN cr_members u ON u.id=c.user_id WHERE task_id=$1 AND (c.user_id=$2 OR c.user_id IN (SELECT user_id FROM cr_claims WHERE task_id=$1 ORDER BY created_at DESC LIMIT 40))",
+        [id, user.id],
+      )
+    ).rows;
+    const result = {
+      ...task,
+      steps,
+      runs,
+      artifacts,
+      messages: pages.messages.items,
+      events: pages.events.items,
+      claims,
+      acceptances: merge(pages.acceptances.items, currentAcceptance),
+      questions,
+      brief_history: pages.briefs.items.map((x) => ({
+        ...x.body,
+        history_id: x.id,
+      })),
+      history: Object.fromEntries(
+        kinds.map((k) => [
+          k,
+          { hasMore: pages[k].hasMore, nextCursor: pages[k].nextCursor },
+        ]),
+      ),
+      historyLimit: 40,
+    };
+    await db.query("COMMIT");
+    return result;
+  } catch (error) {
+    await db.query("ROLLBACK");
+    throw error;
+  } finally {
+    db.release();
+  }
 }
 export async function listTasks(db, user) {
   return (
     await db.query(
-      `SELECT t.*,a.name AS agent_name,s.agent_id,s.name AS step_name FROM cr_tasks t JOIN cr_steps s ON s.task_id=t.id AND s.position=t.step_index JOIN cr_agents a ON a.id=s.agent_id WHERE ${readPredicate()} ORDER BY t.updated_at DESC LIMIT 200`,
+      `SELECT t.id,t.number,t.title,t.work_type,t.owner_id,t.responsible_id,t.visibility,t.department,t.project,t.target,t.target_version,t.status,t.step_index,t.revision,t.created_at,t.updated_at,a.name AS agent_name,s.agent_id,s.name AS step_name FROM cr_tasks t JOIN cr_steps s ON s.task_id=t.id AND s.position=t.step_index JOIN cr_agents a ON a.id=s.agent_id WHERE ${readPredicate()} ORDER BY t.updated_at DESC LIMIT 200`,
       [user.id, user.department],
     )
   ).rows;

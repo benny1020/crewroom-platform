@@ -5,6 +5,7 @@ import {
   writeFile,
   rename,
   readdir,
+  opendir,
   rm,
   mkdtemp,
 } from "node:fs/promises";
@@ -185,6 +186,10 @@ export class Broker {
   }
   async init() {
     await mkdir(this.stateDir, { recursive: true, mode: 0o700 });
+    await mkdir(join(this.stateDir, "terminal"), {
+      recursive: true,
+      mode: 0o700,
+    });
     const { stdout } = await command("docker", [
       "image",
       "inspect",
@@ -215,17 +220,20 @@ export class Broker {
       .split(/\s+/)
       .filter(Boolean);
     for (const id of orphaned) await command("docker", ["rm", "-f", id]);
-    for (const name of await readdir(this.stateDir)) {
+    for await (const entry of await opendir(this.stateDir)) {
+      const name = entry.name;
       if (!/^job-[a-f0-9-]+\.json$/.test(name)) continue;
       const job = JSON.parse(await readFile(join(this.stateDir, name), "utf8"));
-      this.jobs.set(job.id, job);
+      await this.recordGeneration(job.runId, job.generation);
       if (!["stopped", "failed"].includes(job.status)) {
+        this.jobs.set(job.id, job);
         job.status = "unknown";
         await this.save(job);
         await this.kill(job);
         job.status = "stopped";
         await this.save(job);
       }
+      await this.compact(job);
     }
     const { stdout: containers } = await command("docker", [
       "ps",
@@ -238,6 +246,65 @@ export class Broker {
     this.timer = setInterval(() => this.sweep().catch(() => {}), 10000);
     this.timer.unref();
     return this;
+  }
+  async readJob(id) {
+    if (!/^([a-f0-9-]{36})-([1-9][0-9]*)$/.test(id))
+      throw new Error("INVALID_JOB");
+    for (const directory of [this.stateDir, join(this.stateDir, "terminal")]) {
+      try {
+        return JSON.parse(
+          await readFile(join(directory, `job-${id}.json`), "utf8"),
+        );
+      } catch (error) {
+        if (error.code !== "ENOENT") throw error;
+      }
+    }
+    return null;
+  }
+  async generation(runId) {
+    try {
+      return JSON.parse(
+        await readFile(join(this.stateDir, `run-${runId}.json`), "utf8"),
+      ).generation;
+    } catch (error) {
+      if (error.code === "ENOENT") return 0;
+      throw error;
+    }
+  }
+  async recordGeneration(runId, generation) {
+    const previous = await this.generation(runId);
+    if (previous >= generation) return;
+    const path = join(this.stateDir, `run-${runId}.json`);
+    await writeFile(path + ".tmp", JSON.stringify({ runId, generation }), {
+      mode: 0o600,
+    });
+    await rename(path + ".tmp", path);
+  }
+  async compact(job) {
+    // Preserve the complete durable action ledger/checkpoint for late retries.
+    // Only a confirmed terminal job without in-flight operations loses its base.
+    if (
+      !["stopped", "failed"].includes(job.status) ||
+      this.locks.has(job.id) ||
+      this.stopLocks.has(job.id) ||
+      this.snapshotLocks.has(job.id) ||
+      this.runLocks.has(job.runId)
+    )
+      return false;
+    for (const suffix of [".base.tgz", ".source.tgz", ".setup.json"])
+      await rm(join(this.stateDir, job.id + suffix), { force: true });
+    // Cold ledgers are outside the startup scan. Existing root ledgers migrate
+    // here once; restart cost then follows active/unfinished jobs, not all runs.
+    try {
+      await rename(
+        join(this.stateDir, `job-${job.id}.json`),
+        join(this.stateDir, "terminal", `job-${job.id}.json`),
+      );
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+    }
+    this.jobs.delete(job.id);
+    return true;
   }
   async save(job) {
     return this.serialized(
@@ -280,7 +347,7 @@ export class Broker {
       async () => {
         if (this.closing) throw new Error("RUNNER_STOPPING");
         const id = `${input.runId}-${input.generation}`,
-          existing = this.jobs.get(id),
+          existing = this.jobs.get(id) || (await this.readJob(id)),
           inputHash = hash(JSON.stringify(input));
         if (existing) {
           if (existing.inputHash !== inputHash)
@@ -288,11 +355,7 @@ export class Broker {
           if (existing.status !== "ready") throw new Error("JOB_NOT_REUSABLE");
           return this.publicJob(existing);
         }
-        if (
-          [...this.jobs.values()].some(
-            (j) => j.runId === input.runId && j.generation >= input.generation,
-          )
-        )
+        if ((await this.generation(input.runId)) >= input.generation)
           throw new Error("STALE_GENERATION");
         for (const old of this.jobs.values())
           if (
@@ -335,6 +398,7 @@ export class Broker {
           checks: [],
           profileId: this.profile.id,
         };
+        await this.recordGeneration(input.runId, input.generation);
         this.jobs.set(id, job);
         await this.save(job);
         try {
@@ -463,8 +527,8 @@ export class Broker {
       sequence: job.sequence,
     };
   }
-  get(id, token) {
-    const job = this.jobs.get(id);
+  async get(id, token) {
+    const job = this.jobs.get(id) || (await this.readJob(id));
     if (!job || !equalToken(token, job.capability))
       throw new Error("JOB_NOT_FOUND");
     return job;
@@ -649,7 +713,7 @@ export class Broker {
     };
   }
   async action(id, token, input) {
-    const job = this.get(id, token);
+    const job = await this.get(id, token);
     return this.serialized(id, async () => {
       const bodyHash = hash(JSON.stringify(input)),
         old = job.actions[input.sequence];
@@ -704,6 +768,7 @@ export class Broker {
           );
           await this.kill(job);
           job.status = "stopped";
+          job.checkpoint = result;
         } else {
           let before;
           if (check) {
@@ -804,7 +869,7 @@ export class Broker {
     return this.serialized(id, () => this.terminate(id, token), this.stopLocks);
   }
   async terminate(id, token) {
-    const job = this.get(id, token);
+    const job = await this.get(id, token);
     if (job.status === "stopped")
       return { stopped: true, checkpoint: job.checkpoint || null };
     job.status = "stopping";
@@ -826,7 +891,7 @@ export class Broker {
     return this.serialized(
       match[1],
       async () => {
-        const existing = this.jobs.get(id);
+        const existing = this.jobs.get(id) || (await this.readJob(id));
         if (existing) return this.stop(id, existing.capability);
         const job = {
           id,
@@ -839,7 +904,7 @@ export class Broker {
           touchedAt: Date.now(),
           capability: randomBytes(32).toString("hex"),
         };
-        this.jobs.set(id, job);
+        await this.recordGeneration(job.runId, job.generation);
         await this.save(job);
         return { stopped: true, checkpoint: null };
       },
@@ -853,6 +918,7 @@ export class Broker {
         Date.now() - job.touchedAt > this.options.ttlMs
       )
         await this.stop(job.id, job.capability);
+    for (const job of this.jobs.values()) await this.compact(job);
   }
   async close() {
     this.closing = true;

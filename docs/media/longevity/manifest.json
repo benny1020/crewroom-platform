@@ -1,0 +1,27 @@
+{
+  "release": "0.11.0",
+  "capturedAt": "2026-10-19T09:56:30.214Z",
+  "mode": "isolated PostgreSQL/App/Worker; 1007 synthetic messages; no real model",
+  "viewport": {
+    "width": 1440,
+    "height": 1080
+  },
+  "pageErrors": [],
+  "files": [
+    {
+      "name": "history.gif",
+      "bytes": 762336,
+      "sha256": "97c2d1b68181b7649bc61c8ef61e320bdf199840f6db2d3af9c0c4c9780409c5"
+    },
+    {
+      "name": "old-source-search.png",
+      "bytes": 86723,
+      "sha256": "5d6b6a1dfa7e03e3595ebeff271bd94782c5cc1de73adf644541968fc6f47791"
+    },
+    {
+      "name": "recent-page.png",
+      "bytes": 52985,
+      "sha256": "113d22566484c5f7652444088e5cbc57121d1b14cc9b2188050c94e3823ba14c"
+    }
+  ]
+}

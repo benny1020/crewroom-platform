@@ -17,6 +17,76 @@ test.afterEach(async ({ page }) =>
   expect(messages.get(page) || []).toEqual([]),
 );
 
+test("a thousand-message room searches old originals, keeps a bounded DOM and preserves drafts during live changes", async ({
+  page,
+}) => {
+  const auth = page.waitForResponse(
+    (r) =>
+      r.url().endsWith("/api/auth/login") && r.request().method() === "POST",
+  );
+  await login(page);
+  const { csrfToken } = await (await auth).json();
+  const archive = await (
+    await page.request.get(
+      "/api/tasks?q=" + encodeURIComponent("긴 대화 회귀 전용"),
+    )
+  ).json();
+  const id = archive.tasks[0].id;
+  await page.goto("/#/tasks/" + id);
+  await expect(page.locator(".cr-discussion .cr-message")).toHaveCount(40);
+  await expect(page.locator(".cr-discussion")).not.toContainText(
+    "ARCHIVE_NEEDLE_OLD",
+  );
+  await page
+    .getByLabel("추가 조건 또는 업무 대화", { exact: true })
+    .fill("보존할 작성 중 초안");
+  await page
+    .getByRole("button", { name: "이전 대화 더 보기", exact: true })
+    .click();
+  await expect(page.locator(".cr-discussion .cr-message")).toHaveCount(40);
+  await expect(page.locator(".cr-discussion")).not.toContainText(
+    "대화 기록 1007",
+  );
+  await expect(
+    page.getByLabel("추가 조건 또는 업무 대화", { exact: true }),
+  ).toHaveValue("보존할 작성 중 초안");
+  await page
+    .getByLabel("이 업무의 과거 대화 검색", { exact: true })
+    .fill("ARCHIVE_NEEDLE_OLD");
+  await page.getByRole("button", { name: "대화 검색", exact: true }).click();
+  await expect(page.locator(".cr-discussion .cr-message")).toHaveCount(1);
+  await expect(page.locator(".cr-discussion")).toContainText("최초 합의 원문");
+  const response = await page.request.post(`/api/tasks/${id}/messages`, {
+    headers: { origin: "http://127.0.0.1:4186", "x-csrf-token": csrfToken },
+    data: { body: "새로 도착한 대화 원문" },
+  });
+  expect(response.status()).toBe(200);
+  await expect(
+    page.getByRole("button", { name: "새 변경 확인", exact: true }),
+  ).toBeVisible({ timeout: 10000 });
+  await expect(page.locator(".cr-discussion .cr-message")).toHaveCount(1);
+  await expect(
+    page.getByLabel("추가 조건 또는 업무 대화", { exact: true }),
+  ).toHaveValue("보존할 작성 중 초안");
+  await page
+    .getByLabel("대화 이력 이동", { exact: true })
+    .getByRole("button", { name: "최근 기록으로", exact: true })
+    .click();
+  await expect(page.locator(".cr-discussion .cr-message")).toHaveCount(40);
+  await expect(page.locator(".cr-discussion")).toContainText(
+    "새로 도착한 대화 원문",
+  );
+  await expect(
+    page.getByLabel("추가 조건 또는 업무 대화", { exact: true }),
+  ).toHaveValue("보존할 작성 중 초안");
+  await page.setViewportSize({ width: 1024, height: 900 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+});
+
 test("two independent sessions share comments, transfer responsibility, hand off QA and accept one result", async ({
   page,
   browser,

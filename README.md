@@ -11,7 +11,7 @@
 
 </div>
 
-**0.10.0은 스킬에 맞는 대상 입력, 결과 중심 업무방, 구성원 질문함과 답변을 반영한 재작업을 추가했습니다.** [화면·동작·구현 계약](docs/WORKFLOW_IMPROVEMENTS.md) · [검증·리뷰](docs/SERVER_VERIFICATION.md). GitHub Pages는 API 없는 0.4 화면 데모입니다. 실제 공동 사용은 아래 서버를 실행해야 합니다. 모델 키는 포함하지 않습니다. 외부 모델 추론과 실제 팀의 업무 절감 효과는 아직 검증하지 않았습니다. [시범 운영 가이드](docs/PILOT_GUIDE.md)를 별도로 관리합니다.
+**0.11.0은 긴 업무방의 과거 페이지·원문 검색, 검색 인덱스, 종료 Job 메모리 관리와 운영 용량 진단을 추가했습니다.** [장기 운영 설계와 남은 경계](docs/LONG_TERM_OPERATIONS.md). [화면·동작·구현 계약](docs/WORKFLOW_IMPROVEMENTS.md) · [검증·리뷰](docs/SERVER_VERIFICATION.md). GitHub Pages는 API 없는 0.4 화면 데모입니다. 실제 공동 사용은 아래 서버를 실행해야 합니다. 모델 키는 포함하지 않습니다. 외부 모델 추론과 실제 팀의 업무 절감 효과는 아직 검증하지 않았습니다. [시범 운영 가이드](docs/PILOT_GUIDE.md)를 별도로 관리합니다.
 
 OpenAI 호환 또는 Claude Messages API의 **URL·모델 ID·인증 방식**을 직접 지정합니다. 제공자 API, 게이트웨이, 자체 호스팅 endpoint를 같은 설정 방식으로 연결하고, GitLab URL과 사용할 프로젝트도 선택합니다. [커스텀 연결 설정](docs/CONFIGURATION.md)
 
@@ -27,6 +27,12 @@ OpenAI 호환 또는 Claude Messages API의 **URL·모델 ID·인증 방식**을
 
 ![현재 결과와 다음 행동](docs/media/handoff/workroom.png)
 
+## 긴 대화와 장기 운영
+
+한 방의 대화가 길어져도 최근 메시지 40개씩 읽고, 과거 페이지·검색으로 원문을 찾습니다. 현재 결과와 실행은 별도로 유지하고, 과거를 읽는 동안 실시간 변경이 화면과 초안을 덮지 않습니다. 검색 인덱스·Runner 종료 기록의 지연 로딩·로그 회전·DB 용량 진단을 추가했습니다. 원문과 복구 기록은 계속 보존하므로 디스크 증설과 백업 비용을 함께 관리해야 합니다. 대규모 의미 검색·PITR·고가용성은 아직 제공하지 않습니다. [운영 경계와 재현 검사](docs/LONG_TERM_OPERATIONS.md)
+
+![긴 대화의 과거 이동과 원문 검색](docs/media/longevity/history.gif)
+
 ## 구현 구조
 
 [![구현 구조](docs/diagrams/platform-architecture.png)](docs/diagrams/platform-architecture.svg)
@@ -37,7 +43,7 @@ OpenAI 호환 또는 Claude Messages API의 **URL·모델 ID·인증 방식**을
 | ------ | -------------------------------------------------------------------------------------------------------------------------------------- |
 | 웹     | Vite + Vanilla JS + Lucide + CSS 캐릭터 모션. 서버 모드와 정적 데모 진입점 분리                                                        |
 | App    | Fastify 5, Zod 입력 검사, 로그인·CSRF·범위 검사·업무/스킬/기억 API·SSE                                                                 |
-| DB     | PostgreSQL 18, SQL migration 8개, 단일 Task/Run 큐, 영속 이벤트·메시지·버전별 결과                                                     |
+| DB     | PostgreSQL 18, SQL migration 10개, 단일 Task/Run 큐, 영속 이벤트·메시지·버전별 결과                                                    |
 | Worker | 별도 Node 프로세스. 전체 2개·같은 에이전트 1개 동시 실행, 임대와 generation으로 오래된 결과 차단                                       |
 | Runner | 별도 HTTP broker. Docker socket 전담, 고정 이미지·등록 검사·Run별 개발/QA Job 생성과 종료 검증                                         |
 | 모델   | Claude Messages / OpenAI 호환 HTTP adapter. 커스텀 URL·인증 설정, endpoint/model profile 고정, 제한된 JSON 행동 루프, 구조화 결과 검사 |

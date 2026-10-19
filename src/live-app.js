@@ -57,6 +57,10 @@ const stamp = (v) =>
 const pill = (t) =>
   `<span class="g-pill ${t.status === "running" ? "blue" : ["failed", "paused", "result_ready"].includes(t.status) ? "amber" : t.status === "done" ? "green" : ""}"><span class="g-dot"></span>${statusName[t.status] || esc(t.status)}</span>`;
 let archiveResults = [];
+const historyPanels = new Map();
+let workArchive = null,
+  workQuery = "",
+  workTrail = [];
 let selectedAgent = "dev",
   workFilter = "all",
   motionOff = false;
@@ -88,6 +92,10 @@ function clearSession() {
   session = null;
   workspace = null;
   task = null;
+  historyPanels.clear();
+  workArchive = null;
+  workQuery = "";
+  workTrail = [];
   dialog = null;
   refreshing = false;
   pendingRefresh = false;
@@ -207,6 +215,10 @@ async function load(force = false) {
         page === "tasks" && taskId
           ? (await api(`/tasks/${encodeURIComponent(taskId)}`)).task
           : null;
+    if (page === "work" && !workArchive?.requestCursor)
+      workArchive = await api(
+        `/tasks?q=${encodeURIComponent(workQuery)}&status=${workFilter}`,
+      );
     const proposals =
       page === "memory" ? (await api("/memory/proposals")).items : [];
     if (generation !== sessionGeneration || id !== refreshId) throw stale();
@@ -219,8 +231,14 @@ async function load(force = false) {
     workspace.operations = ops;
     workspace.memoryProposals = proposals;
     session.user = next.user;
+    if (task?.id !== nextTask?.id) historyPanels.clear();
     task = nextTask;
-    if (force || (!document.activeElement?.closest("form") && !dialog)) {
+    if (
+      force ||
+      (!document.activeElement?.closest("form") &&
+        !dialog &&
+        !historyPanels.size)
+    ) {
       deferred = false;
       render();
     } else {
@@ -427,7 +445,7 @@ function questionsView(t, operator, members, run) {
     ["queued", "result_ready", "failed"].includes(t.status) &&
     !run?.lease_owner &&
     !["queued", "running", "paused"].includes(run?.status);
-  const rows = (t.questions || [])
+  const rows = historyRows("questions")
     .map(
       (q) =>
         `<article class="cr-question" data-question="${q.id}"><div class="cw-section-heading"><h3>${esc(q.prompt)}</h3><span class="g-pill ${q.status === "pending" ? "amber" : ""}">${{ pending: "답변 대기", answered: "답변 저장", closed: "닫힘", superseded: "대상 변경으로 대체됨" }[q.status]}</span></div><p class="g-small g-muted">${esc(person(q.assignee_id))} 답변 · 대상 ${esc(q.target_version)}</p>${q.answer ? `<blockquote>${esc(q.answer)}</blockquote>` : ""}${q.status === "pending" && q.assignee_id === workspace.user.id ? `<form data-form="question-answer" data-id="${q.id}" data-revision="${q.revision}">${area("답변", "answer", "", 'required maxlength="1000"')}<button class="g-button g-primary" type="submit">답변 저장</button><p data-error class="g-error"></p></form>` : ""}${
@@ -442,7 +460,7 @@ function questionsView(t, operator, members, run) {
         }</article>`,
     )
     .join("");
-  return `<section class="cw-paper cr-questions" aria-label="업무 질문"><h2>확인할 질문과 답변</h2><p class="cr-note">업무를 볼 수 있는 구성원에게 질문합니다. 답변은 다음 새 실행에 반영하며, 이미 만든 결과에는 재작업이 필요해요. 대상 버전마다 최대 5개를 기록합니다.</p>${rows || '<p class="cr-empty-inline">남긴 질문이 없습니다.</p>'}${
+  return `<section class="cw-paper cr-questions" data-history-region="questions" aria-label="업무 질문"><h2>확인할 질문과 답변</h2>${historyNav("questions")}<p class="cr-note">업무를 볼 수 있는 구성원에게 질문합니다. 답변은 다음 새 실행에 반영하며, 이미 만든 결과에는 재작업이 필요해요. 대상 버전마다 최대 5개를 기록합니다.</p>${rows || '<p class="cr-empty-inline">남긴 질문이 없습니다.</p>'}${
     editable
       ? `<details><summary>담당자를 지정해 질문하기</summary><form data-form="question-create">${area("확인할 질문", "prompt", "", 'required maxlength="500"')}${select(
           "답할 사람",
@@ -492,15 +510,73 @@ function intakeView(importing = false) {
     )}${field("업무 대상 링크 또는 이름", "target", d.target || "", "text", 'required maxlength="500" placeholder="GitLab MR · GitHub PR 주소 또는 검토 대상"')}${field("대상 커밋 또는 관측 버전", "targetVersion", d.targetVersion || "", "text", 'required maxlength="80" placeholder="코드 실행: 전체 커밋 SHA (40자 또는 64자)"')}${field("프로젝트", "project", d.project || "우리 프로젝트", "text", 'required maxlength="80"')}${area("요청할 내용", "goal", d.goal || "", 'required maxlength="4000" placeholder="특히 확인할 범위와 원하는 결과를 알려주세요."')}${scopes(d.visibility || "team")}${importing ? area("공유할 결과 내용", "importBody", d.importBody || "", 'required maxlength="30000"') + field("결과 출처", "importSource", d.importSource || "", "text", 'required maxlength="500"') : ""}${example ? `<p class="cr-note">수용한 업무 W-${example.number}의 완료 기준과 형식을 참고합니다. 이전 대상·검사 결과·승인은 복사하지 않습니다.</p>` : ""}<p class="g-error" role="alert" data-error></p><button type="submit" class="g-button g-primary">공개 내용 확인 ${icon("arrow-right")}</button></form></section><aside class="cr-intake-guide"><div class="cr-guide-crew">${portrait(agent("review"), true)}${icon("arrow-right")}${portrait(agent("qa"), true)}</div><h2>같은 업무방에서 검토부터 QA까지</h2><p>입력과 스킬 버전을 고정해 결과를 남깁니다. 사람이 수용하면 업무가 완료됩니다.</p><div class="cr-note">코드 수정은 연결한 GitLab의 고정 커밋에서 시작합니다. 격리된 컨테이너에서 수정·등록 검사 후, 새 QA 컨테이너로 같은 수정본을 넘깁니다. PR 검토 유형은 읽기 전용 분석입니다.</div></aside></div>`
   );
 }
-function workView() {
-  const rows = workspace.tasks.filter(
-    (t) =>
-      workFilter === "all" ||
-      (workFilter === "mine"
-        ? t.responsible_id === workspace.user.id &&
-          ["failed", "paused", "result_ready"].includes(t.status)
-        : t.status === workFilter),
+function historyRows(kind) {
+  const panel = historyPanels.get(kind);
+  if (panel)
+    return kind === "briefs"
+      ? panel.items.map((x) => ({ ...x.body, history_id: x.id }))
+      : panel.items;
+  return kind === "briefs" ? task.brief_history : task[kind];
+}
+function historyNav(kind) {
+  const page = historyPanels.get(kind) || task.history?.[kind];
+  if (!page) return "";
+  const names = {
+    messages: "대화",
+    runs: "실행",
+    artifacts: "결과",
+    events: "이벤트",
+    questions: "질문",
+    briefs: "정정",
+    acceptances: "수용",
+  };
+  return `<nav class="cr-history-nav" aria-label="${names[kind]} 이력 이동"><span>${historyPanels.has(kind) ? "이전 기록 · " : "최근 기록 · "}${historyRows(kind).length}건 표시${page.query ? " · 검색: " + esc(page.query) : ""}</span><div>${page.hasMore ? button("이전 " + names[kind] + " 더 보기", "history-page", `data-kind="${kind}" data-direction="older"`) : ""}${page.trail?.length ? button("다음 기록", "history-page", `data-kind="${kind}" data-direction="newer"`) : ""}${historyPanels.has(kind) ? button("최근 기록으로", "history-page", `data-kind="${kind}" data-direction="latest"`) : ""}</div></nav>`;
+}
+async function showHistory(kind, direction = "older", query) {
+  const taskId = task.id,
+    generation = sessionGeneration;
+  const previous = historyPanels.get(kind),
+    base = previous || {
+      ...task.history[kind],
+      requestCursor: "",
+      query: "",
+      trail: [],
+    };
+  if (direction === "latest") {
+    historyPanels.delete(kind);
+    await load(true);
+    return;
+  }
+  let cursor = "",
+    q = query ?? base.query ?? "",
+    trail = [];
+  if (direction === "older") {
+    cursor = base.nextCursor;
+    if (!cursor) return;
+    trail = [
+      ...(base.trail || []),
+      { cursor: base.requestCursor || "", q },
+    ].slice(-20);
+  }
+  if (direction === "newer") {
+    trail = [...(base.trail || [])];
+    const p = trail.pop();
+    if (!p) return;
+    cursor = p.cursor;
+    q = p.q;
+  }
+  const page = await api(
+    `/tasks/${taskId}/history/${kind}?q=${encodeURIComponent(q)}${cursor ? "&cursor=" + cursor : ""}`,
   );
+  if (task?.id !== taskId || sessionGeneration !== generation) throw stale();
+  historyPanels.set(kind, { ...page, requestCursor: cursor, trail });
+  render();
+  frame
+    .querySelector(`[data-history-region="${kind}"]`)
+    ?.scrollIntoView({ block: "start" });
+}
+function workView() {
+  const rows = workArchive?.tasks || workspace.tasks;
   return (
     heading(
       "함께 이어가는 업무",
@@ -524,7 +600,7 @@ function workView() {
       )
       .join(
         "",
-      )}</div><section class="cr-work-preview">${rows.map(taskRow).join("") || '<div class="g-empty">이 조건에 맞는 업무가 없어요. 전체 업무에서 확인하거나 새 업무를 시작하세요.</div>'}</section>`
+      )}</div><form class="cr-search" data-form="task-search">${field("과거 업무 검색", "query", workQuery, "search", 'maxlength="200" placeholder="제목·프로젝트·업무 대상 검색"')}<button class="g-button" type="submit">업무 검색</button><p class="g-error" data-error></p></form><p class="g-small g-muted">접수 순으로 최대 40건씩 표시합니다. 과거 업무도 같은 공개 범위로 검색합니다.</p><section class="cr-work-preview">${rows.map(taskRow).join("") || '<div class="g-empty">이 조건에 맞는 업무가 없어요. 전체 업무에서 확인하거나 새 업무를 시작하세요.</div>'}</section><nav class="cr-history-nav" aria-label="업무 이력 이동"><div>${workArchive?.hasMore ? button("이전 업무 더 보기", "task-page", 'data-direction="older"') : ""}${workTrail.length ? button("다음 업무", "task-page", 'data-direction="newer"') : ""}${workArchive?.requestCursor ? button("최근 업무로", "task-page", 'data-direction="latest"') : ""}</div></nav>`
   );
 }
 function resultView(a) {
@@ -615,14 +691,40 @@ function taskView() {
           t.responsible_id,
         )}<button type="submit" class="g-button">담당 변경 기록</button><p class="g-error" data-error></p></form></details>`
       : ""
-  }<div class="cr-workroom-grid"><div>${handoffCard(t, state)}${state.current ? `<section class="cr-current-result" aria-label="현재 결과">${resultView(state.current)}${resultComparison(state.current, state.previous)}<div class="cr-result-actions"><strong>근거와 미확인 사항을 확인한 뒤 결정하세요.</strong><div class="cw-actions">${controls}</div></div></section>` : '<div class="cw-paper cr-empty-inline">현재 단계와 대상에 맞는 결과가 아직 없습니다. 이전 결과는 아래 이력에서 볼 수 있어요.</div>'}${questionsView(t, operator, readyMembers, run)}<section class="cw-paper cr-brief"><div class="cw-section-heading"><h2>요청 요약과 정정 이력</h2>${operator ? button("요약 바로잡기", "brief", "", false, "pencil") : ""}</div><p class="cw-brief-text">${esc(t.brief.text)}</p><div class="cr-brief-meta">요약 v${t.brief.version} · 대상 ${esc(t.brief.targetVersion)} · 근거 ${t.brief.source === "request" ? "원래 요청" : "저장한 결과"}</div><details class="cr-history"><summary>완료 기준과 요약 이력</summary><p>${esc(t.done_criteria)}</p>${t.brief_history.map((h) => `<div><strong>v${h.version} · ${esc(h.reason)}</strong><p>${esc(h.text)}</p></div>`).join("")}</details></section><section class="cw-paper cr-discussion"><h2>함께 남긴 맥락</h2><p class="g-small g-muted">${t.work_type === "chat" ? "책임자가 메시지를 보내면 이전 답변을 이어서 답합니다. 팀원은 같은 대화를 함께 볼 수 있어요." : "실행 시작 시 이 대화를 고정합니다. 이후 추가 내용은 다음 실행에 반영됩니다."}</p>${t.messages.map((m) => `<article class="cr-message"><strong>${esc(m.author)} <small>${stamp(m.created_at)}</small></strong><p>${esc(m.body)}</p></article>`).join("") || '<p class="cr-empty-inline">조건이나 후속 요청을 남겨보세요.</p>'}<form data-form="message">${area("추가 조건 또는 업무 대화", "body", "", 'required maxlength="6000"')}<button class="g-button g-primary" type="submit">${t.work_type === "chat" && operator && ["result_ready", "done"].includes(t.status) ? "보내고 답변받기" : "맥락 남기기"} ${icon("send")}</button><p class="g-error" data-error></p></form></section><section class="cr-results"><details><summary>이전 결과와 버전 ${t.artifacts.filter((a) => a.id !== state.current?.id).length}</summary>${
-    t.artifacts
+  }<div class="cr-workroom-grid"><div>${handoffCard(t, state)}${state.current ? `<section class="cr-current-result" aria-label="현재 결과">${resultView(state.current)}${resultComparison(state.current, state.previous)}<div class="cr-result-actions"><strong>근거와 미확인 사항을 확인한 뒤 결정하세요.</strong><div class="cw-actions">${controls}</div></div></section>` : '<div class="cw-paper cr-empty-inline">현재 단계와 대상에 맞는 결과가 아직 없습니다. 이전 결과는 아래 이력에서 볼 수 있어요.</div>'}${questionsView(t, operator, readyMembers, run)}<section class="cw-paper cr-brief"><div class="cw-section-heading"><h2>요청 요약과 정정 이력</h2>${operator ? button("요약 바로잡기", "brief", "", false, "pencil") : ""}</div><p class="cw-brief-text">${esc(t.brief.text)}</p><div class="cr-brief-meta">요약 v${t.brief.version} · 대상 ${esc(t.brief.targetVersion)} · 근거 ${t.brief.source === "request" ? "원래 요청" : "저장한 결과"}</div><details class="cr-history" data-history-details="briefs" data-history-region="briefs"><summary>완료 기준과 요약 이력</summary>${historyNav("briefs")}<p>${esc(t.done_criteria)}</p>${historyRows(
+    "briefs",
+  )
+    .map(
+      (h) =>
+        `<div><strong>v${h.version} · ${esc(h.reason)}</strong><p>${esc(h.text)}</p></div>`,
+    )
+    .join(
+      "",
+    )}</details></section><section class="cw-paper cr-discussion" data-history-region="messages"><h2>함께 남긴 맥락</h2><form class="cr-search" data-form="conversation-search">${field("이 업무의 과거 대화 검색", "query", historyPanels.get("messages")?.query || "", "search", 'minlength="2" maxlength="200" placeholder="원문에서 찾을 내용"')}<button class="g-button" type="submit">대화 검색</button><p class="g-error" data-error></p></form>${historyNav("messages")}<p class="g-small g-muted">${t.work_type === "chat" ? "책임자가 메시지를 보내면 이전 답변을 이어서 답합니다. 팀원은 같은 대화를 함께 볼 수 있어요." : "실행 시작 시 이 대화를 고정합니다. 이후 추가 내용은 다음 실행에 반영됩니다."}</p>${
+    historyRows("messages")
+      .map(
+        (m) =>
+          `<article class="cr-message"><strong>${esc(m.author)} <small>${stamp(m.created_at)}</small></strong><p>${esc(m.body)}</p></article>`,
+      )
+      .join("") ||
+    '<p class="cr-empty-inline">조건이나 후속 요청을 남겨보세요.</p>'
+  }<form data-form="message">${area("추가 조건 또는 업무 대화", "body", "", 'required maxlength="6000"')}<button class="g-button g-primary" type="submit">${t.work_type === "chat" && operator && ["result_ready", "done"].includes(t.status) ? "보내고 답변받기" : "맥락 남기기"} ${icon("send")}</button><p class="g-error" data-error></p></form></section><section class="cr-results" data-history-region="artifacts"><details data-history-details="artifacts"><summary>이전 결과와 버전</summary>${historyNav("artifacts")}${
+    historyRows("artifacts")
       .filter((a) => a.id !== state.current?.id)
       .map(resultView)
       .reverse()
       .join("") || '<p class="cr-empty-inline">이전 결과가 없습니다.</p>'
-  }</details>${t.status === "done" && current ? `<div class="cw-reuse"><div><strong>좋은 결과를 다음 업무의 기준으로</strong><p>완료 기준과 형식을 참고하고 새 대상에서 시작해요.</p></div>${button("이 기준으로 다음 업무", "reuse", "", false, "plus")}${button("이 결과를 기억으로", "remember", "", false, "bookmark-plus")}${button("반복 업무 스킬 초안", "skill-from-task", "", false, "notebook-pen")}</div>` : ""}</section></div><aside class="cr-execution"><section class="cw-paper"><h2>실행 기록</h2>${t.runs.map((r) => `<details class="cr-run"><summary><strong>${esc(agent(r.agent_id)?.name)}</strong><span class="g-pill">${statusName[r.status] || esc(r.status)}</span></summary><p>${esc(r.snapshot.skill.name)} v${r.snapshot.skill.version} · 설정 v${r.snapshot.agent.configVersion}</p><small>대상 ${esc(r.snapshot.targetVersion)}<br>${esc(r.snapshot.provider)} / ${esc(r.snapshot.model || "모델 설정 필요")}<br>${r.snapshot.execution ? `격리 실행 · ${r.snapshot.execution.mode === "verify" ? "독립 QA" : "코드 수정"} · ${esc(r.progress?.action || "준비 중")}${r.progress?.path ? " · " + esc(r.progress.path) : ""} · ${r.progress?.sequence || 0}/30` : "도구 실행 없음"} · 세대 ${r.generation}</small>${r.snapshot.source?.url ? `<p class="cr-source">고정 저장소 SHA<br>${esc(r.snapshot.source.sha)}</p>` : ""}<code>${esc(r.id)}</code></details>`).join("") || '<p class="cr-empty-inline">아직 시작한 실행이 없어요.</p>'}</section><section class="cw-paper"><h2>결정과 인계</h2>${t.events
-    .slice(-12)
+  }</details>${t.status === "done" && current ? `<div class="cw-reuse"><div><strong>좋은 결과를 다음 업무의 기준으로</strong><p>완료 기준과 형식을 참고하고 새 대상에서 시작해요.</p></div>${button("이 기준으로 다음 업무", "reuse", "", false, "plus")}${button("이 결과를 기억으로", "remember", "", false, "bookmark-plus")}${button("반복 업무 스킬 초안", "skill-from-task", "", false, "notebook-pen")}</div>` : ""}</section></div><aside class="cr-execution"><section class="cw-paper" data-history-region="runs"><h2>실행 기록</h2>${historyNav("runs")}${
+    historyRows("runs")
+      .map(
+        (r) =>
+          `<details class="cr-run"><summary><strong>${esc(agent(r.agent_id)?.name)}</strong><span class="g-pill">${statusName[r.status] || esc(r.status)}</span></summary><p>${esc(r.snapshot.skill.name)} v${r.snapshot.skill.version} · 설정 v${r.snapshot.agent.configVersion}</p><small>대상 ${esc(r.snapshot.targetVersion)}<br>${esc(r.snapshot.provider)} / ${esc(r.snapshot.model || "모델 설정 필요")}<br>${r.snapshot.execution ? `격리 실행 · ${r.snapshot.execution.mode === "verify" ? "독립 QA" : "코드 수정"} · ${esc(r.progress?.action || "준비 중")}${r.progress?.path ? " · " + esc(r.progress.path) : ""} · ${r.progress?.sequence || 0}/30` : "도구 실행 없음"} · 세대 ${r.generation}</small>${r.snapshot.source?.url ? `<p class="cr-source">고정 저장소 SHA<br>${esc(r.snapshot.source.sha)}</p>` : ""}<code>${esc(r.id)}</code></details>`,
+      )
+      .join("") || '<p class="cr-empty-inline">아직 시작한 실행이 없어요.</p>'
+  }</section><section class="cw-paper" data-history-region="events"><h2>결정과 인계</h2>${historyNav("events")}${historyRows(
+    "events",
+  )
+    .slice()
     .reverse()
     .map(
       (e) =>
@@ -821,7 +923,14 @@ function render() {
                   : page === "admin"
                     ? adminView()
                     : officeView();
+  const openHistory = [
+    ...frame.querySelectorAll("details[data-history-details][open]"),
+  ].map((x) => x.dataset.historyDetails);
   frame.innerHTML = layout(content);
+  for (const kind of openHistory)
+    frame
+      .querySelector(`details[data-history-details="${kind}"]`)
+      ?.setAttribute("open", "");
   restoreDrafts();
   frame
     .querySelectorAll('form[data-form="agent-chat"]')
@@ -1125,7 +1234,7 @@ function openDialog(type, data = {}) {
     title = "이번 실행이 참고한 기억";
     form = "memory-source";
     submit = "닫기";
-    body = `<p class="cr-note">원본의 현재 버전과 접근 범위가 유효한 기록입니다. 변경·삭제된 출처 ${data.unavailable}개.</p>${data.items.map((m) => `<article class="cw-paper"><h3>${esc(m.title)}</h3><p class="cr-instructions">${esc(m.body)}</p><small>${esc(m.source)}</small></article>`).join("") || "<p>참고한 장기 기억이 없습니다.</p>"}`;
+    body = `${data.semanticStatus === "capacity_limited" ? '<p class="cr-note" role="status">의미 검색의 안전 용량을 넘어 이번 실행은 원문 키워드 검색을 사용했습니다. 과거 원문은 보존되어 있습니다.</p>' : ""}<p class="cr-note">원본의 현재 버전과 접근 범위가 유효한 기록입니다. 변경·삭제된 출처 ${data.unavailable}개.</p>${data.items.map((m) => `<article class="cw-paper"><h3>${esc(m.title)}</h3><p class="cr-instructions">${esc(m.body)}</p><small>${esc(m.source)}</small></article>`).join("") || "<p>참고한 장기 기억이 없습니다.</p>"}`;
   }
   if (type === "memory-source") {
     title = data.item.title;
@@ -1254,7 +1363,32 @@ root.addEventListener("click", async (e) => {
 
       return;
     }
+    if (action === "history-page") {
+      await showHistory(el.dataset.kind, el.dataset.direction);
+      return;
+    }
+    if (action === "task-page") {
+      const direction = el.dataset.direction,
+        previous = workArchive;
+      let cursor = "";
+      if (direction === "older") {
+        cursor = previous.nextCursor;
+        workTrail.push(previous.requestCursor || "");
+        workTrail = workTrail.slice(-20);
+      }
+      if (direction === "newer") cursor = workTrail.pop() || "";
+      if (direction === "latest") workTrail = [];
+      const page = await api(
+        `/tasks?q=${encodeURIComponent(workQuery)}&status=${workFilter}${cursor ? "&cursor=" + cursor : ""}`,
+      );
+      workArchive = { ...page, requestCursor: cursor };
+      render();
+      window.scrollTo(0, 0);
+      return;
+    }
     if (action === "work-filter") {
+      workArchive = null;
+      workTrail = [];
       workFilter = ["all", "mine", "running", "queued", "failed"].includes(
         el.dataset.filter,
       )
@@ -1339,6 +1473,15 @@ root.addEventListener("submit", async (e) => {
   busy = true;
   form.querySelectorAll("button").forEach((b) => (b.disabled = true));
   try {
+    if (kind === "conversation-search") {
+      await showHistory("messages", "search", values.query);
+    }
+    if (kind === "task-search") {
+      workQuery = values.query;
+      workArchive = null;
+      workTrail = [];
+      await load(true);
+    }
     if (kind === "login") {
       clearSession();
       session = await api("/auth/login", { method: "POST", body: values });

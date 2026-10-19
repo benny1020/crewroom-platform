@@ -1,6 +1,6 @@
 # 아키텍처 그림 모음
 
-README와 구조 문서에는 미리 렌더링한 PNG를 표시한다. 그림을 누르면 확대 가능한 SVG를 연다. [읽는 순서·조사 근거·디자인 규칙](DESIGN_NOTES.md)에서 핵심 도식 9종을 먼저 볼 수 있다. 아래 도표는 현재 0.10 구조와 이전 설계 기록을 해당 문서의 범위에 따라 구분한다.
+README와 구조 문서에는 미리 렌더링한 PNG를 표시한다. 그림을 누르면 확대 가능한 SVG를 연다. [읽는 순서·조사 근거·디자인 규칙](DESIGN_NOTES.md)에서 핵심 도식 9종을 먼저 볼 수 있다. 아래 도표는 현재 0.11 구조와 이전 설계 기록을 해당 문서의 범위에 따라 구분한다.
 
 | 그림                                                                           | 설명 문서                                                                | 확대                                     |
 | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------ | ---------------------------------------- |
@@ -33,6 +33,7 @@ README와 구조 문서에는 미리 렌더링한 PNG를 표시한다. 그림을
 | [실행 계약](run-sequence.png)                                                  | [docs/SERVER_ARCHITECTURE.md](../SERVER_ARCHITECTURE.md)                 | [SVG](run-sequence.svg)                  |
 | [권장하는 최소 실행 계약](team-standardization-review-1.png)                   | [docs/TEAM_STANDARDIZATION_REVIEW.md](../TEAM_STANDARDIZATION_REVIEW.md) | [SVG](team-standardization-review-1.svg) |
 | [장기 기억 흐름](memory-retrieval.png)                                         | [docs/MEMORY_ARCHITECTURE.md](../MEMORY_ARCHITECTURE.md)                 | [SVG](memory-retrieval.svg)              |
+| [장기 운영의 저장·조회·관리 경계](long-operation.png)                          | [장기 운영](../LONG_TERM_OPERATIONS.md)                                  | [SVG](long-operation.svg)                |
 
 [질문·답변·재작업의 실행 계약](work-contract.png)은 [0.10 공동 업무 흐름](../WORKFLOW_IMPROVEMENTS.md)의 현재 구현이다. [SVG 확대](work-contract.svg)
 

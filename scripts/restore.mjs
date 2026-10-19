@@ -18,7 +18,7 @@ const directory = resolve(source),
   );
 if (
   manifest.format !== 1 ||
-  !["0.6.0", "0.7.0", "0.8.0", "0.8.1", "0.9.0", "0.10.0"].includes(
+  !["0.6.0", "0.7.0", "0.8.0", "0.8.1", "0.9.0", "0.10.0", "0.11.0"].includes(
     manifest.release,
   ) ||
   manifest.files?.length !== 2

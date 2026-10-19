@@ -386,6 +386,6 @@ test("migration 008 upgrades old tasks and recovers explicit legacy rework event
     Number(
       (await h.pool.query("SELECT count(*) FROM cr_migrations")).rows[0].count,
     ),
-    8,
+    10,
   );
 });

@@ -1,6 +1,6 @@
 {
   "name": "crewroom",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "private": true,
   "type": "module",
   "description": "Crewroom — shared agents, durable team workrooms, skills and scoped memory.",
@@ -30,7 +30,9 @@
     "doctor": "node scripts/doctor.mjs",
     "test:secrets": "node scripts/verify-secret-ownership.mjs",
     "evaluate:memory": "node scripts/evaluate-memory.mjs",
-    "evaluate:answers": "node scripts/evaluate-answers.mjs"
+    "evaluate:answers": "node scripts/evaluate-answers.mjs",
+    "benchmark:long-operation": "node scripts/benchmark-long-operation.mjs",
+    "capture:long-operation": "node scripts/capture-long-operation.mjs"
   },
   "dependencies": {
     "fastify": "5.12.7",

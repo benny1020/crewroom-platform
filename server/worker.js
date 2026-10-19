@@ -472,7 +472,8 @@ export async function recallForRun(pool, run, owner, action, semantic = {}) {
     return {
       items: context.items,
       found: context.items.length,
-      method: "keyword",
+      method: docs.some((d) => d.semantic > 0) ? "hybrid" : "keyword",
+      semanticStatus: docs.semanticStatus,
       nextOffset:
         action.action === "read_memory" &&
         docs[0] &&
@@ -551,9 +552,7 @@ async function semanticContext(pool, run, owner, config, options) {
     run.snapshot.memoryContext = {
       ...context,
       method: docs.some((d) => d.semantic > 0) ? "hybrid" : "keyword",
-      semanticStatus: docs.some((d) => d.semantic > 0)
-        ? "matched"
-        : "no_matches",
+      semanticStatus: docs.semanticStatus,
     };
   });
 }

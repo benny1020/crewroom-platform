@@ -1,7 +1,11 @@
 name: crewroom
+x-logging: &logging
+  driver: local
+  options: { max-size: "10m", max-file: "3" }
 x-app: &app
+  logging: *logging
   build: .
-  image: crewroom:0.10.0
+  image: crewroom:0.11.0
   environment: &environment
     NODE_ENV: ${NODE_ENV:-development}
     PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:4180}
@@ -33,6 +37,7 @@ x-app: &app
   security_opt: [no-new-privileges:true]
 services:
   db:
+    logging: *logging
     image: postgres:18-alpine
     environment:
       POSTGRES_DB: crewroom
@@ -51,7 +56,8 @@ services:
     user: root
     cap_add: [CHOWN, FOWNER, DAC_OVERRIDE]
     command: [node, scripts/stage-secrets.mjs]
-    secrets: [db_url, model_api_key, embedding_api_key, gitlab_token, runner_token]
+    secrets:
+      [db_url, model_api_key, embedding_api_key, gitlab_token, runner_token]
     volumes:
       [
         "app-secrets:/out/app",
@@ -105,8 +111,9 @@ services:
     stop_grace_period: 150s
     restart: unless-stopped
   runner:
+    logging: *logging
     build: { context: ., dockerfile: Dockerfile.runner }
-    image: crewroom-runner:0.10.0
+    image: crewroom-runner:0.11.0
     environment:
       HOST: 0.0.0.0
       PORT: 4191

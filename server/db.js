@@ -44,6 +44,9 @@ export async function transaction(pool, operation) {
 }
 export async function migrate(pool) {
   await transaction(pool, async (db) => {
+    // Backfills/index creation have a separate maintenance window budget.
+    await db.query("SET LOCAL statement_timeout='30min'");
+    await db.query("SET LOCAL lock_timeout='10s'");
     await db.query(
       "SELECT pg_advisory_xact_lock(hashtext('crewroom-migrations'))",
     );

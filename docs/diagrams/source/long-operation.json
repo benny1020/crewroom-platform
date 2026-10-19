@@ -1,0 +1,133 @@
+{
+  "width": 1280,
+  "height": 780,
+  "title": "기록은 보존하고, 한 번에 읽는 양을 제한합니다",
+  "subtitle": "긴 대화 · 기억 검색 · 실행 기록 · 운영 용량을 각각 관리합니다.",
+  "nodes": [
+    {
+      "id": "web",
+      "x": 50,
+      "y": 150,
+      "w": 350,
+      "h": 150,
+      "title": "업무방의 최근 구간",
+      "titleSize": 21,
+      "icon": "MessagesSquare",
+      "color": "service",
+      "tech": "메시지 40 · 실행 12 · 결과 8",
+      "lines": ["과거 페이지 · 검색 · 초안 보존"]
+    },
+    {
+      "id": "app",
+      "x": 465,
+      "y": 150,
+      "w": 350,
+      "h": 150,
+      "title": "권한을 다시 확인하는 App",
+      "titleSize": 21,
+      "icon": "ShieldCheck",
+      "color": "service",
+      "tech": "일관된 상세 · 현재 결과 고정",
+      "lines": ["LISTEN 1개 · SSE 재동기화"]
+    },
+    {
+      "id": "db",
+      "x": 880,
+      "y": 150,
+      "w": 350,
+      "h": 150,
+      "title": "원문과 버전은 영속 보관",
+      "titleSize": 21,
+      "icon": "Database",
+      "color": "data",
+      "tech": "PostgreSQL · 출처 · 실행 입력",
+      "lines": ["요약 정정 이력 별도 테이블"]
+    },
+    {
+      "id": "search",
+      "x": 50,
+      "y": 420,
+      "w": 350,
+      "h": 150,
+      "title": "검색 후보를 먼저 좁히기",
+      "titleSize": 21,
+      "icon": "Search",
+      "color": "data",
+      "tech": "FTS / trigram → 원본 재검사",
+      "lines": ["문맥 16,000자 · 추가 조회"]
+    },
+    {
+      "id": "runner",
+      "x": 465,
+      "y": 420,
+      "w": 350,
+      "h": 150,
+      "title": "종료 작업은 디스크에서 읽기",
+      "titleSize": 21,
+      "icon": "Container",
+      "color": "job",
+      "tech": "action 결과 · checkpoint 보존",
+      "lines": ["종료 확인 후 기준 archive 정리"]
+    },
+    {
+      "id": "ops",
+      "x": 880,
+      "y": 420,
+      "w": 350,
+      "h": 150,
+      "title": "용량과 복구 비용 관측",
+      "titleSize": 21,
+      "icon": "Gauge",
+      "color": "neutral",
+      "tech": "통계 · 만료 세션 · 로그 회전",
+      "lines": ["백업·복원 실측 · 증설 판단"]
+    }
+  ],
+  "edges": [
+    {
+      "points": [
+        [400, 225],
+        [465, 225]
+      ]
+    },
+    {
+      "points": [
+        [815, 225],
+        [880, 225]
+      ]
+    },
+    {
+      "points": [
+        [225, 300],
+        [225, 420]
+      ]
+    },
+    {
+      "points": [
+        [640, 300],
+        [640, 420]
+      ]
+    },
+    {
+      "points": [
+        [1055, 300],
+        [1055, 420]
+      ]
+    }
+  ],
+  "notes": [
+    {
+      "x": 40,
+      "y": 620,
+      "w": 1200,
+      "h": 80,
+      "icon": "Info",
+      "color": "neutral",
+      "size": 18,
+      "lines": [
+        "의미 검색은 안전 용량 초과 시 키워드 검색으로 전환하고 실행 기록에 표시합니다.",
+        "원본·복구 기록은 계속 증가합니다. 디스크 증설·외부 보관·PITR은 운영 요구에 맞게 준비합니다."
+      ]
+    }
+  ]
+}

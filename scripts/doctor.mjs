@@ -44,7 +44,7 @@ console.log(
       runner,
       modelConfigured: runtime.model && runtime.endpoint,
       memorySearch: runtime.embeddingConfigured
-        ? "keyword + optional vector index"
+        ? "indexed keyword + capacity-bounded exact vectors"
         : "local keyword; embeddings disabled",
       gitlabConfigured: runtime.gitlab && runtime.projects > 0,
       actualModelInference:

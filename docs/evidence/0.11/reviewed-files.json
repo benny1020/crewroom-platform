@@ -1,0 +1,88 @@
+{
+  "release": "0.11.0",
+  "baseHead": "ee8753026d4c2a027dc417dabecc75dcad15fae2",
+  "reviewModel": "gpt-6-astra",
+  "scope": "long conversation, indexed recall, bounded semantic fallback, notifications, terminal runner retention, operation diagnostics; source snapshot",
+  "files": [
+    {
+      "path": "server/history.js",
+      "sha256": "2cec2aa99a443ee8fda0f3d2d8b4e1d05c741700460bbb79ce1424c9ba8ccee2"
+    },
+    {
+      "path": "server/tasks.js",
+      "sha256": "2be8ce78e7ad07c0f0e522c0450607bfa40edee10de2b35fee25a403b01151d5"
+    },
+    {
+      "path": "server/app.js",
+      "sha256": "066c169294be4fde82f0c533c1d7982c9a69d088e9ec02aced50f7ec1767c018"
+    },
+    {
+      "path": "server/event-hub.js",
+      "sha256": "95eedf0d5548c821e555deaddf745fb993ebccd4eaed92b48442c9631ee9a3e7"
+    },
+    {
+      "path": "server/recall-index.js",
+      "sha256": "c65112639cbab59ce9356211b304880c206e075b95d2a767f8c3afd6c1989cc8"
+    },
+    {
+      "path": "server/memory.js",
+      "sha256": "3a1ebb1f9605001fc9bff83afe94cf2cef004931584b2983a0385aaf1d010314"
+    },
+    {
+      "path": "server/memory-embedding.js",
+      "sha256": "f995696cedf7eae31886340d9fe74e652b840a0064156844f79a778fe71fea9f"
+    },
+    {
+      "path": "server/operations.js",
+      "sha256": "5583c623275400b1abd57a0a870f12ad5bbea23f9d2d9ad72b87ca042145655a"
+    },
+    {
+      "path": "server/worker.js",
+      "sha256": "c125a89c23c2a31464bbfc06a4bb482841522c46e86d9458358bf3857322ab64"
+    },
+    {
+      "path": "server/db.js",
+      "sha256": "3c68b31462ef1b04367b9786a96489c274327f8ad88cac1baf7d87cf81fdfab2"
+    },
+    {
+      "path": "runner/broker.mjs",
+      "sha256": "c012a2a1ce4a122644c9a89498acd3beefc0fb7415586c7278bb46a78bcb861f"
+    },
+    {
+      "path": "src/live-app.js",
+      "sha256": "7a305327fc1578e238bb379caa2a764edd3ae36217b0cef8219dfcfa2b168d33"
+    },
+    {
+      "path": "src/live.css",
+      "sha256": "c61ca26eeceffc7cea652c176df950ede8036733d5ffed57dca2e10923858f74"
+    },
+    {
+      "path": "server/migrations/009_long_operation.sql",
+      "sha256": "beebb2dd04b5d566c7a6bca577677b89ecee291d8573a038dd8e187b762c1c33"
+    },
+    {
+      "path": "server/migrations/010_recall_index.sql",
+      "sha256": "f272ba52cc7b7b3d5fd11fa248a6517865a7d9fa6f66b5aaf45ee30362ab985e"
+    },
+    {
+      "path": "tests/server/long-operation.test.js",
+      "sha256": "1134f3a0fce1546d396ce5db0339341668edc8ac04c95766ed85bbbc297fc0b0"
+    },
+    {
+      "path": "tests/server/history.test.js",
+      "sha256": "faff5d8c38a3d7ca7b8f60bd08878dcb130e63cd0c4e6355bd823681f5fc7459"
+    },
+    {
+      "path": "tests/server/event-hub.test.js",
+      "sha256": "f8e90ae118dfa630f5617dd6195e1898ae79bd051cd259e935120cf3fe183f40"
+    },
+    {
+      "path": "tests/runner-docker.test.mjs",
+      "sha256": "5cf45d10af0b94c52e7d9e8442b2d310f8c9a82d7e35d00b8021778371e5c9ca"
+    },
+    {
+      "path": "tests/server-e2e/collaboration.spec.js",
+      "sha256": "b9ea7c22ab882f0537eb0796f5eeb8ca8b30d0f390f13d2ee60a3a9b82ca4429"
+    }
+  ]
+}

@@ -1,0 +1,99 @@
+{
+  "synthetic": true,
+  "release": "0.11.0",
+  "node": "v26.4.0",
+  "tasks": 100001,
+  "messages": 1000000,
+  "ingestionSeconds": 105,
+  "measurements": [
+    {
+      "name": "detail_recent",
+      "p50Ms": 5.1,
+      "p95Ms": 11.6,
+      "responseBytes": 13443,
+      "items": 40
+    },
+    {
+      "name": "archive_recent",
+      "p50Ms": 0.8,
+      "p95Ms": 1.8,
+      "responseBytes": 21205,
+      "items": 40
+    },
+    {
+      "name": "messages_recent",
+      "p50Ms": 0.5,
+      "p95Ms": 0.6,
+      "responseBytes": 11745,
+      "items": 40
+    },
+    {
+      "name": "old_message_search",
+      "p50Ms": 0.7,
+      "p95Ms": 1.3,
+      "responseBytes": 364,
+      "items": 1
+    },
+    {
+      "name": "recent_memory_archive",
+      "p50Ms": 963.3,
+      "p95Ms": 1549.1,
+      "responseBytes": 33365,
+      "items": 40
+    },
+    {
+      "name": "korean_memory_search",
+      "p50Ms": 1476.6,
+      "p95Ms": 1827.9,
+      "responseBytes": 830,
+      "items": 1
+    },
+    {
+      "name": "concurrent_detail_8",
+      "p50Ms": 11.4,
+      "p95Ms": 38.5,
+      "responseBytes": 107553,
+      "items": 8
+    },
+    {
+      "name": "old_memory_search",
+      "p50Ms": 404.5,
+      "p95Ms": 595.4,
+      "responseBytes": 830,
+      "items": 1
+    }
+  ],
+  "schemaBytes": "1481752576",
+  "limits": [
+    "Single local PostgreSQL, warm sequential requests; not production SLO or concurrent multi-year proof.",
+    "Synthetic short text; no actual inference, embeddings or large artifact payloads.",
+    "Corpus inserted through synchronous index triggers; originals kept."
+  ],
+  "sourceFiles": [
+    {
+      "file": "server/tasks.js",
+      "sha256": "2be8ce78e7ad07c0f0e522c0450607bfa40edee10de2b35fee25a403b01151d5"
+    },
+    {
+      "file": "server/history.js",
+      "sha256": "2cec2aa99a443ee8fda0f3d2d8b4e1d05c741700460bbb79ce1424c9ba8ccee2"
+    },
+    {
+      "file": "server/recall-index.js",
+      "sha256": "c65112639cbab59ce9356211b304880c206e075b95d2a767f8c3afd6c1989cc8"
+    },
+    {
+      "file": "server/memory.js",
+      "sha256": "3a1ebb1f9605001fc9bff83afe94cf2cef004931584b2983a0385aaf1d010314"
+    },
+    {
+      "file": "server/migrations/009_long_operation.sql",
+      "sha256": "beebb2dd04b5d566c7a6bca577677b89ecee291d8573a038dd8e187b762c1c33"
+    },
+    {
+      "file": "server/migrations/010_recall_index.sql",
+      "sha256": "f272ba52cc7b7b3d5fd11fa248a6517865a7d9fa6f66b5aaf45ee30362ab985e"
+    }
+  ],
+  "at": "2026-10-19T10:00:05.949Z"
+}

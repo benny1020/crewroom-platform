@@ -195,5 +195,12 @@
     "title": "질문과 재작업의 실행 계약",
     "source": "source/work-contract.json",
     "renderer": "illustrated"
+  },
+  {
+    "id": "long-operation",
+    "document": "docs/LONG_TERM_OPERATIONS.md",
+    "title": "장기 운영의 저장·조회·관리 경계",
+    "source": "source/long-operation.json",
+    "renderer": "illustrated"
   }
 ]

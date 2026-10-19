@@ -233,8 +233,16 @@ try {
  SELECT gen_random_uuid(),'${runId}',1,'dev',t.owner_id,t.id,t.visibility,t.department,t.project,'agent','Synthetic restore proposal',d.body,'fact',d.key,d.revision,d.body
  FROM cr_tasks t CROSS JOIN cr_recall_documents d WHERE t.id='${queued.id}' AND d.kind='decision' LIMIT 1`,
   );
+  await sql(
+    source,
+    `UPDATE cr_tasks SET brief_history=jsonb_build_array(jsonb_build_object('version',1,'text','synthetic retained brief','reason','restore boundary')) WHERE id='${queued.id}'`,
+  );
+  assert.equal(
+    (await sql(source, "SELECT count(*) FROM cr_brief_revisions")).trim(),
+    "1",
+  );
   const comparison =
-    "SELECT json_build_object('workInputs',(SELECT json_agg(json_build_object('id',id,'rework',rework,'questionRevision',question_revision) ORDER BY id) FROM cr_tasks),'questions',(SELECT json_agg(json_build_object('id',id,'task',task_id,'target',target_version,'prompt',prompt,'assignee',assignee_id,'status',status,'answer',answer,'revision',revision) ORDER BY id) FROM cr_questions),'tasks',(SELECT json_agg(id ORDER BY id) FROM cr_tasks),'artifacts',(SELECT json_agg(content_hash ORDER BY id) FROM cr_artifacts),'memories',(SELECT json_agg(json_build_object('body',body,'kind',kind,'pinned',pinned,'audience',audience,'valid_from',valid_from,'valid_to',valid_to,'supersedes_id',supersedes_id,'source_key',source_key,'source_refs',source_refs,'origin_task_id',origin_task_id,'source_corrected',source_corrected) ORDER BY id) FROM cr_memories),'proposals',(SELECT json_agg(json_build_object('id',id,'status',status,'source_key',source_key,'source_revision',source_revision,'source_quote',source_quote,'body',body,'valid_from',valid_from,'valid_to',valid_to) ORDER BY id) FROM cr_memory_candidates),'reads',(SELECT json_agg(refs ORDER BY run_id,generation,sequence) FROM cr_memory_reads),'vectors',(SELECT json_agg(json_build_object('key',source_key,'revision',source_revision,'profile',profile_id,'vectors',vectors) ORDER BY source_key) FROM cr_memory_embeddings),'documents',(SELECT json_agg(key||revision ORDER BY key) FROM cr_recall_documents))";
+    "SELECT json_build_object('briefRevisions',(SELECT json_agg(json_build_object('id',id,'task',task_id,'body',body) ORDER BY id) FROM cr_brief_revisions),'recallProjection',(SELECT json_agg(key||md5(title||body) ORDER BY key) FROM cr_recall_text),'workInputs',(SELECT json_agg(json_build_object('id',id,'rework',rework,'questionRevision',question_revision) ORDER BY id) FROM cr_tasks),'questions',(SELECT json_agg(json_build_object('id',id,'task',task_id,'target',target_version,'prompt',prompt,'assignee',assignee_id,'status',status,'answer',answer,'revision',revision) ORDER BY id) FROM cr_questions),'tasks',(SELECT json_agg(id ORDER BY id) FROM cr_tasks),'artifacts',(SELECT json_agg(content_hash ORDER BY id) FROM cr_artifacts),'memories',(SELECT json_agg(json_build_object('body',body,'kind',kind,'pinned',pinned,'audience',audience,'valid_from',valid_from,'valid_to',valid_to,'supersedes_id',supersedes_id,'source_key',source_key,'source_refs',source_refs,'origin_task_id',origin_task_id,'source_corrected',source_corrected) ORDER BY id) FROM cr_memories),'proposals',(SELECT json_agg(json_build_object('id',id,'status',status,'source_key',source_key,'source_revision',source_revision,'source_quote',source_quote,'body',body,'valid_from',valid_from,'valid_to',valid_to) ORDER BY id) FROM cr_memory_candidates),'reads',(SELECT json_agg(refs ORDER BY run_id,generation,sequence) FROM cr_memory_reads),'vectors',(SELECT json_agg(json_build_object('key',source_key,'revision',source_revision,'profile',profile_id,'vectors',vectors) ORDER BY source_key) FROM cr_memory_embeddings),'documents',(SELECT json_agg(key||revision ORDER BY key) FROM cr_recall_documents))";
   const before = (await sql(source, comparison)).trim();
   const runtimePath = "/data/runs/restore-drill/input.json";
   await compose(source, [
@@ -395,10 +403,11 @@ try {
   );
   const receipt = {
     date: new Date().toISOString(),
-    release: "0.10.0",
+    release: "0.11.0",
     elapsedSeconds: Math.round((Date.now() - started) / 1000),
     checks: [
       "DB Task/Artifact hashes/Memory identical",
+      "normalized brief revisions and indexed recall projection identical",
       "rework input, question ownership/answers/revisions and task question revision identical",
       "memory audience/effective periods, pending proposals, read ledger, vector cache and recall view fingerprints identical",
       "active Docker Job edit checkpointed to DB before backup and restored with identical patch hash",

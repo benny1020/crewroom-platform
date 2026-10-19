@@ -1,7 +1,12 @@
 import { secret, modelAuthentication } from "./config.js";
 import { digest, transaction, assertRuntimeReady } from "./db.js";
 import { HttpError } from "./errors.js";
-import { validReferences } from "./memory.js";
+import {
+  validReferences,
+  EXACT_VECTOR_DOCUMENT_LIMIT,
+  EXACT_VECTOR_VALUE_LIMIT,
+  EXACT_VECTOR_BYTE_LIMIT,
+} from "./memory.js";
 import { limitedText } from "./inputs.js";
 
 export function embeddingProfile(config) {
@@ -111,6 +116,18 @@ export async function embedTexts(
 export async function indexNextMemoryDocument(pool, config, options = {}) {
   const profile = embeddingProfile(config);
   if (!profile) return false;
+  const capacity = (
+    await pool.query(
+      `SELECT count(*)::int AS documents,coalesce(sum(vector_values),0)::text AS values,coalesce(sum(vector_bytes),0)::text AS bytes FROM (SELECT vector_values,vector_bytes FROM cr_memory_embeddings WHERE status='ready' AND profile_id=$1 LIMIT $2)c`,
+      [profile.id, EXACT_VECTOR_DOCUMENT_LIMIT + 1],
+    )
+  ).rows[0];
+  if (
+    capacity.documents > EXACT_VECTOR_DOCUMENT_LIMIT ||
+    Number(capacity.values) > EXACT_VECTOR_VALUE_LIMIT ||
+    Number(capacity.bytes) > EXACT_VECTOR_BYTE_LIMIT
+  )
+    return false;
   const doc = await transaction(pool, async (db) => {
     await assertRuntimeReady(db);
     const acquired = (
@@ -178,7 +195,7 @@ export async function indexNextMemoryDocument(pool, config, options = {}) {
   }
   // Cached text must not outlive a deleted/corrected source.
   await pool.query(
-    "DELETE FROM cr_memory_embeddings e WHERE NOT EXISTS(SELECT 1 FROM cr_recall_documents d WHERE d.key=e.source_key AND d.revision=e.source_revision)",
+    "DELETE FROM cr_memory_embeddings WHERE source_key IN (SELECT e.source_key FROM cr_memory_embeddings e WHERE NOT EXISTS(SELECT 1 FROM cr_recall_documents d WHERE d.key=e.source_key AND d.revision=e.source_revision) LIMIT 100)",
   );
   return true;
 }

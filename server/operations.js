@@ -17,6 +17,12 @@ export async function operations(db, user) {
           ELSE jsonb_build_array(a.result->'receipt') END
       ) c(value)
       WHERE a.origin='model' AND a.created_at>=now()-interval '24 hours'
+    ), usage_rows AS (
+      SELECT value,
+       CASE WHEN jsonb_typeof(value->'usage'->'promptTokens')='number' AND jsonb_typeof(value->'usage'->'completionTokens')='number'
+        AND (value->'usage'->>'promptTokens')~'^[0-9]{1,16}$' AND (value->'usage'->>'completionTokens')~'^[0-9]{1,16}$'
+       THEN (value->'usage'->>'promptTokens')::numeric<=9007199254740991 AND (value->'usage'->>'completionTokens')::numeric<=9007199254740991 ELSE false END AS valid
+      FROM calls WHERE jsonb_typeof(value)='object'
     )
     SELECT
       (SELECT coalesce(jsonb_object_agg(status,n),'{}') FROM
@@ -33,28 +39,13 @@ export async function operations(db, user) {
         (SELECT t.id,t.number,t.title,t.status,t.updated_at,r.error_code
          FROM visible t LEFT JOIN runs r ON r.id=t.current_run_id
          WHERE t.status IN ('failed','paused') ORDER BY t.updated_at DESC LIMIT 8) x) AS attention,
-      (SELECT coalesce(jsonb_agg(value),'[]') FROM calls WHERE jsonb_typeof(value)='object') AS receipts
+      (SELECT jsonb_build_object('recordedCalls',count(*),'usageReported',count(*) FILTER(WHERE valid),
+        'inputTokens',sum(CASE WHEN valid THEN (value->'usage'->>'promptTokens')::numeric END),
+        'outputTokens',sum(CASE WHEN valid THEN (value->'usage'->>'completionTokens')::numeric END)) FROM usage_rows) AS token_usage
   `,
     [user.id, user.department],
   );
-  let inputTokens = 0,
-    outputTokens = 0,
-    usageReported = 0;
-  for (const r of data.receipts) {
-    const u = r?.usage;
-    if (
-      u &&
-      Number.isSafeInteger(u.promptTokens) &&
-      u.promptTokens >= 0 &&
-      Number.isSafeInteger(u.completionTokens) &&
-      u.completionTokens >= 0
-    ) {
-      usageReported++;
-      inputTokens += u.promptTokens;
-      outputTokens += u.completionTokens;
-    }
-  }
-  const { receipts, ...metrics } = data;
+  const { token_usage: usage, ...metrics } = data;
   return {
     ...metrics,
     scope: "readable-tasks",
@@ -62,13 +53,108 @@ export async function operations(db, user) {
     generatedAt: new Date().toISOString(),
     capacity: { global: 2, perAgent: 1 },
     usage: {
-      recordedCalls: receipts.length,
-      usageReported,
-      usageMissing: receipts.length - usageReported,
-      inputTokens: usageReported ? inputTokens : null,
-      outputTokens: usageReported ? outputTokens : null,
+      ...usage,
+      usageMissing: usage.recordedCalls - usage.usageReported,
       cost: null,
       coverage: "successful-artifact-receipts-only",
     },
+  };
+}
+
+import { statfs } from "node:fs/promises";
+import {
+  EXACT_VECTOR_DOCUMENT_LIMIT,
+  EXACT_VECTOR_VALUE_LIMIT,
+  EXACT_VECTOR_BYTE_LIMIT,
+} from "./memory.js";
+
+// Read-only, administrative diagnostics. Never served through member APIs.
+export async function operationStats(db, dataDir) {
+  const tables = (
+    await db.query(`SELECT c.relname AS name,
+    greatest(c.reltuples,0)::bigint AS estimated_rows,pg_total_relation_size(c.oid)::text AS bytes,
+    s.n_live_tup,s.n_dead_tup,s.last_autovacuum,s.last_autoanalyze
+    FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+    LEFT JOIN pg_stat_user_tables s ON s.relid=c.oid
+    WHERE n.nspname=current_schema() AND c.relkind='r' AND c.relname LIKE 'cr_%'
+    ORDER BY pg_total_relation_size(c.oid) DESC`)
+  ).rows;
+  const storage = (
+    await db.query(`SELECT pg_database_size(current_database())::text AS database_bytes,
+    pg_size_bytes(current_setting('shared_buffers'))::text AS shared_buffers_bytes,
+    current_setting('autovacuum') AS autovacuum,
+    (SELECT count(*)::int FROM pg_stat_activity WHERE datname=current_database()) AS connections,
+    (SELECT count(*)::int FROM pg_stat_activity WHERE datname=current_database() AND state='idle in transaction') AS idle_transactions`)
+  ).rows[0];
+  const vectorProfiles = (
+    await db.query(`SELECT profile_id,count(*)::int AS ready_documents,coalesce(sum(vector_values),0)::text AS vector_values,coalesce(sum(vector_bytes),0)::text AS vector_bytes
+    FROM cr_memory_embeddings WHERE status='ready' GROUP BY profile_id`)
+  ).rows.map((r) => ({
+    ...r,
+    mode:
+      r.ready_documents > EXACT_VECTOR_DOCUMENT_LIMIT ||
+      Number(r.vector_values) > EXACT_VECTOR_VALUE_LIMIT ||
+      Number(r.vector_bytes) > EXACT_VECTOR_BYTE_LIMIT
+        ? "keyword_capacity_limited"
+        : "bounded_exact_vectors",
+  }));
+  let filesystem = null;
+  if (dataDir) {
+    try {
+      const s = await statfs(dataDir, { bigint: true });
+      filesystem = {
+        availableBytes: String(s.bavail * s.bsize),
+        totalBytes: String(s.blocks * s.bsize),
+        usedPercent: Number(((s.blocks - s.bavail) * 100n) / s.blocks),
+      };
+    } catch (e) {
+      if (e.code !== "ENOENT") throw e;
+    }
+  }
+  return {
+    at: new Date().toISOString(),
+    storage,
+    filesystem,
+    tables,
+    vectorProfiles,
+    limits: {
+      messagePage: 40,
+      runPage: 12,
+      resultPage: 8,
+      exactVectorDocuments: EXACT_VECTOR_DOCUMENT_LIMIT,
+      exactVectorValues: EXACT_VECTOR_VALUE_LIMIT,
+      exactVectorBytes: EXACT_VECTOR_BYTE_LIMIT,
+    },
+    notices: [
+      "Table rows are PostgreSQL estimates; run ANALYZE after bulk imports.",
+      "Filesystem describes DATA_DIR's mounted filesystem, not every database/backup volume.",
+      "No original conversations, results, memories or recovery records are pruned.",
+    ],
+  };
+}
+// Bounded and opt-in. Original records and recovery evidence are never candidates.
+export async function maintain(db, { apply = false, batch = 500 } = {}) {
+  if (!Number.isInteger(batch) || batch < 1 || batch > 1000)
+    throw Error("INVALID_MAINTENANCE_BATCH");
+  const candidates = (
+    await db.query(
+      `SELECT token_hash FROM cr_sessions WHERE expires_at<clock_timestamp() ORDER BY expires_at,token_hash LIMIT $1`,
+      [batch],
+    )
+  ).rows;
+  let removed = 0;
+  if (apply && candidates.length)
+    removed = (
+      await db.query(
+        `DELETE FROM cr_sessions WHERE token_hash=ANY($1::text[]) AND expires_at<clock_timestamp()`,
+        [candidates.map((r) => r.token_hash)],
+      )
+    ).rowCount;
+  return {
+    mode: apply ? "apply" : "dry-run",
+    expiredSessionCandidates: candidates.length,
+    removed,
+    hasMore: candidates.length === batch,
+    batch,
   };
 }
