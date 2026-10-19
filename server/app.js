@@ -3,7 +3,7 @@ import { readFile, stat } from "node:fs/promises";
 import { resolve, extname, sep } from "node:path";
 import { z } from "zod";
 import { digest, transaction, event, assertRuntimeReady } from "./db.js";
-import { configuration } from "./config.js";
+import { configuration, modelEndpoint } from "./config.js";
 import {
   authenticate,
   issueSession,
@@ -37,6 +37,12 @@ import { taskHistory, taskArchive } from "./history.js";
 import { EventHub } from "./event-hub.js";
 import { operations } from "./operations.js";
 import { listProposals, resolveProposal } from "./memory-learning.js";
+import {
+  listSkillStudios,
+  createSkillStudio,
+  skillStudioTurn,
+  saveSkillStudio,
+} from "./skill-studio.js";
 
 export function buildApp(pool, config = configuration()) {
   const app = Fastify({
@@ -246,6 +252,7 @@ export function buildApp(pool, config = configuration()) {
       })),
       agents,
       skills,
+      skillStudios: await listSkillStudios(pool, user),
       tasks,
       questions: await listQuestions(pool, user),
       memories,
@@ -259,6 +266,10 @@ export function buildApp(pool, config = configuration()) {
         mode: "native",
         codeExecution: !!config.runnerUrl,
         fixture: config.allowFixture,
+        modelConfigured: Boolean(
+          (config.allowFixture && config.provider === "fixture") ||
+          (config.model && modelEndpoint(config)),
+        ),
       },
       release: config.release,
     };
@@ -393,6 +404,33 @@ export function buildApp(pool, config = configuration()) {
     const skill = await resources.createSkill(pool, req.member, req.body);
     return reply.code(201).send({ skill });
   });
+  app.post("/api/skill-studio", async (req, reply) => {
+    const task = await createSkillStudio(
+      pool,
+      req.member,
+      req.body,
+      req.headers["idempotency-key"],
+      config,
+    );
+    return reply.code(201).send({ task });
+  });
+  app.post("/api/skill-studio/:id/turns", async (req) => ({
+    task: await skillStudioTurn(
+      pool,
+      req.member,
+      id.parse(req.params.id),
+      req.body,
+      config,
+    ),
+  }));
+  app.post("/api/skill-studio/:id/save", async (req) => ({
+    skill: await saveSkillStudio(
+      pool,
+      req.member,
+      id.parse(req.params.id),
+      req.body,
+    ),
+  }));
   app.post("/api/skills/:id/versions", async (req) =>
     resources.publishSkill(pool, req.member, req.params.id, req.body),
   );

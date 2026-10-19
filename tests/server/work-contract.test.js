@@ -361,6 +361,9 @@ test("migration 008 upgrades old tasks and recovers explicit legacy rework event
   const h = await harness(t),
     lead = await h.client("lead@example.com");
   const task = await newTask(lead, values({ workType: "review" }));
+  const migrationCount = Number(
+    (await h.pool.query("SELECT count(*) FROM cr_migrations")).rows[0].count,
+  );
   await event(h.pool, task.id, { type: "user", id: lead.user.id }, "rework", {
     reason: "LEGACY_REWORK 기존 요청",
     targetVersion: task.target_version,
@@ -386,6 +389,6 @@ test("migration 008 upgrades old tasks and recovers explicit legacy rework event
     Number(
       (await h.pool.query("SELECT count(*) FROM cr_migrations")).rows[0].count,
     ),
-    10,
+    migrationCount,
   );
 });

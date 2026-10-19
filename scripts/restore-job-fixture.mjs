@@ -4,6 +4,8 @@ import { secret, configuration, modelProfile } from "../server/config.js";
 import { database, digest } from "../server/db.js";
 import { executeCommand } from "../server/tasks.js";
 import { claimRun, processRun } from "../server/worker.js";
+import { createSkillStudio, saveSkillStudio } from "../server/skill-studio.js";
+import { randomUUID } from "node:crypto";
 let input = "";
 for await (const chunk of process.stdin) input += chunk;
 const data = JSON.parse(input),
@@ -24,7 +26,46 @@ const request = async (path, body, key = token) => {
 };
 const db = database();
 try {
-  if (process.argv[2] === "stage") {
+  if (process.argv[2] === "skill-studio") {
+    const user = (
+      await db.query("SELECT * FROM cr_members ORDER BY created_at LIMIT 1")
+    ).rows[0];
+    const config = {
+      ...configuration(),
+      provider: "fixture",
+      model: "restore-studio-fixture",
+      allowFixture: true,
+    };
+    let task = await createSkillStudio(
+      db,
+      user,
+      { message: "복원 훈련용 반복 업무 스킬" },
+      randomUUID(),
+      config,
+    );
+    const run = await claimRun(db, "restore-studio-worker", config);
+    assert.equal(run.task_id, task.id);
+    await processRun(db, run, "restore-studio-worker", config);
+    task = (await db.query("SELECT * FROM cr_tasks WHERE id=$1", [task.id]))
+      .rows[0];
+    const draft = {
+      ...task.skill_design.draft,
+      instructions: "수동 수정도 복원하는 합성 스킬 지침입니다.",
+    };
+    const saved = await saveSkillStudio(db, user, task.id, {
+      revision: task.revision,
+      draft,
+      scope: "private",
+      agentId: `personal-${user.id}`,
+    });
+    console.log(
+      JSON.stringify({
+        taskId: task.id,
+        skillId: saved.id,
+        version: saved.version,
+      }),
+    );
+  } else if (process.argv[2] === "stage") {
     const profile = await (await fetch(url + "/v1/profile")).json(),
       job = await request("/v1/jobs", {
         runId: data.runId,

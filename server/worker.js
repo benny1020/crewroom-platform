@@ -15,6 +15,7 @@ import { canRead } from "./permissions.js";
 import { collectInput, collectCodeInput } from "./inputs.js";
 import { runModel } from "./provider.js";
 import { runMemoryAgent } from "./memory-agent.js";
+import { runSkillDesigner } from "./skill-designer.js";
 import { recordProposal } from "./memory-learning.js";
 import {
   searchMemory,
@@ -47,6 +48,7 @@ export async function contextAllowed(db, run, task) {
     await db.query("SELECT refs FROM cr_memory_reads WHERE run_id=$1", [run.id])
   ).rows;
   const refs = [
+    ...(run.snapshot.skillDesign?.sourceRefs || []),
     ...(run.snapshot.memoryContext?.refs || []),
     ...reads.flatMap((r) => r.refs),
   ];
@@ -198,6 +200,14 @@ export async function completeRun(pool, id, owner, generation, value) {
       origin: value.origin,
       result: {
         ...value.result,
+        ...(run.snapshot.skillDesign
+          ? {
+              sampleInput:
+                run.snapshot.skillDesign.mode === "try"
+                  ? run.snapshot.skillDesign.sample
+                  : null,
+            }
+          : {}),
         receipt: value.receipt,
         inputHash: run.snapshot.inputHash,
         verification: value.result.execution
@@ -207,6 +217,14 @@ export async function completeRun(pool, id, owner, generation, value) {
           : "unverified",
       },
     });
+    if (run.snapshot.skillDesign)
+      await db.query(
+        "UPDATE cr_tasks SET skill_design=skill_design || $2::jsonb WHERE id=$1",
+        [
+          task.id,
+          { draft: value.result.skillDraft, draftArtifactId: artifact.id },
+        ],
+      );
     await db.query(
       "UPDATE cr_tasks SET status='result_ready',revision=revision+1,updated_at=now() WHERE id=$1",
       [task.id],
@@ -735,11 +753,10 @@ export async function processRun(pool, run, owner, config, dependencies = {}) {
     };
     const value = run.snapshot.execution
       ? await runCodeAgent(pool, run, config, modelOptions)
-      : await (dependencies.runModel || runMemoryAgent)(
-          run.snapshot,
-          config,
-          modelOptions,
-        );
+      : await (
+          dependencies.runModel ||
+          (run.snapshot.skillDesign ? runSkillDesigner : runMemoryAgent)
+        )(run.snapshot, config, modelOptions);
     if (!(await completeRun(pool, run.id, owner, run.generation, value)))
       throw new HttpError(
         409,

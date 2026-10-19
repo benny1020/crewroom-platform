@@ -172,7 +172,10 @@ export async function runModel(
       "UNEXPECTED_TOOL_CALL",
       "허용하지 않은 도구 요청이 반환됐어요.",
     );
-  if (anthropic && payload.stop_reason === "max_tokens")
+  if (
+    (anthropic && payload.stop_reason === "max_tokens") ||
+    (!anthropic && payload.choices?.[0]?.finish_reason === "length")
+  )
     throw new HttpError(
       502,
       "MODEL_OUTPUT_TRUNCATED",

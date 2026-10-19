@@ -1,6 +1,6 @@
 {
   "name": "crewroom",
-  "version": "0.11.1",
+  "version": "0.12.0",
   "private": true,
   "type": "module",
   "description": "Crewroom — shared agents, durable team workrooms, skills and scoped memory.",

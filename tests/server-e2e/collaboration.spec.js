@@ -311,9 +311,7 @@ test("a new personal skill can be created, bound and selected to trigger an agen
 }) => {
   await login(page);
   await page.locator('.cr-nav[href="#/skills"]').click();
-  await page
-    .getByRole("button", { name: "새 스킬 만들기", exact: true })
-    .click();
+  await page.getByRole("button", { name: "직접 작성", exact: true }).click();
   const name = "주간 업무 정리 · 브라우저";
   await page.getByLabel("스킬 이름", { exact: true }).fill(name);
   await page
@@ -540,12 +538,14 @@ test("evidence proposal promotion, a future policy replacement and accepted-work
   await page
     .getByRole("button", { name: "반복 업무 스킬 초안", exact: true })
     .click();
-  await expect(page.getByLabel("반복 업무 지침")).toContainText(
-    "새 대상과 버전",
+  await expect(
+    page.getByLabel("만들고 싶은 업무", { exact: true }),
+  ).toHaveValue(/수용한 결과를 참고/);
+  await page.getByRole("button", { name: "초안 만들기", exact: true }).click();
+  await expect(page.locator(".cr-studio-document")).toContainText(
+    "과거 업무의 검사·수용을 새 업무의 승인으로 재사용하지 마세요.",
   );
-  await expect(page.getByLabel("반복 업무 지침")).toHaveValue(
-    /과거 결과의 검사·수용을 새 업무의 승인으로 사용하지 마세요./,
-  );
+  await expect(page.locator(".cr-main")).toContainText("참고한 수용 결과");
 });
 
 test("office selects an agent by button, opens the applied skill and keeps motion/status understandable", async ({

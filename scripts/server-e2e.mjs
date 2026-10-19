@@ -36,6 +36,18 @@ await transaction(pool, (db) =>
     department: "qa",
   }),
 );
+await transaction(pool, (db) =>
+  createMember(
+    db,
+    {
+      email: "designer@e2e.invalid",
+      name: "스킬 테스트",
+      password,
+      department: "development",
+    },
+    "lead",
+  ),
+);
 const config = configuration({
   NODE_ENV: "test",
   PUBLIC_ORIGIN: "http://127.0.0.1:4186",

@@ -202,5 +202,12 @@
     "title": "장기 운영의 저장·조회·관리 경계",
     "source": "source/long-operation.json",
     "renderer": "illustrated"
+  },
+  {
+    "id": "skill-studio",
+    "document": "docs/SKILL_STUDIO.md",
+    "title": "대화형 스킬 생성과 게시·적용",
+    "source": "source/skill-studio.json",
+    "renderer": "illustrated"
   }
 ]

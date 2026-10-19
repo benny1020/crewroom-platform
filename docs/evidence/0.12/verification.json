@@ -1,0 +1,44 @@
+{
+  "release": "0.12.0",
+  "date": "2026-10-19",
+  "counts": {
+    "unit": 56,
+    "postgres": 113,
+    "dockerRunner": 6,
+    "staticBrowser": 31,
+    "serverBrowser": 22,
+    "total": 228,
+    "skipped": 0
+  },
+  "environment": "macOS Node26, Docker Node24/PostgreSQL18; CI uses Node24",
+  "logHashes": {
+    "unitAndBuild": "aa00a4a3eba1af860aaa337de5d7c80c3ee26c3c61eb649612e8335a2ebcd291",
+    "postgres": "aad0e0547956bfd96b348f16484d30b3ff2cf85548c2459f9ea8f4c67f4d4e78",
+    "dockerRunner": "14570ec05ff570f6d1042fc5c02d1ad1c1926ac2ca30fb05f03a274fcad2c278",
+    "staticBrowser": "44506e67f602005eed3ebdd8a78955c68382c981fe610e577698fa40e60680a8",
+    "serverBrowser": "fe2f9a604e8f7207c5f364ccd671f4314a2f493cfb169f4d4061925f09430e01",
+    "restore": "bb6e4b895b4741a4179da5e3eb034e7f020938a9611ee1f2d735eb2b8055624b",
+    "filesystemIsolation": "ed7cf6041c4fcc669fd6ca022c7ae2d9cbfb4cd1d13e883f0fd4204db2461989"
+  },
+  "independentReview": {
+    "model": "gpt-6-astra",
+    "focusedTests": 14,
+    "failed": 0,
+    "remainingRequiredFindings": 0,
+    "manifestSha256": "7f55b9eed80b06c85546481a0680f639d273e8663fbcede5632dbf588c7d8456"
+  },
+  "actualExternalModelCalls": 0,
+  "limits": [
+    "Fixture and local HTTP protocol responses verify durable execution and publication contracts, not actual model skill-authoring quality.",
+    "Examples are model text only; they do not execute tools, code or QA checks.",
+    "Static GitHub Pages remains an API-free demo; conversational skill authoring requires a running server and configured model."
+  ],
+  "securityScan": {
+    "scanner": "Gitleaks 8.30.1",
+    "publishableFiles": 423,
+    "sourceFindings": 0,
+    "preReleaseAllRefHistoryFindings": 0,
+    "preReleaseCommitsChecked": 12,
+    "forbiddenContextMatches": 0
+  }
+}

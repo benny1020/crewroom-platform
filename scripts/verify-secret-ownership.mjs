@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { command } from "../runner/broker.mjs";
 const namespace = "crewroom-secret-test-" + Date.now(),
   names = ["source", "app", "worker", "runner"].map((n) => namespace + "-" + n),
-  image = "crewroom:0.11.1";
+  image = "crewroom:0.12.0";
 const mount = (name, path, ro = false) => [
   "--mount",
   `type=volume,source=${name},target=${path}${ro ? ",readonly" : ""}`,

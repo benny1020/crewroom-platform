@@ -1,0 +1,44 @@
+{
+  "release": "0.12.0",
+  "capturedAt": "2026-10-19T11:19:45.739052+00:00",
+  "mode": "isolated PostgreSQL/App/Worker; deterministic skill studio fixture; no real model",
+  "viewport": {
+    "width": 1280,
+    "height": 720
+  },
+  "pageErrors": [],
+  "actualExternalModelCalls": 0,
+  "gif": "8 actual viewport screenshots; timed sequence; no fabricated UI",
+  "files": [
+    {
+      "name": "draft.jpg",
+      "bytes": 125288,
+      "sha256": "c50676aeb960b40e4449b153f654a2332ccc426772fb271136f37cc07b11c716"
+    },
+    {
+      "name": "library.jpg",
+      "bytes": 73859,
+      "sha256": "fbab06693ec911682cef3c11e80b80fe3b2308d172b612266a2e7f62ba43d7f6"
+    },
+    {
+      "name": "sample.jpg",
+      "bytes": 151683,
+      "sha256": "a44023ba8532951feb8670e72f6e62a3a6fefafd598c7b99938abc7ffda70bb0"
+    },
+    {
+      "name": "saved.jpg",
+      "bytes": 155053,
+      "sha256": "95a8413d95b15393af371dc25a74478a42a1d56058b7be8f20245b6bbd5e5c70"
+    },
+    {
+      "name": "start.jpg",
+      "bytes": 94744,
+      "sha256": "29358e6feb311b732026c5821d9d0b60b884890c34bee1dc8ea367aae60629ae"
+    },
+    {
+      "name": "walkthrough.gif",
+      "bytes": 1014889,
+      "sha256": "b29004c65a28388292af8046265858336e1aff0945b3a03bbe93c640bc5caa30"
+    }
+  ]
+}

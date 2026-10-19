@@ -15,7 +15,7 @@
     },
     {
       "file": "package-lock.json",
-      "sha256": "0b651232c615c0f513cbb33bca6bbe3f99376b9ae8d940eed7eb9f601bb713d1"
+      "sha256": "fea3c921fc16f68a95ca021a4da2919b466297d790d667a068bbbd241b25eaaf"
     }
   ],
   "diagrams": [
@@ -637,6 +637,26 @@
         "file": "long-operation.png",
         "bytes": 219036,
         "sha256": "111957dfed789f3d03526b8118ded10ac37307a4c349d9b99e8c5f905d5969c4"
+      }
+    },
+    {
+      "id": "skill-studio",
+      "document": "docs/SKILL_STUDIO.md",
+      "title": "대화형 스킬 생성과 게시·적용",
+      "source": "source/skill-studio.json",
+      "renderer": "illustrated",
+      "width": 1280,
+      "height": 780,
+      "sourceHash": "36de1e2aa880fd4a7a03910e4062b461c71d6dde281f6d90b151060f3c87c79e",
+      "svg": {
+        "file": "skill-studio.svg",
+        "bytes": 12447,
+        "sha256": "c4d87563700fa233ff92003c347922295ec25a4be988b37a95df7667e4183b0e"
+      },
+      "png": {
+        "file": "skill-studio.png",
+        "bytes": 226408,
+        "sha256": "d1b21e393e60b7ec1d690c9bf2ef2f8f180bf48224c611a5f4486c1f533cfddb"
       }
     }
   ]

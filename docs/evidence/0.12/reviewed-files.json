@@ -1,0 +1,88 @@
+{
+  "release": "0.12.0",
+  "baseHead": "500c283d8e0b10ad7297f8f2af48dd63255e4c6c",
+  "reviewModel": "gpt-6-astra",
+  "scope": "conversational skill authoring, canonical drafts, fixed source and model inputs, examples, atomic publication and binding, privacy, version conflict, durable recovery, desktop UI; source snapshot",
+  "files": [
+    {
+      "path": "server/skill-studio.js",
+      "sha256": "7a6b8f7144fec8b86830546ab3b65e7fe5726dbc69bbc3ed3c5403fa2be11f97"
+    },
+    {
+      "path": "server/skill-designer.js",
+      "sha256": "3400cde29ec74a78475ec6a5358d07be761d07e94e569e489ed0bda2c4215e45"
+    },
+    {
+      "path": "server/tasks.js",
+      "sha256": "20bee49d7483857b690d1b944a8b4571ace373cf79d86746326c5affe6841c8e"
+    },
+    {
+      "path": "server/resources.js",
+      "sha256": "e5b55300da6e5d1a1c1a39503d5af36a35b98cbeb515068ecd434fbc45e6475a"
+    },
+    {
+      "path": "server/worker.js",
+      "sha256": "3362e2597b4f985b1a2da28b1bb74bcd35e030eb96297c16347fc39f0c8c28cf"
+    },
+    {
+      "path": "server/provider.js",
+      "sha256": "4e37c1946baa728d6470f08c16f1853bca52f6469c6345eee97bd06e9957f3b1"
+    },
+    {
+      "path": "server/app.js",
+      "sha256": "93825b6eb716a527d33dc386bc8a504f34518b39845e2f8c0f7a7e07b8606e13"
+    },
+    {
+      "path": "server/config.js",
+      "sha256": "dd202f4466ca30359253be365b6f24ec61cb01e0436d83ab46cc25b3eba5939d"
+    },
+    {
+      "path": "server/migrations/011_skill_studio.sql",
+      "sha256": "f1678d50ca753b704fcb0426fde2c7e0b62d5a2165127b0270bc52d80e5991b5"
+    },
+    {
+      "path": "src/skill-studio.js",
+      "sha256": "98b1ca56520207225f2a4a7a1c91046f727c23e248181355f2474b7a7cfc3481"
+    },
+    {
+      "path": "src/live-app.js",
+      "sha256": "f0e0f8977bd7a7d5870573084404791137a0809000b9e3e41eec4e132c52e7a9"
+    },
+    {
+      "path": "src/live.css",
+      "sha256": "04f80e9809c179dbb6e1a9c076af459737b62095d1ec4df496b6cc33b3aa12d3"
+    },
+    {
+      "path": "tests/server/skill-studio.test.js",
+      "sha256": "f06960ff078884d5ff1c9d818e44a66657a1387ba92921f934d73ed4d4b64829"
+    },
+    {
+      "path": "tests/server/work-contract.test.js",
+      "sha256": "f80a30558616281d6da097c515ebf12bf093ec237854fbb81eef2658234cf22f"
+    },
+    {
+      "path": "tests/server-e2e/skill-studio.spec.js",
+      "sha256": "b2623cefd113583df702cf38bfdf3ddf153a3bf5a6d2d49bb32efa013e7d97ac"
+    },
+    {
+      "path": "tests/server-e2e/collaboration.spec.js",
+      "sha256": "6dc80d4f6f94d8f505f3bd17b3cfa34c47b5153602e689c9ef5d63a7383bc192"
+    },
+    {
+      "path": "scripts/server-e2e.mjs",
+      "sha256": "5b190232d8bfb208ea2687abcf3b7ecca33a2d68365a6692ecd941f0540a364f"
+    },
+    {
+      "path": "scripts/restore-job-fixture.mjs",
+      "sha256": "45d940294f5dfd464cdba9463d78cd79a1ba5d7f59a691b908183733c3fb16f7"
+    },
+    {
+      "path": "scripts/verify-restore.mjs",
+      "sha256": "43b6b8a1f621e57d6c2b7468868a6ec5ded9c98629857819ec84c7470a9279f2"
+    },
+    {
+      "path": "compose.yaml",
+      "sha256": "7f152680ecb9c443f600227d16d9eecdba78f288cb826eb6bcd0575a6dec3c9d"
+    }
+  ]
+}

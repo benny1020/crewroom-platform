@@ -27,6 +27,7 @@ if (
     "0.10.0",
     "0.11.0",
     "0.11.1",
+    "0.12.0",
   ].includes(manifest.release) ||
   manifest.files?.length !== 2
 )

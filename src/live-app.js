@@ -1,6 +1,11 @@
 import { requestContract } from "./request-contract.js";
 import { workroomState } from "./workroom-state.js";
 import { officeStation, agentTask, stationMode } from "./office-station.js";
+import {
+  studioView,
+  currentStudioDraft,
+  studioExamples,
+} from "./skill-studio.js";
 import "./styles.css";
 import "./refinements.css";
 import "./team.css";
@@ -76,6 +81,8 @@ let workspace = null,
   busy = false;
 let sessionGeneration = 0,
   refreshId = 0;
+let studioEdits = null,
+  studioCreateKey = null;
 const requests = new Set();
 const drafts = new Map();
 const stale = () =>
@@ -103,6 +110,8 @@ function clearSession() {
   selectedAgent = "dev";
   workFilter = "all";
   drafts.clear();
+  studioEdits = null;
+  studioCreateKey = null;
   archiveResults = [];
   modal.innerHTML = "";
   frame.removeAttribute("inert");
@@ -110,17 +119,45 @@ function clearSession() {
 
 const draftKey = (form) =>
   form.dataset.form +
-  (form.dataset.form === "agent-chat"
-    ? ":" + form.dataset.agent
-    : ["message", "question-create", "question-answer"].includes(
-          form.dataset.form,
-        )
-      ? ":" + task?.id + ":" + (form.dataset.id || "")
-      : "");
+  (form.dataset.form.startsWith("studio-")
+    ? ":" + (form.dataset.context || location.hash)
+    : form.dataset.form === "agent-chat"
+      ? ":" + form.dataset.agent
+      : ["message", "question-create", "question-answer"].includes(
+            form.dataset.form,
+          )
+        ? ":" + task?.id + ":" + (form.dataset.id || "")
+        : "");
 const person = (id) =>
   workspace?.members.find((m) => m.id === id)?.name || "팀원";
 const agent = (id) => workspace?.agents.find((a) => a.id === id);
-const route = () => location.hash.slice(2).split("/").filter(Boolean);
+const route = () =>
+  location.hash.slice(2).split("?")[0].split("/").filter(Boolean);
+const studioSeed = () => {
+  const q = new URLSearchParams(location.hash.split("?")[1] || "");
+  return {
+    baseSkillId: q.get("base") || undefined,
+    sourceTaskId: q.get("from") || undefined,
+  };
+};
+function readStudioDraft() {
+  const form = frame.querySelector('[data-form="studio-edit"]');
+  if (form && drafts.has(draftKey(form))) {
+    if (!form.reportValidity())
+      throw new Error("직접 수정한 초안의 빈 항목을 확인해주세요.");
+    return Object.fromEntries(new FormData(form));
+  }
+  return currentStudioDraft(task, studioEdits);
+}
+function updateStudioScope(form) {
+  const select = form.elements.agentId;
+  for (const option of select.options)
+    if (option.dataset.shared === "true") {
+      option.hidden = form.elements.scope.value === "private";
+      option.disabled = option.hidden;
+    }
+  if (select.selectedOptions[0]?.disabled) select.value = "";
+}
 const field = (label, name, value = "", type = "text", extra = "") =>
   `<label class="g-field"><span>${label}</span><input class="g-input" type="${type}" name="${name}" value="${esc(value)}" ${extra}></label>`;
 const area = (label, name, value = "", extra = "") =>
@@ -212,7 +249,7 @@ async function load(force = false) {
     const next = await api("/workspace");
     const [page, taskId] = route(),
       nextTask =
-        page === "tasks" && taskId
+        ["tasks", "skill-studio"].includes(page) && taskId && taskId !== "new"
           ? (await api(`/tasks/${encodeURIComponent(taskId)}`)).task
           : null;
     if (page === "work" && !workArchive?.requestCursor)
@@ -235,6 +272,7 @@ async function load(force = false) {
     task = nextTask;
     if (
       force ||
+      page === "skill-studio" ||
       (!document.activeElement?.closest("form") &&
         !dialog &&
         !historyPanels.size)
@@ -800,31 +838,64 @@ function memoryView() {
 }
 function skillsView() {
   const user = workspace.user;
+  const filters = drafts.get("skill-search") || {},
+    query = (filters.query || "").trim().toLowerCase();
+  const skills = workspace.skills.filter(
+    (s) =>
+      (filters.scope !== "private" || !!s.owner_id) &&
+      (filters.scope !== "team" || !s.owner_id) &&
+      (!query ||
+        (s.name + " " + s.done_criteria).toLowerCase().includes(query)),
+  );
   return (
     heading(
       "함께 쓰는 업무 방식",
-      "스킬 원본 게시와 동료에 적용하는 버전은 따로 관리합니다.",
-      button("새 스킬 만들기", "new-skill", "", true, "plus"),
+      "반복하는 일을 설명하고, AI와 다듬어 팀의 업무 방식으로 만드세요.",
+      button("직접 작성", "new-skill") +
+        button("AI와 스킬 만들기", "studio-new", "", true, "sparkles"),
     ) +
-    `<div class="cr-skills-list">${workspace.skills
-      .map((s) => {
-        const publish =
-          user.role === "lead" ||
-          s.owner_id === user.id ||
-          s.steward_id === user.id;
-        return `<article class="cw-paper cr-skill"><div><span class="cr-kicker">COMMON SKILL · v${s.current_version}</span><h2>${esc(s.name)}</h2><p>${esc(s.done_criteria)}</p><small>${s.steward_id ? esc(person(s.steward_id)) + " 관리" : "팀장 관리"}</small><details class="cr-history"><summary>스킬 원문</summary><p class="cr-instructions">${esc(s.instructions)}</p></details></div><div class="cr-skill-apply">${workspace.agents
-          .filter((a) => a.skills.some((b) => b.skillId === s.id))
-          .map((a) => {
-            const binding = a.skills.find((b) => b.skillId === s.id),
-              manage =
-                a.owner_id === user.id || (user.role === "lead" && !a.owner_id);
-            return `<div class="cr-binding">${portrait(a)}<span>${esc(a.name)}<small>적용 v${binding.version}</small></span>${manage && binding.version !== s.current_version ? button(`v${s.current_version} 적용`, "bind-skill", `data-agent="${a.id}" data-skill="${s.id}" data-version="${s.current_version}" data-revision="${a.config_version}"`) : '<span class="g-tiny g-muted">적용됨</span>'}</div>`;
-          })
-          .join(
-            "",
-          )}${button("동료에 적용", "apply-skill", `data-id="${s.id}"`, false, "plus")}${publish ? button("다음 버전 게시", "publish-skill", `data-id="${s.id}"`, false, "plus") : ""}</div></article>`;
-      })
-      .join("")}</div>`
+    `${
+      workspace.skillStudios?.length
+        ? `<section class="cr-studio-recent" aria-label="작성하던 스킬"><h2>작성하던 스킬 이어가기</h2><div>${workspace.skillStudios
+            .slice(0, 4)
+            .map(
+              (s) =>
+                `<a href="#/skill-studio/${s.id}"><span>${esc(s.title)}</span><small>${s.saved ? `v${s.saved.version} 저장됨` : statusName[s.status] || "초안 작성"}</small>${icon("arrow-up-right")}</a>`,
+            )
+            .join("")}</div></section>`
+        : ""
+    }<form class="cr-skill-search" data-form="skill-search">${field("스킬 검색", "query", filters.query || "", "search", 'placeholder="이름이나 완료 기준으로 찾기" maxlength="200"')}${select(
+      "스킬 공개 대상",
+      "scope",
+      [
+        ["all", "모든 스킬"],
+        ["private", "나의 스킬"],
+        ["team", "팀 공용"],
+      ],
+      filters.scope || "all",
+    )}<button class="g-button" type="submit">${icon("search")} 찾기</button></form><div class="cr-skills-list">${
+      skills
+        .map((s) => {
+          const publish =
+            user.role === "lead" ||
+            s.owner_id === user.id ||
+            s.steward_id === user.id;
+          return `<article class="cw-paper cr-skill"><div><span class="g-pill">${s.owner_id ? "나의 스킬" : "팀 공용"} · v${s.current_version}</span><h2>${esc(s.name)}</h2><p>${esc(s.done_criteria)}</p><small>${s.owner_id ? "내가 관리" : s.steward_id ? esc(person(s.steward_id)) + " 관리" : "팀장 관리"}</small><details class="cr-history"><summary>스킬 원문</summary><p class="cr-instructions">${esc(s.instructions)}</p></details></div><div class="cr-skill-apply">${workspace.agents
+            .filter((a) => a.skills.some((b) => b.skillId === s.id))
+            .map((a) => {
+              const binding = a.skills.find((b) => b.skillId === s.id),
+                manage =
+                  a.owner_id === user.id ||
+                  (user.role === "lead" && !a.owner_id);
+              return `<div class="cr-binding">${portrait(a)}<span>${esc(a.name)}<small>적용 v${binding.version}</small></span>${manage && binding.version !== s.current_version ? button(`v${s.current_version} 적용`, "bind-skill", `data-agent="${a.id}" data-skill="${s.id}" data-version="${s.current_version}" data-revision="${a.config_version}"`) : '<span class="g-tiny g-muted">적용됨</span>'}</div>`;
+            })
+            .join(
+              "",
+            )}${button("동료에 적용", "apply-skill", `data-id="${s.id}"`, false, "plus")}${publish ? button("AI로 다듬기", "studio-edit-skill", `data-id="${s.id}"`, false, "sparkles") + button("다음 버전 직접 작성", "publish-skill", `data-id="${s.id}"`, false, "pencil") : ""}</div></article>`;
+        })
+        .join("") ||
+      '<p class="cr-empty-inline">조건에 맞는 스킬이 없어요. 검색어를 바꾸거나 AI와 새 스킬을 만들어보세요.</p>'
+    }</div>`
   );
 }
 function operationsView() {
@@ -905,24 +976,52 @@ function render() {
     return;
   }
   const [page = "office", id] = route();
+  const active = document.activeElement,
+    keepFocus =
+      active?.closest(".cr-studio") && active.name
+        ? {
+            form: active.form?.dataset.form,
+            name: active.name,
+            start: active.selectionStart,
+            end: active.selectionEnd,
+          }
+        : null;
+  const thread = frame.querySelector("[data-studio-thread]"),
+    threadPosition = thread
+      ? {
+          top: thread.scrollTop,
+          bottom:
+            thread.scrollHeight - thread.scrollTop - thread.clientHeight < 50,
+        }
+      : null;
+  const studioOpen = [
+    ...frame.querySelectorAll(".cr-studio-preview details[open]"),
+  ].map((d) => d.className);
   const content =
-    page === "intake"
-      ? intakeView(id === "import")
-      : page === "tasks"
-        ? taskView()
-        : page === "inbox"
-          ? inboxView()
-          : page === "work"
-            ? workView()
-            : page === "agents"
-              ? agentView(id)
-              : page === "memory"
-                ? memoryView()
-                : page === "skills"
-                  ? skillsView()
-                  : page === "admin"
-                    ? adminView()
-                    : officeView();
+    page === "skill-studio"
+      ? studioView({
+          task,
+          workspace,
+          draft: currentStudioDraft(task, studioEdits),
+          seed: studioSeed(),
+        })
+      : page === "intake"
+        ? intakeView(id === "import")
+        : page === "tasks"
+          ? taskView()
+          : page === "inbox"
+            ? inboxView()
+            : page === "work"
+              ? workView()
+              : page === "agents"
+                ? agentView(id)
+                : page === "memory"
+                  ? memoryView()
+                  : page === "skills"
+                    ? skillsView()
+                    : page === "admin"
+                      ? adminView()
+                      : officeView();
   const openHistory = [
     ...frame.querySelectorAll("details[data-history-details][open]"),
   ].map((x) => x.dataset.historyDetails);
@@ -932,6 +1031,43 @@ function render() {
       .querySelector(`details[data-history-details="${kind}"]`)
       ?.setAttribute("open", "");
   restoreDrafts();
+  frame
+    .querySelectorAll('form[data-form="studio-save"]')
+    .forEach(updateStudioScope);
+  for (const cls of studioOpen)
+    frame
+      .querySelector(".cr-studio-preview details." + CSS.escape(cls))
+      ?.setAttribute("open", "");
+  if (page === "skill-studio") {
+    const composer = frame.querySelector(
+      '[data-form="studio-message"] textarea',
+    );
+    if (!task && composer && !composer.value) {
+      const seed = studioSeed();
+      if (seed.baseSkillId)
+        composer.value =
+          "이 스킬을 더 쓰기 편하게 다듬어줘. 개선할 점을 제안하고 초안에 반영해줘.";
+      if (seed.sourceTaskId)
+        composer.value =
+          "수용한 결과를 참고해 같은 종류의 업무에 반복해서 사용할 스킬을 만들어줘. 새 업무의 입력과 완료 기준을 구체화해줘.";
+    }
+    const next = frame.querySelector("[data-studio-thread]");
+    if (next)
+      next.scrollTop =
+        threadPosition && !threadPosition.bottom
+          ? threadPosition.top
+          : next.scrollHeight;
+    if (keepFocus) {
+      const input = frame.querySelector(
+        `form[data-form="${CSS.escape(keepFocus.form)}"] [name="${CSS.escape(keepFocus.name)}"]`,
+      );
+      input?.focus({ preventScroll: true });
+      if (input?.setSelectionRange && keepFocus.start !== null)
+        try {
+          input.setSelectionRange(keepFocus.start, keepFocus.end);
+        } catch {}
+    }
+  }
   frame
     .querySelectorAll('form[data-form="agent-chat"]')
     .forEach(updateSkillGuide);
@@ -1272,6 +1408,10 @@ root.addEventListener("input", (e) => {
       "memory-search",
       "question-create",
       "question-answer",
+      "studio-message",
+      "studio-sample",
+      "studio-edit",
+      "studio-save",
     ].includes(form.dataset.form)
   )
     drafts.set(draftKey(form), {
@@ -1280,6 +1420,16 @@ root.addEventListener("input", (e) => {
     });
 });
 root.addEventListener("change", (e) => {
+  if (
+    e.target.name === "scope" &&
+    e.target.form?.dataset.form === "studio-save"
+  ) {
+    updateStudioScope(e.target.form);
+    drafts.set(
+      draftKey(e.target.form),
+      Object.fromEntries(new FormData(e.target.form)),
+    );
+  }
   if (
     e.target.name === "skillId" &&
     e.target.form?.dataset.form === "agent-chat"
@@ -1291,6 +1441,41 @@ root.addEventListener("click", async (e) => {
   if (!el || busy) return;
   const { action } = el.dataset;
   try {
+    if (action === "studio-new") {
+      studioCreateKey = null;
+      navigate("skill-studio/new");
+      return;
+    }
+    if (action === "studio-edit-skill") {
+      studioCreateKey = null;
+      navigate("skill-studio/new?base=" + encodeURIComponent(el.dataset.id));
+      return;
+    }
+    if (action === "studio-rebase") {
+      const response = await api("/skill-studio", {
+        method: "POST",
+        headers: { "idempotency-key": crypto.randomUUID() },
+        body: {
+          message:
+            "최신 게시 버전의 변경과 작성하던 초안을 함께 비교해서 반영해줘. 최신 내용이 누락되지 않도록 하고 차이는 설명해줘.",
+          baseSkillId: task.skill_design.baseSkillId,
+          draft: readStudioDraft(),
+        },
+      });
+      studioEdits = null;
+      navigate("skill-studio/" + response.task.id);
+      return;
+    }
+    if (action === "studio-example" || action === "studio-suggestion") {
+      const form = frame.querySelector('[data-form="studio-message"]');
+      form.elements.message.value =
+        action === "studio-example"
+          ? studioExamples[Number(el.dataset.index)]
+          : el.dataset.value;
+      drafts.set(draftKey(form), Object.fromEntries(new FormData(form)));
+      form.elements.message.focus();
+      return;
+    }
     if (action === "resolve-memory") {
       await api(`/memory/proposals/${el.dataset.id}`, {
         method: "POST",
@@ -1305,7 +1490,9 @@ root.addEventListener("click", async (e) => {
       return;
     }
     if (action === "skill-from-task") {
-      openDialog("new-skill", { fromTask: true });
+      studioCreateKey = null;
+      navigate("skill-studio/new?from=" + task.id);
+      return;
       return;
     }
     if (action === "navigate") navigate(el.dataset.path);
@@ -1473,6 +1660,79 @@ root.addEventListener("submit", async (e) => {
   busy = true;
   form.querySelectorAll("button").forEach((b) => (b.disabled = true));
   try {
+    if (kind === "skill-search") {
+      drafts.set(kind, values);
+      render();
+    }
+    if (kind === "studio-edit") {
+      studioEdits = { taskId: task.id, draft: values };
+      drafts.delete(draftKey(form));
+      render();
+      toast(
+        "현재 초안에 반영했어요. AI에 요청하거나 저장하면 서버에 보관됩니다.",
+      );
+    }
+    if (kind === "studio-message") {
+      const key = draftKey(form);
+      if (!task) {
+        studioCreateKey ||= crypto.randomUUID();
+        const response = await api("/skill-studio", {
+          method: "POST",
+          headers: { "idempotency-key": studioCreateKey },
+          body: { message: values.message, ...studioSeed() },
+        });
+        drafts.delete(key);
+        studioCreateKey = null;
+        studioEdits = null;
+        navigate("skill-studio/" + response.task.id);
+      } else {
+        await api(`/skill-studio/${task.id}/turns`, {
+          method: "POST",
+          body: {
+            revision: task.revision,
+            message: values.message,
+            ...(readStudioDraft() ? { draft: readStudioDraft() } : {}),
+          },
+        });
+        drafts.delete(key);
+        drafts.delete("studio-edit:" + task.id);
+        studioEdits = null;
+        await load(true);
+      }
+    }
+    if (kind === "studio-sample") {
+      await api(`/skill-studio/${task.id}/turns`, {
+        method: "POST",
+        body: {
+          revision: task.revision,
+          message: "이 입력으로 예시 결과를 만들어줘:\n" + values.sample,
+          mode: "try",
+          sample: values.sample,
+          draft: readStudioDraft(),
+        },
+      });
+      drafts.delete("studio-edit:" + task.id);
+      studioEdits = null;
+      await load(true);
+    }
+    if (kind === "studio-save") {
+      const body = {
+        revision: task.revision,
+        draft: readStudioDraft(),
+        scope: values.scope,
+        ...(values.agentId ? { agentId: values.agentId } : {}),
+      };
+      await api(`/skill-studio/${task.id}/save`, { method: "POST", body });
+      drafts.delete(draftKey(form));
+      drafts.delete("studio-edit:" + task.id);
+      studioEdits = null;
+      await load(true);
+      toast(
+        values.agentId
+          ? "스킬을 저장하고 선택한 동료에 적용했어요."
+          : "스킬을 저장했어요. 동료 적용은 라이브러리에서 선택할 수 있어요.",
+      );
+    }
     if (kind === "conversation-search") {
       await showHistory("messages", "search", values.query);
     }
@@ -1745,6 +2005,10 @@ root.addEventListener("submit", async (e) => {
     const output = form.querySelector("[data-error]");
     if (output) output.textContent = error.message;
     else toast(error.message);
+    if (error.status === 409 && kind.startsWith("studio-")) {
+      toast(error.message);
+      await load(true);
+    }
   } finally {
     busy = false;
     form.querySelectorAll("button").forEach((b) => (b.disabled = false));
@@ -1771,6 +2035,8 @@ window.addEventListener("hashchange", () => {
   dialog = null;
   modal.innerHTML = "";
   frame.removeAttribute("inert");
+  if (route()[0] === "skill-studio")
+    window.scrollTo({ top: 0, behavior: "instant" });
   load(true);
 });
 try {

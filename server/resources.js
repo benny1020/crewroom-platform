@@ -64,7 +64,7 @@ export async function listSkills(db, user) {
     )
   ).rows;
 }
-export async function publishSkill(pool, user, id, input) {
+export async function publishSkill(pool, user, id, input, existingDb = null) {
   const v = z
     .object({
       revision,
@@ -73,7 +73,7 @@ export async function publishSkill(pool, user, id, input) {
     })
     .strict()
     .parse(input);
-  return transaction(pool, async (db) => {
+  const execute = async (db) => {
     const skill = (
       await db.query("SELECT * FROM cr_skills WHERE id=$1 FOR UPDATE", [id])
     ).rows[0];
@@ -107,9 +107,10 @@ export async function publishSkill(pool, user, id, input) {
       version,
     });
     return { id, version };
-  });
+  };
+  return existingDb ? execute(existingDb) : transaction(pool, execute);
 }
-export async function bindSkill(pool, user, agentId, input) {
+export async function bindSkill(pool, user, agentId, input, existingDb = null) {
   const v = z
     .object({
       skillId: z.string().max(80),
@@ -118,7 +119,7 @@ export async function bindSkill(pool, user, agentId, input) {
     })
     .strict()
     .parse(input);
-  return transaction(pool, async (db) => {
+  const execute = async (db) => {
     const a = (
       await db.query("SELECT * FROM cr_agents WHERE id=$1 FOR UPDATE", [
         agentId,
@@ -158,7 +159,8 @@ export async function bindSkill(pool, user, agentId, input) {
       version: v.version,
     });
     return { ok: true };
-  });
+  };
+  return existingDb ? execute(existingDb) : transaction(pool, execute);
 }
 export async function updateMember(pool, user, id, input) {
   requireLead(user);
@@ -569,7 +571,7 @@ export async function changeMemory(pool, user, id, input, deleting = false) {
   });
 }
 
-export async function createSkill(pool, user, input) {
+export async function createSkill(pool, user, input, existingDb = null) {
   const v = z
     .object({
       name: z.string().trim().min(1).max(80),
@@ -581,7 +583,7 @@ export async function createSkill(pool, user, input) {
     .parse(input);
   if (v.scope === "team") requireLead(user);
   const id = "custom-" + randomUUID();
-  return transaction(pool, async (db) => {
+  const execute = async (db) => {
     await db.query("INSERT INTO cr_skills(id,name,owner_id) VALUES($1,$2,$3)", [
       id,
       v.name,
@@ -602,5 +604,6 @@ export async function createSkill(pool, user, input) {
       scope: v.scope,
     });
     return { id, version: 1 };
-  });
+  };
+  return existingDb ? execute(existingDb) : transaction(pool, execute);
 }

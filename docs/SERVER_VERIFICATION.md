@@ -1,3 +1,27 @@
+# 0.12.0 대화형 스킬 설계 검증
+
+2026-10-19. [AI와 스킬 만들기](SKILL_STUDIO.md)는 기존 영속 Task·Message·Run·Artifact와 Worker를 재사용한다. 아래 0.11.1 이하는 이전 릴리스 기록이다.
+
+| 검사 | 결과 | 범위 |
+| --- | --- | --- |
+| 단위·HTTP adapter·빌드 | 56 통과 | 기존 입력·문맥·프로토콜 계약 |
+| 실제 PostgreSQL + Docker 개발/QA | 113 통과, skip 0 | 신규 설계 회귀 14개와 기존 전체 회귀. 현재 초안·출처·권한·원자적 게시/적용·버전 충돌·동시성·실패 복구·실제 모델 요청 본문 |
+| 실제 Docker Runner | 6 통과 | 기존 수정·검사·취소·재시작·원장 보존 |
+| 정적/서버 브라우저 | 31 + 22 통과 | 설명→수정→예시→재접속→저장/적용, 입력·focus·범위 선택 보존, 연결 누락 안내와 기존 협업·긴 대화. 1440·1280·1024px |
+| Linux 비밀 파일·암호화 복원 | 통과 | 서비스별 격리. 기존 원문/기억/수정본과 비공개 작성 대화·수동 초안·게시 버전·선택 binding 동일성, 미완료 격리·실패 차단 |
+
+총 **228개 자동 검사**와 별도 비밀 파일·복원 훈련을 통과했다. [기계 판독 기록](evidence/0.12/verification.json) · [복원 영수증](evidence/0.12/restore.json) · [화면 manifest](media/skill-studio/manifest.json). 격리된 서버에서 실제 조작한 화면·GIF를 포함하며 브라우저 오류는 없었다.
+
+Astra가 최종 동결 소스 **20개**를 검사 전후 대조하고 집중 검사 **14/14**를 독립 통과했다. 검토 범위의 남은 필수 P0/P1/P2는 없었다. 독립 검사와 renderer 경계 확인은 위 228개에 중복 합산하지 않는다. [리뷰 결과](reviews/ASTRA_SKILL_STUDIO.md) · [동결 소스](evidence/0.12/reviewed-files.json)
+
+암호화 사전 백업 후 로컬 서버를 0.11.1에서 0.12.0으로 갱신했다. migration 11개, App ready·DB/Runner healthy·0.12.0 Worker의 최신 heartbeat, App/Worker의 검토 서버 파일 각 9개 hash 일치를 확인했다. [배포 영수증](evidence/0.12/deployment.json)
+
+**실제 외부 생성·embedding 호출은 0회**다. 두 provider의 로컬 프로토콜 응답·fixture로 실행 계약을 검증했다. 실제 모델의 스킬 작성 품질이나 업무 절감은 증명하지 않는다. 응답 예시는 텍스트이며 실제 도구·코드·QA를 실행하지 않는다. GitHub Pages는 API 없는 기존 화면 데모이며, 새 AI 설계는 서버 실행과 모델 URL 설정이 필요하다. 최종 커밋의 CI는 GitHub Actions에서 확인한다.
+
+![대화형 스킬 작성과 저장·적용](media/skill-studio/walkthrough.gif)
+
+---
+
 # 0.11.1 기억 품질 보호 검증
 
 2026-10-19. [품질 유지 기준](QUALITY.md)에 따라 설정한 의미 검색을 조용히 키워드 검색으로 낮추거나, 인덱스 준비 실패를 정상적인 검색 무일치로 처리하던 경로를 차단했다. 아래 0.11.0 이하는 이전 릴리스의 기록이다.

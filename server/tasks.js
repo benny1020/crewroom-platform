@@ -185,10 +185,11 @@ async function insertArtifact(db, task, stepIndex, value) {
   return artifact;
 }
 export { insertArtifact };
-export async function createTask(pool, user, values, key) {
+export async function createTask(pool, user, values, key, existingDb = null) {
   if (!key || !/^[\w-]{8,100}$/.test(key))
     fail(400, "IDEMPOTENCY_REQUIRED", "요청 식별자가 필요해요.");
-  return transaction(pool, async (db) => {
+  const execute = async (db) => {
+    await lockContextMutation(db);
     await db.query("SELECT pg_advisory_xact_lock(hashtext($1))", [
       `${user.id}:${key}`,
     ]);
@@ -210,7 +211,7 @@ export async function createTask(pool, user, values, key) {
     }
     let steps = WORK_TYPES[values.workType]?.steps;
     let selectedDone;
-    if (["chat", "analysis"].includes(values.workType)) {
+    if (["chat", "analysis", "skill-design"].includes(values.workType)) {
       const agent = (
         await db.query("SELECT * FROM cr_agents WHERE id=$1", [values.agentId])
       ).rows[0];
@@ -245,7 +246,12 @@ export async function createTask(pool, user, values, key) {
       selectedDone = binding.done_criteria;
       steps = [
         {
-          name: values.workType === "chat" ? "업무 대화" : "대상 분석",
+          name:
+            values.workType === "skill-design"
+              ? "스킬 함께 만들기"
+              : values.workType === "chat"
+                ? "업무 대화"
+                : "대상 분석",
           agentId: agent.id,
           skill: skillId,
         },
@@ -301,7 +307,7 @@ export async function createTask(pool, user, values, key) {
     }
     const task = (
       await db.query(
-        "INSERT INTO cr_tasks(id,owner_id,responsible_id,visibility,department,title,project,target,target_version,work_type,goal,done_criteria,brief,example_artifact_id) VALUES($1,$2,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *",
+        "INSERT INTO cr_tasks(id,owner_id,responsible_id,visibility,department,title,project,target,target_version,work_type,goal,done_criteria,brief,example_artifact_id,skill_design) VALUES($1,$2,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *",
         [
           id,
           user.id,
@@ -321,6 +327,7 @@ export async function createTask(pool, user, values, key) {
             source: "request",
           },
           values.exampleId || null,
+          values.skillDesign || null,
         ],
       )
     ).rows[0];
@@ -355,14 +362,22 @@ export async function createTask(pool, user, values, key) {
       imported: Boolean(values.imported),
     });
     return getTask(db, user, id);
-  });
+  };
+  return existingDb ? execute(existingDb) : transaction(pool, execute);
 }
-export async function executeCommand(pool, user, id, values, config) {
+export async function executeCommand(
+  pool,
+  user,
+  id,
+  values,
+  config,
+  existingDb = null,
+) {
   const runner =
     values.action === "start"
-      ? await optionalRunnerProfile(pool, user, id, config)
+      ? await optionalRunnerProfile(existingDb || pool, user, id, config)
       : null;
-  return transaction(pool, async (db) => {
+  const execute = async (db) => {
     const task = await getTask(db, user, id, true);
     if (task.revision !== values.revision) conflict();
     const action = values.action,
@@ -419,10 +434,11 @@ export async function executeCommand(pool, user, id, values, config) {
     }
     if (action === "continue") {
       if (
-        task.work_type !== "chat" ||
+        !["chat", "skill-design"].includes(task.work_type) ||
         !["result_ready", "done"].includes(task.status) ||
         run?.lease_owner ||
-        !step.current_artifact_id
+        (!step.current_artifact_id &&
+          !(task.work_type === "skill-design" && task.skill_design?.draft))
       )
         fail(
           409,
@@ -433,6 +449,11 @@ export async function executeCommand(pool, user, id, values, config) {
         "UPDATE cr_steps SET input_artifact_id=current_artifact_id WHERE task_id=$1 AND position=$2",
         [id, task.step_index],
       );
+      if (task.work_type === "skill-design")
+        await db.query(
+          'UPDATE cr_tasks SET skill_design=skill_design || \'{"mode":"design","sample":""}\'::jsonb WHERE id=$1',
+          [id],
+        );
       await db.query(
         "UPDATE cr_acceptances SET revoked_at=now() WHERE task_id=$1 AND revoked_at IS NULL",
         [id],
@@ -589,6 +610,9 @@ export async function executeCommand(pool, user, id, values, config) {
           provider: config.provider,
           model: config.model,
           outputSchema: 1,
+          ...(task.work_type === "skill-design"
+            ? { skillDesign: task.skill_design }
+            : {}),
           ...(task.work_type === "code-qa"
             ? {
                 execution: {
@@ -704,6 +728,11 @@ export async function executeCommand(pool, user, id, values, config) {
       }
     }
     if (action === "rework") {
+      if (task.work_type === "skill-design")
+        await db.query(
+          'UPDATE cr_tasks SET skill_design=skill_design || \'{"mode":"design","sample":""}\'::jsonb WHERE id=$1',
+          [id],
+        );
       if (
         !["result_ready", "done", "failed", "cancelled"].includes(
           task.status,
@@ -814,7 +843,8 @@ export async function executeCommand(pool, user, id, values, config) {
     );
     await event(db, id, actor, action, { ...values, revision: undefined });
     return getTask(db, user, id);
-  });
+  };
+  return existingDb ? execute(existingDb) : transaction(pool, execute);
 }
 
 async function requireAnsweredQuestions(db, task) {
