@@ -181,6 +181,12 @@ try {
       { "idempotency-key": randomBytes(16).toString("hex") },
     )
   ).task;
+  await sql(
+    source,
+    `INSERT INTO cr_questions(id,task_id,target_version,asked_by,assignee_id,prompt,status,answer,answered_by,answered_at)
+ SELECT gen_random_uuid(),id,target_version,owner_id,owner_id,'Synthetic restored question','answered','Synthetic restored answer',owner_id,now() FROM cr_tasks WHERE id='${queued.id}';
+ UPDATE cr_tasks SET question_revision=1,rework=jsonb_build_object('reason','Synthetic restored rework','targetVersion',target_version,'previous',NULL) WHERE id='${queued.id}'`,
+  );
   await api(`/tasks/${queued.id}/commands`, {
     action: "start",
     revision: queued.revision,
@@ -228,7 +234,7 @@ try {
  FROM cr_tasks t CROSS JOIN cr_recall_documents d WHERE t.id='${queued.id}' AND d.kind='decision' LIMIT 1`,
   );
   const comparison =
-    "SELECT json_build_object('tasks',(SELECT json_agg(id ORDER BY id) FROM cr_tasks),'artifacts',(SELECT json_agg(content_hash ORDER BY id) FROM cr_artifacts),'memories',(SELECT json_agg(json_build_object('body',body,'kind',kind,'pinned',pinned,'audience',audience,'valid_from',valid_from,'valid_to',valid_to,'supersedes_id',supersedes_id,'source_key',source_key,'source_refs',source_refs,'origin_task_id',origin_task_id,'source_corrected',source_corrected) ORDER BY id) FROM cr_memories),'proposals',(SELECT json_agg(json_build_object('id',id,'status',status,'source_key',source_key,'source_revision',source_revision,'source_quote',source_quote,'body',body,'valid_from',valid_from,'valid_to',valid_to) ORDER BY id) FROM cr_memory_candidates),'reads',(SELECT json_agg(refs ORDER BY run_id,generation,sequence) FROM cr_memory_reads),'vectors',(SELECT json_agg(json_build_object('key',source_key,'revision',source_revision,'profile',profile_id,'vectors',vectors) ORDER BY source_key) FROM cr_memory_embeddings),'documents',(SELECT json_agg(key||revision ORDER BY key) FROM cr_recall_documents))";
+    "SELECT json_build_object('workInputs',(SELECT json_agg(json_build_object('id',id,'rework',rework,'questionRevision',question_revision) ORDER BY id) FROM cr_tasks),'questions',(SELECT json_agg(json_build_object('id',id,'task',task_id,'target',target_version,'prompt',prompt,'assignee',assignee_id,'status',status,'answer',answer,'revision',revision) ORDER BY id) FROM cr_questions),'tasks',(SELECT json_agg(id ORDER BY id) FROM cr_tasks),'artifacts',(SELECT json_agg(content_hash ORDER BY id) FROM cr_artifacts),'memories',(SELECT json_agg(json_build_object('body',body,'kind',kind,'pinned',pinned,'audience',audience,'valid_from',valid_from,'valid_to',valid_to,'supersedes_id',supersedes_id,'source_key',source_key,'source_refs',source_refs,'origin_task_id',origin_task_id,'source_corrected',source_corrected) ORDER BY id) FROM cr_memories),'proposals',(SELECT json_agg(json_build_object('id',id,'status',status,'source_key',source_key,'source_revision',source_revision,'source_quote',source_quote,'body',body,'valid_from',valid_from,'valid_to',valid_to) ORDER BY id) FROM cr_memory_candidates),'reads',(SELECT json_agg(refs ORDER BY run_id,generation,sequence) FROM cr_memory_reads),'vectors',(SELECT json_agg(json_build_object('key',source_key,'revision',source_revision,'profile',profile_id,'vectors',vectors) ORDER BY source_key) FROM cr_memory_embeddings),'documents',(SELECT json_agg(key||revision ORDER BY key) FROM cr_recall_documents))";
   const before = (await sql(source, comparison)).trim();
   const runtimePath = "/data/runs/restore-drill/input.json";
   await compose(source, [
@@ -389,10 +395,11 @@ try {
   );
   const receipt = {
     date: new Date().toISOString(),
-    release: "0.9.0",
+    release: "0.10.0",
     elapsedSeconds: Math.round((Date.now() - started) / 1000),
     checks: [
       "DB Task/Artifact hashes/Memory identical",
+      "rework input, question ownership/answers/revisions and task question revision identical",
       "memory audience/effective periods, pending proposals, read ledger, vector cache and recall view fingerprints identical",
       "active Docker Job edit checkpointed to DB before backup and restored with identical patch hash",
       "operator CLI confirmation then new Run restores patch and passes actual test requiring the edited value",

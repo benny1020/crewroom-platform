@@ -1,0 +1,47 @@
+{
+  "release": "0.10.0",
+  "capturedAt": "2026-10-19T00:23:18.180Z",
+  "mode": "isolated App/PostgreSQL/Worker, deterministic model fixture, no external inference",
+  "viewport": {
+    "width": 1440,
+    "height": 1080
+  },
+  "checkedDesktopWidths": [
+    1440,
+    1280,
+    1024
+  ],
+  "pageErrors": [],
+  "files": [
+    {
+      "name": "request.png",
+      "bytes": 160188,
+      "sha256": "ffaea480fc6e3f4f326e268958554e35bacd76bfd84436443468d58ffda17d25"
+    },
+    {
+      "name": "workroom.png",
+      "bytes": 275400,
+      "sha256": "b31ff9b99e94388fdd9025d1af80eccf6c7017f05ca8a53378269696bf9349de"
+    },
+    {
+      "name": "question.png",
+      "bytes": 292744,
+      "sha256": "1bcfa9739354fa79b5092b612bca803b084802309bc9f8f493c22fff663692ad"
+    },
+    {
+      "name": "inbox.png",
+      "bytes": 100186,
+      "sha256": "2e43268170be11ea8f8016e931562c2fa9b0046ab380451b338c43111d0e2dca"
+    },
+    {
+      "name": "rework.png",
+      "bytes": 327018,
+      "sha256": "0b831deeb839b334c4cb41fcb7d05ddfb7b0783760dfe7d05c351186ca813c1e"
+    },
+    {
+      "name": "workflow.gif",
+      "bytes": 1815281,
+      "sha256": "e3192893e80c72c6c73cd9d98c0e69f5e0bd03d4a5f26c7ffcbd3e667de6a36f"
+    }
+  ]
+}

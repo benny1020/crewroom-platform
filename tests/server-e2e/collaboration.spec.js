@@ -495,21 +495,67 @@ test("office selects an agent by button, opens the applied skill and keeps motio
     page.getByRole("button", { name: "모션 꺼짐", exact: true }),
   ).toHaveAttribute("aria-pressed", "false");
   await side.locator('[data-action="use-skill"]').first().click();
-  await expect(page).toHaveURL(/#\/agents\/review$/);
-  await expect(page.locator(".cr-skill-guide")).toContainText(
-    "이번 요청에 적용할 스킬 v",
-  );
-  await expect(page.getByLabel("맡길 일 또는 대화")).toBeVisible();
+  await expect(page).toHaveURL(/#\/intake$/);
+  await expect(page.locator(".cr-request-summary")).toContainText("노아");
+  await page.getByLabel("업무 대상 링크 또는 이름").fill("합성 코드 리뷰 자료");
+  await page.getByLabel("대상 커밋 또는 관측 버전").fill("office-target-v2");
+  await page.getByLabel("프로젝트", { exact: true }).fill("공동 스킬 검증");
+  await page.getByLabel("요청할 내용").fill("오피스의 스킬 바로 실행 검증");
   await page
-    .getByLabel("맡길 일 또는 대화")
-    .fill("오피스의 스킬 바로 실행 검증");
+    .getByRole("button", { name: "공개 내용 확인", exact: true })
+    .click();
   await page
-    .getByRole("button", { name: "업무방 열고 시작", exact: true })
+    .getByRole("button", { name: "업무 접수하기", exact: true })
     .click();
   await expect(page).toHaveURL(/#\/tasks\//);
-  await expect(page.locator(".g-page-head")).toContainText(
-    "오피스의 스킬 바로 실행 검증",
+  const taskId = page.url().split("/").at(-1);
+  const detail = (await (await page.request.get(`/api/tasks/${taskId}`)).json())
+    .task;
+  expect(detail.work_type).toBe("analysis");
+  expect(detail.target_version).toBe("office-target-v2");
+  expect(detail.project).toBe("공동 스킬 검증");
+  expect(detail.steps[0].agent_id).toBe("review");
+  expect(detail.steps[0].skill_id).toBe("review");
+  await page.getByRole("button", { name: "실행 시작", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "이 결과 수용", exact: true }),
+  ).toBeVisible();
+  const current = page.getByLabel("현재 결과", { exact: true });
+  const discussion = page.locator(".cr-discussion");
+  expect(
+    await current.evaluate((node) =>
+      Boolean(
+        node.compareDocumentPosition(document.querySelector(".cr-discussion")) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      ),
+    ),
+  ).toBe(true);
+  await expect(discussion).toBeVisible();
+  await page.getByRole("button", { name: "이 결과 수용", exact: true }).click();
+  await page
+    .getByRole("button", { name: "이 기준으로 다음 업무", exact: true })
+    .click();
+  await expect(page.getByLabel("필요한 결과", { exact: true })).toHaveValue(
+    "analysis",
   );
+  await expect(page.locator(".cr-request-summary")).toContainText("노아");
+  await page.getByLabel("업무 대상 링크 또는 이름").fill("다음 합성 자료");
+  await page.getByLabel("대상 커밋 또는 관측 버전").fill("office-target-v3");
+  await page
+    .getByRole("button", { name: "공개 내용 확인", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "업무 접수하기", exact: true })
+    .click();
+  await expect(page).toHaveURL(/#\/tasks\//);
+  const reused = (
+    await (
+      await page.request.get(`/api/tasks/${page.url().split("/").at(-1)}`)
+    ).json()
+  ).task;
+  expect(reused.steps[0].agent_id).toBe("review");
+  expect(reused.steps[0].skill_id).toBe("review");
+  expect(reused.example_artifact_id).toBeTruthy();
 });
 
 test("lead operations panel has scoped metrics and member cannot obtain it", async ({
@@ -529,5 +575,80 @@ test("lead operations panel has scoped metrics and member cannot obtain it", asy
   expect(result.status()).toBe(403);
   await member.goto("/#/admin");
   await expect(member.getByLabel("운영 현황", { exact: true })).toHaveCount(0);
+  await other.close();
+});
+
+test("assigned questions appear in a second user's inbox and require a fresh result after answering", async ({
+  page,
+  browser,
+}) => {
+  await login(page);
+  await page.getByRole("button", { name: "새 업무 시작", exact: true }).click();
+  await page.getByLabel("필요한 결과", { exact: true }).selectOption("review");
+  await page.getByLabel("업무 대상 링크 또는 이름").fill("질문 인계 검증");
+  await page.getByLabel("대상 커밋 또는 관측 버전").fill("question-v1");
+  await page.getByLabel("요청할 내용").fill("질문 답변을 반영해 검토해주세요");
+  await page
+    .getByRole("button", { name: "공개 내용 확인", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "업무 접수하기", exact: true })
+    .click();
+  await expect(page).toHaveURL(/#\/tasks\//);
+  const url = page.url();
+  await page.getByRole("button", { name: "실행 시작", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "이 결과 수용", exact: true }),
+  ).toBeVisible();
+  const questions = page.getByLabel("업무 질문", { exact: true });
+  await questions
+    .getByText("담당자를 지정해 질문하기", { exact: true })
+    .click();
+  await questions
+    .getByLabel("확인할 질문", { exact: true })
+    .fill("어느 환경에서 확인하나요?");
+  await questions
+    .getByLabel("답할 사람", { exact: true })
+    .selectOption({ label: "민지" });
+  await questions
+    .getByRole("button", { name: "질문 보내기", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "이 결과 수용", exact: true }),
+  ).toHaveCount(0);
+  const other = await browser.newContext(),
+    member = await other.newPage();
+  await login(member, "member@e2e.invalid");
+  await member.getByRole("link", { name: "내가 할 일", exact: true }).click();
+  await member.getByRole("link", { name: /어느 환경에서 확인하나요/ }).click();
+  await member
+    .getByLabel("답변", { exact: true })
+    .fill("staging 합성 환경을 사용합니다.");
+  await member.getByRole("button", { name: "답변 저장", exact: true }).click();
+  await expect(
+    member.getByLabel("업무 질문", { exact: true }).locator("blockquote"),
+  ).toHaveText("staging 합성 환경을 사용합니다.");
+  await page.goto(url);
+  await expect(
+    page.getByLabel("현재 인계 요약", { exact: true }),
+  ).toContainText("새 답변이 아직");
+  await expect(
+    page.getByRole("button", { name: "이 결과 수용", exact: true }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "재작업 요청", exact: true }).click();
+  await page
+    .getByLabel("재작업 이유", { exact: true })
+    .fill("답변한 환경을 반영해주세요");
+  await page.getByRole("button", { name: "새 실행 준비", exact: true }).click();
+  await page.getByRole("button", { name: "실행 시작", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "이 결과 수용", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByLabel("현재 인계 요약", { exact: true }),
+  ).toContainText("답변한 환경을 반영해주세요");
+  await expect(
+    page.getByText("이전 결과와 비교", { exact: false }),
+  ).toBeVisible();
   await other.close();
 });

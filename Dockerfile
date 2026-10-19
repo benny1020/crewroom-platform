@@ -14,7 +14,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 COPY --from=build /app/dist ./dist
-COPY src/data.js src/domain.js src/workflow-domain.js ./src/
+COPY src/data.js src/domain.js src/workflow-domain.js src/request-contract.js ./src/
 COPY server ./server
 COPY runner/archive.mjs ./runner/archive.mjs
 COPY scripts/init-volume.mjs scripts/stage-secrets.mjs ./scripts/

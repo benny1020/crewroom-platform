@@ -1,8 +1,8 @@
-# 0.8 실제 서버 아키텍처
+# 0.10 실제 서버 아키텍처
 
 **코드 실행 추가 구조와 실제 검사 계약은 [0.6 실행 아키텍처](CODE_EXECUTION.md)가 기준이다.** 아래 협업·인증·큐 계약은 유지한다.
 
-2026-10-18. 이 문서와 소스가 현재 구현의 기준이다. 0.4 문서의 Paperclip 재사용·원격 하네스·자율 도구 실행은 이전 검토안이다.
+2026-10-19. 이 문서와 소스가 현재 구현의 기준이다. 0.4 문서의 Paperclip 재사용·원격 하네스·자율 도구 실행은 이전 검토안이다.
 
 ## 구성과 데이터 소유권
 
@@ -26,6 +26,16 @@ App과 Worker는 같은 릴리스를 사용하되 별도 프로세스다. 큐·�
 - 취소·일시정지와 발송 오류가 겹쳐도 `prepared/launched/unknown` intent가 있으면 lease를 자동 해제하지 않는다. 운영 CLI가 근거 해시를 남기며 확인한다.
 - Agent·스킬·provider endpoint/model profile은 Run 시작 시 고정한다. 최근 대화는 최대 20개·12,000자다. 장기 기억은 관련성 검색으로 16,000자까지 고정하며 모든 답변 버전·프로젝트 공통 기록을 조회하며 조회·기억 제안 합계는 최대 4회다. 제안은 사람이 저장하기 전까지 기억으로 사용하지 않는다. 출처 key/버전과 의존 자료를 발송·완료 때 다시 검사한다. [0.8 장기 기억](MEMORY_ARCHITECTURE.md)
 - 기억 삭제·정정·소속/계정 변경은 발송 전/갱신/완료 때 재검사한다. 이미 발송한 데이터를 외부 모델에서 회수할 수는 없다. 결과 게시는 막는다.
+
+## 질문·재작업과 결과의 유효성
+
+[![질문·재작업과 결과의 유효성](diagrams/work-contract.png)](diagrams/work-contract.svg)
+
+Migration 008은 `cr_tasks.rework`, `question_revision`, 대상별 `cr_questions`를 추가하고 `analysis` 업무 유형을 허용한다. 질문은 책임자가 만들고 지정한 활성·열람 가능한 구성원이 답한다. Task의 기존 공개 범위를 상속하며 Task 문맥 잠금→질문 잠금 순서와 revision으로 늦은 수정·중복 답변을 거절한다. 새 답변은 Task 답변 revision을 증가시킨다.
+
+시작은 미답변 질문을 검사한다. 수용·QA 인계는 현재 대상의 미답변 질문과 결과를 만든 Run의 답변 revision을 검사한다. 결과 뒤 새 답변이 생기면 새 Run이 필요하다. 실행 중·일시정지 Run의 입력은 바꾸지 않으며 자동 발송하지 않는다. 대상 변경 시 옛 질문·답변은 superseded로 보관하고 새 입력에서 제외한다.
+
+새 Run은 재작업 지시, 서버가 고른 같은 단계 기준 결과의 제한된 참조, 현재 대상 답변을 snapshot에 고정한다. `server/provider.js`와 `server/runner-client.js` 모두 이를 모델 최초 입력에 넣는다. 과거 검사·수용은 참고 자료로만 구분하며 새 증거로 상속하지 않는다. [UI·필드·한도·상태 계약](WORKFLOW_IMPROVEMENTS.md)
 
 ## 입력과 모델
 
@@ -57,16 +67,17 @@ GitHub PR은 7~40자리 head SHA를 받는다. head를 확인하고 불변 base/
 
 `GET /api/admin/operations`는 팀장 역할을 확인한 뒤 기존 Task 열람 조건으로 대기·실행·실패·24시간 처리 시간과 성공 산출물의 모델 영수증을 집계한다. 집계도 비공개 업무 권한을 확대하지 않는다. 누락된 사용량은 0으로 채우지 않으며, 실패/취소의 전체 청구량과 금액은 측정하지 않는다. [답변 평가·사용량의 범위](ANSWER_EVALUATION.md)
 
-| 경로                                                | 역할                           | 구현                          |
-| --------------------------------------------------- | ------------------------------ | ----------------------------- |
-| `/api/auth/*`                                       | 로그인·세션·로그아웃·팀장 요청 | auth.js, app.js               |
-| `/api/workspace`, `/api/events`                     | 범위별 목록·실시간 갱신        | app.js, permissions.js        |
-| `/api/admin/operations`                             | 팀장용 열람 범위 내 운영 집계  | operations.js, permissions.js |
-| `/api/tasks`, `/:id/commands`, `/:id/messages`      | 접수·상태·책임·대화            | tasks.js                      |
-| `/api/artifacts/:id`                                | 범위 검사 후 Markdown 다운로드 | app.js                        |
-| `/api/memories`                                     | 검색·출처·정정·삭제            | resources.js                  |
-| `/api/memory/search`, `/sources/:key`, `/proposals` | 시점 검색·원문·제안 검토       | memory.js, memory-learning.js |
-| `/api/agents`, `/api/skills`, `/api/members`        | 설정·버전·담당·역할            | resources.js                  |
-| `/api/health`, `/api/ready`                         | 프로세스 / DB·복원 준비 상태   | app.js                        |
+| 경로                                                | 역할                                | 구현                          |
+| --------------------------------------------------- | ----------------------------------- | ----------------------------- |
+| `/api/auth/*`                                       | 로그인·세션·로그아웃·팀장 요청      | auth.js, app.js               |
+| `/api/workspace`, `/api/events`                     | 범위별 목록·실시간 갱신             | app.js, permissions.js        |
+| `/api/admin/operations`                             | 팀장용 열람 범위 내 운영 집계       | operations.js, permissions.js |
+| `/api/tasks`, `/:id/commands`, `/:id/messages`      | 접수·상태·책임·대화                 | tasks.js                      |
+| `/api/tasks/:id/questions`, `/:questionId`          | 책임자 질문·담당자 답변·닫기·재배정 | questions.js                  |
+| `/api/artifacts/:id`                                | 범위 검사 후 Markdown 다운로드      | app.js                        |
+| `/api/memories`                                     | 검색·출처·정정·삭제                 | resources.js                  |
+| `/api/memory/search`, `/sources/:key`, `/proposals` | 시점 검색·원문·제안 검토            | memory.js, memory-learning.js |
+| `/api/agents`, `/api/skills`, `/api/members`        | 설정·버전·담당·역할                 | resources.js                  |
+| `/api/health`, `/api/ready`                         | 프로세스 / DB·복원 준비 상태        | app.js                        |
 
 기억 원문·정정 이력은 DB에 보관한다. 핵심 기억과 대화 원문·자동 발췌 업무 요약을 검색하고 출처를 추적한다. 선택적 embedding URL은 Worker가 별도로 호출한다. 자동 요약을 승인된 사실·검사 결과로 승격하지 않는다. [구조·설정·검증](MEMORY_ARCHITECTURE.md)

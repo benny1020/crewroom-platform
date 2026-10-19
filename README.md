@@ -11,17 +11,21 @@
 
 </div>
 
-**0.9.0은 실제 서버 오피스에서 동료·적용 스킬·현재 업무를 이어주고, 팀장용 운영 현황과 한국어 답변 평가 도구를 추가했습니다.** [변경·검증 기록](docs/SERVER_VERIFICATION.md) · [평가 사용법](docs/ANSWER_EVALUATION.md). GitHub Pages는 API 없는 0.4 화면 데모입니다. 실제 공동 사용은 아래 서버를 실행해야 합니다. 모델 키는 포함하지 않습니다. 외부 모델 추론과 실제 팀의 업무 절감 효과는 아직 검증하지 않았습니다. [배포별 시범 운영 가이드](docs/PILOT_GUIDE.md)를 별도로 관리합니다.
+**0.10.0은 스킬에 맞는 대상 입력, 결과 중심 업무방, 구성원 질문함과 답변을 반영한 재작업을 추가했습니다.** [화면·동작·구현 계약](docs/WORKFLOW_IMPROVEMENTS.md) · [검증·리뷰](docs/SERVER_VERIFICATION.md). GitHub Pages는 API 없는 0.4 화면 데모입니다. 실제 공동 사용은 아래 서버를 실행해야 합니다. 모델 키는 포함하지 않습니다. 외부 모델 추론과 실제 팀의 업무 절감 효과는 아직 검증하지 않았습니다. [시범 운영 가이드](docs/PILOT_GUIDE.md)를 별도로 관리합니다.
 
 OpenAI 호환 또는 Claude Messages API의 **URL·모델 ID·인증 방식**을 직접 지정합니다. 제공자 API, 게이트웨이, 자체 호스팅 endpoint를 같은 설정 방식으로 연결하고, GitLab URL과 사용할 프로젝트도 선택합니다. [커스텀 연결 설정](docs/CONFIGURATION.md)
 
-지금은 **서버 UX·평가 준비를 구현한 상태**이며, 다음 단계는 실제 endpoint 검증과 소규모 공동 사용입니다. [마일스톤과 완료 기준](docs/MILESTONES.md) · [GitHub 진행 현황](https://github.com/benny1020/crewroom-platform/milestones)
+지금은 **공동 업무 흐름·평가 준비를 구현한 상태**이며, 다음 단계는 실제 endpoint 검증과 소규모 공동 사용입니다. [마일스톤과 완료 기준](docs/MILESTONES.md) · [GitHub 진행 현황](https://github.com/benny1020/crewroom-platform/milestones)
 
 ![실제 서버의 부서별 공용 동료와 스킬](docs/media/readiness/office.png)
 
 동료를 선택하면 현재 업무와 다음 행동, 적용한 스킬이 함께 열립니다. 스킬 요청 화면에는 실행에 고정할 버전과 완료 기준을 보여줍니다. 팀장은 열람 가능한 업무의 대기열·실패·처리 시간과 저장된 모델 사용 기록을 확인합니다. 아래 화면과 GIF는 격리된 PostgreSQL·App·Worker를 사용하며 모델 응답은 결정적 테스트 fixture입니다.
 
-![서버 오피스에서 스킬 요청·결과·운영 현황까지](docs/media/readiness/workflow.gif)
+![스킬 요청·구성원 질문·답변을 반영한 재작업](docs/media/handoff/workflow.gif)
+
+선택한 분석 스킬은 대상·버전·프로젝트 입력으로 이어지고, 코드 수정은 실제 개발·독립 QA 경로로 연결됩니다. 업무방은 현재 결과와 미확인 사항을 먼저 보여줍니다. 책임자가 질문할 사람을 지정하면 **내가 할 일**에서 답변하고, 새 답변과 재작업 이유는 다음 실행에 고정됩니다. 새 답변이 빠진 옛 결과는 수용할 수 없습니다. 모델의 자동 질문·자동 재개는 제공하지 않습니다. [질문·재작업의 상태와 한도](docs/WORKFLOW_IMPROVEMENTS.md)
+
+![현재 결과와 다음 행동](docs/media/handoff/workroom.png)
 
 ## 구현 구조
 
@@ -33,7 +37,7 @@ OpenAI 호환 또는 Claude Messages API의 **URL·모델 ID·인증 방식**을
 | ------ | -------------------------------------------------------------------------------------------------------------------------------------- |
 | 웹     | Vite + Vanilla JS + Lucide + CSS 캐릭터 모션. 서버 모드와 정적 데모 진입점 분리                                                        |
 | App    | Fastify 5, Zod 입력 검사, 로그인·CSRF·범위 검사·업무/스킬/기억 API·SSE                                                                 |
-| DB     | PostgreSQL 18, SQL migration 7개, 단일 Task/Run 큐, 영속 이벤트·메시지·버전별 결과                                                     |
+| DB     | PostgreSQL 18, SQL migration 8개, 단일 Task/Run 큐, 영속 이벤트·메시지·버전별 결과                                                     |
 | Worker | 별도 Node 프로세스. 전체 2개·같은 에이전트 1개 동시 실행, 임대와 generation으로 오래된 결과 차단                                       |
 | Runner | 별도 HTTP broker. Docker socket 전담, 고정 이미지·등록 검사·Run별 개발/QA Job 생성과 종료 검증                                         |
 | 모델   | Claude Messages / OpenAI 호환 HTTP adapter. 커스텀 URL·인증 설정, endpoint/model profile 고정, 제한된 JSON 행동 루프, 구조화 결과 검사 |
@@ -58,9 +62,9 @@ LangChain/LangGraph는 사용하지 않습니다. Paperclip 내부 큐를 별도
 ## 함께 일하는 흐름
 
 1. 대상·버전·원하는 결과와 공개 범위를 입력합니다.
-2. 책임자가 실행을 시작하면 지침·스킬 버전·기억·대화·입력 결과를 고정합니다.
+2. 책임자가 실행을 시작하면 지침·스킬 버전·기억·대화·입력 결과·재작업 지시·저장한 답변을 고정합니다.
 3. Worker가 분석 또는 실제 실행 결과·patch·검사 로그를 저장합니다. 팀원은 같은 업무방에 조건을 남기고 책임을 인계합니다.
-4. 결과 버전을 고정해 QA 계획 또는 독립 실제 검사로 넘깁니다. 사람이 결과를 수용해야 완료됩니다.
+4. 필요한 질문에 담당자가 답하고, 새 답변이 있으면 재작업으로 반영합니다. 유효한 결과를 QA 계획 또는 독립 실제 검사로 넘기고 사람이 수용해야 완료됩니다.
 5. 수용한 결과에서 반복 업무 스킬 초안을 만들고 편집·게시·적용합니다. 이전 검증·승인은 복사하지 않습니다.
 
 [![함께 일하는 흐름](docs/diagrams/task-lifecycle.png)](docs/diagrams/task-lifecycle.svg)
@@ -149,6 +153,7 @@ TEST_DATABASE_URL=postgresql://crewroom@127.0.0.1:5448/crewroom npm run test:ser
 
 | 문서                                                                  | 내용                                                          |
 | --------------------------------------------------------------------- | ------------------------------------------------------------- |
+| [요청·결과·질문·재작업](docs/WORKFLOW_IMPROVEMENTS.md)                | 0.10 화면, 수동 질문함, 답변·재작업 입력과 수용 계약          |
 | [실제 코드 수정·독립 QA](docs/CODE_EXECUTION.md)                      | native 루프·Docker 격리·검사·이미지·복구 계약                 |
 | [커스텀 모델·저장소 연결](docs/CONFIGURATION.md)                      | 모델·GitLab URL·인증·프록시·소스 패키지                       |
 | [장기 기억 구조·조사·검증](docs/MEMORY_ARCHITECTURE.md)               | 핵심 기억·원문 검색·자동 업무 요약·추가 조회·선택적 의미 검색 |

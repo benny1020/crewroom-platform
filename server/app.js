@@ -17,6 +17,7 @@ import {
 } from "./auth.js";
 import { requireLead, requireRead, readPredicate } from "./permissions.js";
 import { fail, HttpError } from "./errors.js";
+import { listQuestions, createQuestion, updateQuestion } from "./questions.js";
 import { login, register, taskInput, command, id } from "./validation.js";
 import {
   createTask,
@@ -244,6 +245,7 @@ export function buildApp(pool, config = configuration()) {
       agents,
       skills,
       tasks,
+      questions: await listQuestions(pool, user),
       memories,
       workers: workers.rows.map((w) => ({
         ...w,
@@ -275,6 +277,25 @@ export function buildApp(pool, config = configuration()) {
   });
   app.get("/api/tasks/:id", async (req) => ({
     task: await taskDetail(pool, req.member, id.parse(req.params.id)),
+  }));
+  app.post("/api/tasks/:id/questions", async (req, reply) => {
+    const question = await createQuestion(
+      pool,
+      req.member,
+      id.parse(req.params.id),
+      req.body,
+    );
+    reply.code(201);
+    return { question };
+  });
+  app.patch("/api/tasks/:id/questions/:questionId", async (req) => ({
+    question: await updateQuestion(
+      pool,
+      req.member,
+      id.parse(req.params.id),
+      id.parse(req.params.questionId),
+      req.body,
+    ),
   }));
   app.post("/api/tasks/:id/commands", async (req) => ({
     task: await executeCommand(

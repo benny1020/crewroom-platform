@@ -12,6 +12,7 @@ import { modelProfile, sourceProfile } from "./config.js";
 import { buildMemoryContext } from "./memory.js";
 import { embeddingProfile } from "./memory-embedding.js";
 import { WORK_TYPES } from "./work-types.js";
+import { requestContract } from "../src/request-contract.js";
 
 export async function getTask(db, user, id, lock = false) {
   if (lock) await lockContextMutation(db);
@@ -26,34 +27,46 @@ export async function getTask(db, user, id, lock = false) {
 }
 export async function taskDetail(db, user, id) {
   const task = await getTask(db, user, id);
-  const [steps, runs, artifacts, messages, events, claims, acceptances] =
-    await Promise.all([
-      db.query(
-        "SELECT s.*,a.name AS agent_name FROM cr_steps s JOIN cr_agents a ON a.id=s.agent_id WHERE task_id=$1 ORDER BY position",
-        [id],
-      ),
-      db.query(
-        "SELECT id,task_id,agent_id,step_index,status,generation,lease_owner,lease_until,snapshot,progress,error_code,error_message,created_at,started_at,finished_at FROM cr_runs WHERE task_id=$1 ORDER BY created_at",
-        [id],
-      ),
-      db.query(
-        "SELECT * FROM cr_artifacts WHERE task_id=$1 ORDER BY created_at",
-        [id],
-      ),
-      db.query(
-        "SELECT m.*,u.name AS author FROM cr_messages m JOIN cr_members u ON u.id=m.user_id WHERE task_id=$1 ORDER BY id",
-        [id],
-      ),
-      db.query("SELECT * FROM cr_events WHERE task_id=$1 ORDER BY id", [id]),
-      db.query(
-        "SELECT c.*,u.name FROM cr_claims c JOIN cr_members u ON u.id=c.user_id WHERE task_id=$1",
-        [id],
-      ),
-      db.query(
-        "SELECT * FROM cr_acceptances WHERE task_id=$1 ORDER BY created_at",
-        [id],
-      ),
-    ]);
+  const [
+    steps,
+    runs,
+    artifacts,
+    messages,
+    events,
+    claims,
+    acceptances,
+    questions,
+  ] = await Promise.all([
+    db.query(
+      "SELECT s.*,a.name AS agent_name FROM cr_steps s JOIN cr_agents a ON a.id=s.agent_id WHERE task_id=$1 ORDER BY position",
+      [id],
+    ),
+    db.query(
+      "SELECT id,task_id,agent_id,step_index,status,generation,lease_owner,lease_until,snapshot,progress,error_code,error_message,created_at,started_at,finished_at FROM cr_runs WHERE task_id=$1 ORDER BY created_at",
+      [id],
+    ),
+    db.query(
+      "SELECT * FROM cr_artifacts WHERE task_id=$1 ORDER BY created_at",
+      [id],
+    ),
+    db.query(
+      "SELECT m.*,u.name AS author FROM cr_messages m JOIN cr_members u ON u.id=m.user_id WHERE task_id=$1 ORDER BY id",
+      [id],
+    ),
+    db.query("SELECT * FROM cr_events WHERE task_id=$1 ORDER BY id", [id]),
+    db.query(
+      "SELECT c.*,u.name FROM cr_claims c JOIN cr_members u ON u.id=c.user_id WHERE task_id=$1",
+      [id],
+    ),
+    db.query(
+      "SELECT * FROM cr_acceptances WHERE task_id=$1 ORDER BY created_at",
+      [id],
+    ),
+    db.query(
+      "SELECT * FROM cr_questions WHERE task_id=$1 ORDER BY created_at",
+      [id],
+    ),
+  ]);
   // Context can contain personal memory. Run snapshots returned to viewers omit it.
   return {
     ...task,
@@ -69,6 +82,8 @@ export async function taskDetail(db, user, id) {
         model: r.snapshot.model,
         outputSchema: r.snapshot.outputSchema,
         inputHash: r.snapshot.inputHash,
+        questionRevision: r.snapshot.questionRevision || 0,
+        rework: r.snapshot.rework,
         memoryContext: r.snapshot.memoryContext
           ? {
               version: r.snapshot.memoryContext.version,
@@ -92,6 +107,7 @@ export async function taskDetail(db, user, id) {
     events: events.rows,
     claims: claims.rows,
     acceptances: acceptances.rows,
+    questions: questions.rows,
   };
 }
 export async function listTasks(db, user) {
@@ -160,7 +176,8 @@ export async function createTask(pool, user, values, key) {
       return getTask(db, user, prior.resource_id);
     }
     let steps = WORK_TYPES[values.workType]?.steps;
-    if (values.workType === "chat") {
+    let selectedDone;
+    if (["chat", "analysis"].includes(values.workType)) {
       const agent = (
         await db.query("SELECT * FROM cr_agents WHERE id=$1", [values.agentId])
       ).rows[0];
@@ -171,13 +188,35 @@ export async function createTask(pool, user, values, key) {
       const skillId = values.skillId || "conversation";
       const binding = (
         await db.query(
-          "SELECT 1 FROM cr_skill_bindings b JOIN cr_skills s ON s.id=b.skill_id WHERE b.agent_id=$1 AND b.skill_id=$2 AND (s.owner_id IS NULL OR s.owner_id=$3)",
+          "SELECT v.done_criteria FROM cr_skill_bindings b JOIN cr_skills s ON s.id=b.skill_id JOIN cr_skill_versions v ON v.skill_id=b.skill_id AND v.version=b.version WHERE b.agent_id=$1 AND b.skill_id=$2 AND (s.owner_id IS NULL OR s.owner_id=$3)",
           [agent.id, skillId, user.id],
         )
-      ).rowCount;
+      ).rows[0];
       if (!binding)
         fail(400, "MISSING_BINDING", "이 동료에 적용한 스킬을 선택해주세요.");
-      steps = [{ name: "업무 대화", agentId: agent.id, skill: skillId }];
+      const contract = requestContract(skillId);
+      // Existing custom conversation skills remain compatible. Built-in task skills
+      // must not silently lose their target or execution contract through chat.
+      if (
+        contract === "handoff" ||
+        contract === "code-qa" ||
+        (values.workType === "chat" &&
+          contract === "analysis" &&
+          !skillId.startsWith("custom-"))
+      )
+        fail(
+          422,
+          "SKILL_REQUEST_CONTRACT",
+          "이 스킬은 대상이 있는 업무 접수 또는 코드 수정·QA 인계에서 사용해주세요.",
+        );
+      selectedDone = binding.done_criteria;
+      steps = [
+        {
+          name: values.workType === "chat" ? "업무 대화" : "대상 분석",
+          agentId: agent.id,
+          skill: skillId,
+        },
+      ];
     }
     if (!steps || (values.imported && values.workType !== "pr-qa"))
       fail(400, "WORK_TYPE", "업무 유형을 확인해주세요.");
@@ -190,8 +229,19 @@ export async function createTask(pool, user, values, key) {
         "FULL_COMMIT_REQUIRED",
         "코드 실행은 40자 또는 64자 전체 커밋 SHA가 필요해요.",
       );
+    if (
+      values.workType === "code-qa" &&
+      ((values.agentId && values.agentId !== "dev") ||
+        (values.skillId && values.skillId !== "code-change"))
+    )
+      fail(
+        422,
+        "SKILL_REQUEST_CONTRACT",
+        "코드 수정·QA는 개발 동료의 코드 수정 스킬과 독립 QA 인계로 시작합니다.",
+      );
     const id = randomUUID();
     let done =
+      selectedDone ||
       WORK_TYPES[values.workType]?.done ||
       "요청의 답변과 근거·미확인 사항을 확인하고 수용";
     if (values.exampleId) {
@@ -360,6 +410,7 @@ export async function executeCommand(pool, user, id, values, config) {
       );
     }
     if (action === "start") {
+      await requireAnsweredQuestions(db, task);
       if (!["queued", "paused", "failed"].includes(task.status))
         fail(409, "INVALID_STATE", "현재 상태에서는 실행할 수 없어요.");
       if (run?.lease_owner)
@@ -475,6 +526,14 @@ export async function executeCommand(pool, user, id, values, config) {
           inputArtifact: input?.result || null,
           inputArtifactHash: input?.content_hash || null,
           brief: task.brief,
+          rework: task.rework,
+          questionRevision: task.question_revision,
+          questions: (
+            await db.query(
+              "SELECT id,prompt,answer,asked_by,answered_by,target_version FROM cr_questions WHERE task_id=$1 AND target_version=$2 AND status='answered' ORDER BY created_at",
+              [id, task.target_version],
+            )
+          ).rows,
           messages,
           example: task.example_artifact_id
             ? {
@@ -544,8 +603,14 @@ export async function executeCommand(pool, user, id, values, config) {
           [run.id, status],
         );
       await db.query("UPDATE cr_tasks SET status=$2 WHERE id=$1", [id, status]);
+      if (action === "cancel")
+        await db.query(
+          "UPDATE cr_questions SET status='closed',revision=revision+1 WHERE task_id=$1 AND status='pending'",
+          [id],
+        );
     }
     if (action === "handoff" || action === "accept") {
+      await requireAnsweredQuestions(db, task);
       const artifact = (
         await db.query("SELECT * FROM cr_artifacts WHERE id=$1", [
           step.current_artifact_id,
@@ -558,6 +623,22 @@ export async function executeCommand(pool, user, id, values, config) {
       )
         fail(409, "RESULT_REQUIRED", "현재 대상 버전의 결과를 확인해주세요.");
       if (task.work_type === "code-qa") assertExecutionResult(artifact, task);
+      const answeredRevision = artifact.run_id
+        ? Number(
+            (
+              await db.query(
+                "SELECT snapshot->>'questionRevision' AS revision FROM cr_runs WHERE id=$1",
+                [artifact.run_id],
+              )
+            ).rows[0]?.revision || 0,
+          )
+        : 0;
+      if (answeredRevision !== task.question_revision)
+        fail(
+          409,
+          "ANSWERS_NOT_APPLIED",
+          "새 답변이 아직 결과에 반영되지 않았어요. 재작업으로 새 실행을 시작해주세요.",
+        );
       const next = (
         await db.query(
           "SELECT * FROM cr_steps WHERE task_id=$1 AND position=$2",
@@ -601,6 +682,35 @@ export async function executeCommand(pool, user, id, values, config) {
           "STOP_CONFIRMATION_REQUIRED",
           "결과 또는 이전 실행의 종료를 먼저 확인해주세요.",
         );
+      const reference = step.current_artifact_id
+        ? (
+            await db.query(
+              "SELECT id,target_version,result,content_hash,origin FROM cr_artifacts WHERE id=$1 AND task_id=$2",
+              [step.current_artifact_id, id],
+            )
+          ).rows[0]
+        : null;
+      const rework = {
+        reason: values.reason,
+        targetVersion: values.targetVersion,
+        requestedBy: user.id,
+        requestedAt: new Date().toISOString(),
+        previous: reference
+          ? {
+              artifactId: reference.id,
+              targetVersion: reference.target_version,
+              contentHash: reference.content_hash,
+              origin: reference.origin,
+              summary: reference.result.summary.slice(0, 6000),
+            }
+          : task.rework?.previous || null,
+        notice:
+          "이전 결과는 수정 참고 이력입니다. 이전 검사와 수용은 현재 대상의 검증 근거가 아닙니다.",
+      };
+      await db.query(
+        "UPDATE cr_questions SET status='superseded',revision=revision+1 WHERE task_id=$1 AND target_version<>$2 AND status IN ('pending','answered')",
+        [id, values.targetVersion],
+      );
       await db.query(
         "UPDATE cr_acceptances SET revoked_at=now() WHERE task_id=$1 AND revoked_at IS NULL",
         [id],
@@ -616,7 +726,7 @@ export async function executeCommand(pool, user, id, values, config) {
         targetVersion: values.targetVersion,
       };
       await db.query(
-        "UPDATE cr_tasks SET target_version=$2,brief_history=brief_history || $3::jsonb,brief=$4,step_index=0,current_run_id=NULL,status='queued' WHERE id=$1",
+        "UPDATE cr_tasks SET target_version=$2,brief_history=brief_history || $3::jsonb,brief=$4,rework=$5,step_index=0,current_run_id=NULL,status='queued' WHERE id=$1",
         [
           id,
           values.targetVersion,
@@ -629,6 +739,7 @@ export async function executeCommand(pool, user, id, values, config) {
             },
           ]),
           brief,
+          rework,
         ],
       );
     }
@@ -673,9 +784,26 @@ export async function executeCommand(pool, user, id, values, config) {
   });
 }
 
+async function requireAnsweredQuestions(db, task) {
+  if (
+    (
+      await db.query(
+        "SELECT 1 FROM cr_questions WHERE task_id=$1 AND target_version=$2 AND status='pending' LIMIT 1",
+        [task.id, task.target_version],
+      )
+    ).rowCount
+  )
+    fail(
+      409,
+      "QUESTIONS_PENDING",
+      "답변이 필요한 질문이 있어요. 답변을 받거나 질문을 닫은 뒤 진행해주세요.",
+    );
+}
+
 async function optionalRunnerProfile(pool, user, id, config) {
   const task = await getTask(pool, user, id);
   if (task?.work_type !== "code-qa") return null;
+  await requireAnsweredQuestions(pool, task);
   const { getRunnerProfile } = await import("./runner-client.js");
   return getRunnerProfile(config);
 }

@@ -7,6 +7,8 @@ erDiagram
   TASK ||--|{ STEP : contains
   TASK ||--o{ MESSAGE : shares
   TASK ||--o{ EVENT : audits
+  TASK ||--o{ QUESTION : scopes_by_target
+  MEMBER ||--o{ QUESTION : assigned_to
   STEP ||--o{ RUN : executes
   RUN ||--o{ MODEL_DISPATCH : records
   RUN ||--o{ EXECUTION_JOB : isolates

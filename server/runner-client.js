@@ -153,6 +153,8 @@ export async function runCodeAgent(
         mode: snapshot.execution.mode,
         checks: profile.checks.map(({ id, label }) => ({ id, label })),
         brief: snapshot.brief,
+        rework: snapshot.rework,
+        questions: snapshot.questions,
         messages: snapshot.messages,
         memories: snapshot.memoryContext ? [] : snapshot.memories,
         memoryContext: snapshot.memoryContext?.items,

@@ -41,6 +41,7 @@ test(
         ],
       ]),
       archive = tarFiles(files);
+    const contexts = [];
     const upstream = createServer(async (req, res) => {
       if (req.url.includes("/repository/commits/")) {
         res.setHeader("content-type", "application/json");
@@ -62,6 +63,7 @@ test(
           nextActions: [],
         };
       let action;
+      if (!actions.length) contexts.push(context);
       if (!actions.length)
         action = { action: "search_memory", query: "합계 함수 개발 규칙" };
       else if (!actions.some((a) => a.action === "read_file"))
@@ -145,7 +147,54 @@ test(
       ),
       1,
     );
-    const dev = detail.artifacts[0].result.execution;
+    const question = (
+      await lead.request("POST", `/api/tasks/${task.id}/questions`, {
+        taskRevision: detail.revision,
+        assigneeId: member.user.id,
+        prompt: "어떤 검사를 추가 확인할까요?",
+      })
+    ).json().question;
+    assert.equal(
+      (
+        await member.request(
+          "PATCH",
+          `/api/tasks/${task.id}/questions/${question.id}`,
+          {
+            action: "answer",
+            revision: question.revision,
+            answer: "NATIVE_ANSWER_PROBE 합계 검사를 확인해주세요",
+          },
+        )
+      ).statusCode,
+      200,
+    );
+    detail = (await lead.request("GET", `/api/tasks/${task.id}`)).json().task;
+    assert.equal(
+      (await command(lead, detail, "handoff")).json().code,
+      "ANSWERS_NOT_APPLIED",
+    );
+    detail = (
+      await command(lead, detail, "rework", {
+        reason: "NATIVE_REWORK_PROBE 답변을 반영해 다시 검사해주세요",
+        targetVersion: sha,
+      })
+    ).json().task;
+    assert.equal((await command(lead, detail, "start")).statusCode, 200);
+    run = await claimRun(h.pool, "test-worker", h.config);
+    await processRun(h.pool, run, "test-worker", h.config);
+    detail = (await lead.request("GET", `/api/tasks/${task.id}`)).json().task;
+    assert.equal(detail.status, "result_ready", JSON.stringify(detail.runs));
+    const secondContext = contexts.find((c) =>
+      c.rework?.reason.includes("NATIVE_REWORK_PROBE"),
+    );
+    assert.ok(secondContext);
+    assert.match(
+      JSON.stringify(secondContext.questions),
+      /NATIVE_ANSWER_PROBE/,
+    );
+    const dev = detail.artifacts.find(
+      (a) => a.id === detail.steps[0].current_artifact_id,
+    ).result.execution;
     assert.equal(dev.passed, true);
     assert.match(dev.patch, /a\+b/);
     assert.equal(dev.checks[0].exitCode, 0);
@@ -167,6 +216,9 @@ test(
       .execution;
     assert.equal(qa.passed, true);
     assert.equal(qa.mode, "verify");
+    const qaContext = contexts.find((c) => c.mode === "verify");
+    assert.match(qaContext.rework.reason, /NATIVE_REWORK_PROBE/);
+    assert.match(JSON.stringify(qaContext.questions), /NATIVE_ANSWER_PROBE/);
     assert.equal(qa.patchHash, dev.patchHash);
     assert.notEqual(qa.jobId, dev.jobId);
     assert.equal((await command(member, detail, "accept")).statusCode, 200);

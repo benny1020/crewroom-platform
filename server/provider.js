@@ -30,6 +30,8 @@ export function modelMessages(snapshot) {
         source: snapshot.source,
         inputArtifact: snapshot.inputArtifact,
         brief: snapshot.brief,
+        rework: snapshot.rework,
+        questions: snapshot.questions,
         messages: snapshot.messages,
         example: snapshot.example,
         memoryContext: snapshot.memoryContext?.items,

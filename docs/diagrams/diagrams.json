@@ -188,5 +188,12 @@
     "title": "기억 제안·적용 기간·스킬 초안",
     "renderer": "illustrated",
     "document": "docs/MEMORY_ARCHITECTURE.md"
+  },
+  {
+    "id": "work-contract",
+    "document": "docs/WORKFLOW_IMPROVEMENTS.md",
+    "title": "질문과 재작업의 실행 계약",
+    "source": "source/work-contract.json",
+    "renderer": "illustrated"
   }
 ]

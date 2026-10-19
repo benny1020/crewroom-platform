@@ -15,7 +15,7 @@
     },
     {
       "file": "package-lock.json",
-      "sha256": "b551a47e1c282decca56f2554657e200f59042b7d104c2572a9d722c1466472e"
+      "sha256": "c975b3a4a531b0da7234805fe6e2760b1db834805e167d3af74d051440e0a0f3"
     }
   ],
   "diagrams": [
@@ -507,18 +507,18 @@
       "document": "docs/SERVER_ARCHITECTURE.md",
       "title": "구성과 데이터 소유권",
       "source": "source/server-data-model.mmd",
-      "width": 1481,
+      "width": 1609,
       "height": 1027,
-      "sourceHash": "21d8fa0778ef0237cff583da2da890b487b5dd26a59f8cc4d39bfaa7a411c907",
+      "sourceHash": "260c6ff24d5d9aedb8d657c4fc74a79f20c479453e1b917fb5548ab7942c1553",
       "svg": {
         "file": "server-data-model.svg",
-        "bytes": 32470,
-        "sha256": "fe09e8b72f0165de6749c9179685403043530971be34b0af35f936954524654d"
+        "bytes": 36014,
+        "sha256": "2c40b65b3ae4a4d97811673a75a8e673942fb80ed03796cef56992a36c74031b"
       },
       "png": {
         "file": "server-data-model.png",
-        "bytes": 179368,
-        "sha256": "e16f68a0d3daacf8767ee41299014c7a743718941f6c805c045bb825526ab7f7"
+        "bytes": 226837,
+        "sha256": "72b86af81d616302944d5c31f3a35c12972619baee9cde5e960cb4f84afdd20e"
       }
     },
     {
@@ -597,6 +597,26 @@
         "file": "memory-learning.png",
         "bytes": 266962,
         "sha256": "77ea6fe9eca0422983d2b77710c8e037d8081081f4e5d617a8b47eddba9eda4b"
+      }
+    },
+    {
+      "id": "work-contract",
+      "document": "docs/WORKFLOW_IMPROVEMENTS.md",
+      "title": "질문과 재작업의 실행 계약",
+      "source": "source/work-contract.json",
+      "renderer": "illustrated",
+      "width": 1280,
+      "height": 680,
+      "sourceHash": "9e026fcfd37d85aefa45f127276e871ad5099b421449685fe1fff3af9bf8a7bf",
+      "svg": {
+        "file": "work-contract.svg",
+        "bytes": 11309,
+        "sha256": "76502cfdac68c4e069a294eee69c1b284d963c766ce7397e10f2e1fae0dd884e"
+      },
+      "png": {
+        "file": "work-contract.png",
+        "bytes": 201030,
+        "sha256": "152aa0ff709258d444ad9c5ab41a87119e79dc84a0a4385c27e4c6e6053ce2dd"
       }
     }
   ]

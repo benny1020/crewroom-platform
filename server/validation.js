@@ -21,7 +21,7 @@ export const login = z
   .strict();
 export const taskInput = z
   .object({
-    workType: z.enum(["pr-qa", "review", "ops", "chat", "code-qa"]),
+    workType: z.enum(["pr-qa", "review", "ops", "chat", "code-qa", "analysis"]),
     title: z.string().trim().max(110).optional(),
     target: z.string().trim().min(1).max(500),
     targetVersion: z.string().trim().min(1).max(80),
