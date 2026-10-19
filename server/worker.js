@@ -395,6 +395,44 @@ export async function dispatchRun(pool, run, owner, send) {
     throw error;
   }
 }
+// A configured semantic search must not silently lose recall capability and
+// publish a normal result. Keyword-only installations remain explicit choices.
+function assertRecallQuality(context, required = false) {
+  if (context?.semanticStatus === "capacity_limited")
+    throw new HttpError(
+      503,
+      "MEMORY_SEARCH_CAPACITY",
+      "의미 검색의 안전 용량을 넘었어요. 검색 용량을 확장한 뒤 새 실행을 시작해주세요. 품질을 낮춘 답변은 저장하지 않았습니다.",
+    );
+  if (context?.semanticStatus === "profile_incompatible")
+    throw new HttpError(
+      503,
+      "EMBEDDING_DIMENSION_CHANGED",
+      "질문과 저장된 기억의 embedding 차원이 달라요. 모델 설정과 기억 인덱스를 확인한 뒤 새 실행을 시작해주세요.",
+    );
+  if (context?.semanticStatus === "index_incomplete")
+    throw new HttpError(
+      503,
+      "MEMORY_INDEX_INCOMPLETE",
+      "접근 가능한 기억의 인덱스가 아직 완성되지 않았어요. 인덱스 준비·오류를 확인한 뒤 새 실행을 시작해주세요.",
+    );
+  if (context?.semanticStatus === "unavailable")
+    throw new HttpError(
+      503,
+      "MEMORY_SEARCH_UNAVAILABLE",
+      "설정한 의미 검색을 사용할 수 없어요. 연결을 복구한 뒤 새 실행을 시작해주세요. 품질을 낮춘 답변은 저장하지 않았습니다.",
+    );
+  if (
+    required &&
+    (context?.semanticCoverageVersion !== 1 ||
+      !["matched", "no_matches"].includes(context?.semanticStatus))
+  )
+    throw new HttpError(
+      503,
+      "MEMORY_SEARCH_UNVERIFIED",
+      "이전 실행의 의미 검색 확인 기록이 없어요. 새 실행에서 기억을 다시 확인해주세요.",
+    );
+}
 export async function recallForRun(pool, run, owner, action, semantic = {}) {
   return transaction(pool, async (db) => {
     const locked = await lockedRun(db, run.id);
@@ -439,6 +477,10 @@ export async function recallForRun(pool, run, owner, action, semantic = {}) {
       asOf: action.asOf || run.created_at,
       limit: action.action === "read_memory" ? 1 : 10,
     });
+    assertRecallQuality(
+      docs,
+      action.action === "search_memory" && !!run.snapshot.embeddingProfile,
+    );
     if (action.action === "read_memory")
       for (const d of docs)
         d.excerpt = d.body.slice(
@@ -474,6 +516,7 @@ export async function recallForRun(pool, run, owner, action, semantic = {}) {
       found: context.items.length,
       method: docs.some((d) => d.semantic > 0) ? "hybrid" : "keyword",
       semanticStatus: docs.semanticStatus,
+      semanticCoverageVersion: docs.semanticCoverageVersion,
       nextOffset:
         action.action === "read_memory" &&
         docs[0] &&
@@ -484,15 +527,19 @@ export async function recallForRun(pool, run, owner, action, semantic = {}) {
     };
   });
 }
-async function semanticContext(pool, run, owner, config, options) {
+function checkedEmbeddingProfile(run, config) {
   const profile = embeddingProfile(config);
-  if (!profile) return;
-  if (profile.id !== run.snapshot.embeddingProfile?.id)
+  if ((profile?.id || null) !== (run.snapshot.embeddingProfile?.id || null))
     throw new HttpError(
       409,
       "EMBEDDING_PROFILE_CHANGED",
       "의미 검색 연결이 변경됐어요. 새 실행을 시작해주세요.",
     );
+  return profile;
+}
+async function semanticContext(pool, run, owner, config, options) {
+  const profile = checkedEmbeddingProfile(run, config);
+  if (!profile) return;
   const query = [run.snapshot.messages?.at(-1)?.body, run.snapshot.goal]
     .filter(Boolean)
     .join(" ")
@@ -507,7 +554,7 @@ async function semanticContext(pool, run, owner, config, options) {
     if (error.code === "DISPATCH_UNKNOWN" || error.code === "DISPATCH_REVOKED")
       throw error;
     run.snapshot.memoryContext.semanticStatus = "unavailable";
-    return;
+    assertRecallQuality(run.snapshot.memoryContext);
   }
   await transaction(pool, async (db) => {
     const locked = await lockedRun(db, run.id),
@@ -530,6 +577,7 @@ async function semanticContext(pool, run, owner, config, options) {
       before: run.created_at,
       limit: 60,
     });
+    assertRecallQuality(docs, true);
     const base = await documentsByKeys(
       db,
       run.snapshot.memoryContext.items.map((i) => i.key),
@@ -553,6 +601,7 @@ async function semanticContext(pool, run, owner, config, options) {
       ...context,
       method: docs.some((d) => d.semantic > 0) ? "hybrid" : "keyword",
       semanticStatus: docs.semanticStatus,
+      semanticCoverageVersion: docs.semanticCoverageVersion,
     };
   });
 }
@@ -578,6 +627,7 @@ export async function processRun(pool, run, owner, config, dependencies = {}) {
   };
   const timer = setInterval(check, Math.min(config.workerHeartbeatMs, 2000));
   try {
+    checkedEmbeddingProfile(run, config);
     const source = await (
       run.snapshot.execution ? collectCodeInput : collectInput
     )(run.snapshot, {
@@ -652,6 +702,11 @@ export async function processRun(pool, run, owner, config, dependencies = {}) {
         "STALE_EXECUTION",
         "실행 소유권 또는 자료 권한이 변경됐어요.",
       );
+    // Covers resumed inputs created by versions that allowed degraded recall.
+    assertRecallQuality(
+      run.snapshot.memoryContext,
+      !!run.snapshot.embeddingProfile,
+    );
     const modelOptions = {
       signal: controller.signal,
       ...dependencies,
@@ -672,6 +727,7 @@ export async function processRun(pool, run, owner, config, dependencies = {}) {
               error.code === "DISPATCH_REVOKED"
             )
               throw error;
+            assertRecallQuality({ semanticStatus: "unavailable" });
           }
         }
         return recallForRun(pool, run, owner, action, semantic);

@@ -1,0 +1,42 @@
+{
+  "release": "0.11.1",
+  "date": "2026-10-19",
+  "counts": {
+    "unit": 56,
+    "postgres": 99,
+    "dockerRunner": 6,
+    "staticBrowser": 31,
+    "serverBrowser": 17,
+    "total": 209,
+    "skipped": 0
+  },
+  "environment": "macOS Node26, Docker Node24/PostgreSQL18; CI uses Node24",
+  "logHashes": {
+    "unitAndBuild": "9f766909daf59ef61c546d597921b75a95c4cf6d1ce62ccaeb9c2325c0175f43",
+    "postgres": "d205285cda9c8fe334d31d0dbc106d40ccdf6c9bdf002a78c258d68b21e12c5b",
+    "dockerRunner": "5567280c23346fedb30a68ed460010e788dec80171931bedfdd024631ac27b16",
+    "staticBrowser": "86d9a6b7f7e0624fdea3bcb18458ac56c3a2604d27f5286718c9dda1545ccc0e",
+    "serverBrowser": "68fd26b48f05cfc24ea2146c4a04234b7ea0d9a837519fc6d8d35dfa7b867473",
+    "restore": "c4a96c31eb9094db976033bed16e04adfc19f9321971ec1f216cc3c04cc4dd8a",
+    "filesystemIsolation": "91221c60e16dd134975e6fc21c36ab7f1732e3f6d89e4bfba6d2795dfd1c86d5"
+  },
+  "independentReview": {
+    "model": "gpt-6-astra",
+    "focusedTests": 18,
+    "failed": 0,
+    "remainingRequiredFindings": 0,
+    "manifestSha256": "c7829f14b3d646b9222b7fedd02748b5a54466e1c63c22dac834a4e825953721"
+  },
+  "actualExternalModelCalls": 0,
+  "limits": [
+    "Fixture model responses verify execution gates, not real generation or embedding quality.",
+    "Semantic capacity now blocks completion; large-scale ANN and semantic throughput are not implemented.",
+    "Prior 0.11.0 million-message benchmark does not measure new semantic coverage checks."
+  ],
+  "securityScan": {
+    "scanner": "Gitleaks 8.30.1",
+    "publishableFiles": 401,
+    "sourceFindings": 0,
+    "preReleaseAllRefHistoryFindings": 0
+  }
+}

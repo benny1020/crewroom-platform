@@ -58,7 +58,9 @@ try {
   await h.pool.query("ANALYZE");
   const report = {
     synthetic: true,
-    release: "0.11.0",
+    release: JSON.parse(
+      await readFile(new URL("../package.json", import.meta.url), "utf8"),
+    ).version,
     node: process.version,
     tasks: tasks + 1,
     messages,

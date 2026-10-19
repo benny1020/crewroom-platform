@@ -5,7 +5,7 @@ x-logging: &logging
 x-app: &app
   logging: *logging
   build: .
-  image: crewroom:0.11.0
+  image: crewroom:0.11.1
   environment: &environment
     NODE_ENV: ${NODE_ENV:-development}
     PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:4180}
@@ -113,7 +113,7 @@ services:
   runner:
     logging: *logging
     build: { context: ., dockerfile: Dockerfile.runner }
-    image: crewroom-runner:0.11.0
+    image: crewroom-runner:0.11.1
     environment:
       HOST: 0.0.0.0
       PORT: 4191

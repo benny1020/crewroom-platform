@@ -95,9 +95,14 @@ export async function operationStats(db, dataDir) {
       r.ready_documents > EXACT_VECTOR_DOCUMENT_LIMIT ||
       Number(r.vector_values) > EXACT_VECTOR_VALUE_LIMIT ||
       Number(r.vector_bytes) > EXACT_VECTOR_BYTE_LIMIT
-        ? "keyword_capacity_limited"
+        ? "semantic_capacity_blocked"
         : "bounded_exact_vectors",
   }));
+  const embeddingIndex = (
+    await db.query(
+      "SELECT profile_id,status,error_code,count(*)::int AS documents FROM cr_memory_embeddings GROUP BY profile_id,status,error_code ORDER BY profile_id,status,error_code",
+    )
+  ).rows;
   let filesystem = null;
   if (dataDir) {
     try {
@@ -117,6 +122,7 @@ export async function operationStats(db, dataDir) {
     filesystem,
     tables,
     vectorProfiles,
+    embeddingIndex,
     limits: {
       messagePage: 40,
       runPage: 12,
@@ -127,6 +133,7 @@ export async function operationStats(db, dataDir) {
     },
     notices: [
       "Table rows are PostgreSQL estimates; run ANALYZE after bulk imports.",
+      "Cache counts do not prove recall coverage; each semantic lookup verifies live scoped source revisions.",
       "Filesystem describes DATA_DIR's mounted filesystem, not every database/backup volume.",
       "No original conversations, results, memories or recovery records are pruned.",
     ],

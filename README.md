@@ -11,7 +11,7 @@
 
 </div>
 
-**0.11.0은 긴 업무방의 과거 페이지·원문 검색, 검색 인덱스, 종료 Job 메모리 관리와 운영 용량 진단을 추가했습니다.** [장기 운영 설계와 남은 경계](docs/LONG_TERM_OPERATIONS.md). [화면·동작·구현 계약](docs/WORKFLOW_IMPROVEMENTS.md) · [검증·리뷰](docs/SERVER_VERIFICATION.md). GitHub Pages는 API 없는 0.4 화면 데모입니다. 실제 공동 사용은 아래 서버를 실행해야 합니다. 모델 키는 포함하지 않습니다. 외부 모델 추론과 실제 팀의 업무 절감 효과는 아직 검증하지 않았습니다. [시범 운영 가이드](docs/PILOT_GUIDE.md)를 별도로 관리합니다.
+**0.11.1은 긴 대화·장기 운영 기능에 기억 검색의 품질 보호 조건을 추가했습니다.** 의미 검색을 설정한 실행은 검색 실패·용량 초과 시 품질을 낮춰 완료하지 않습니다. [품질 유지 기준](docs/QUALITY.md). [장기 운영 설계와 남은 경계](docs/LONG_TERM_OPERATIONS.md). [화면·동작·구현 계약](docs/WORKFLOW_IMPROVEMENTS.md) · [검증·리뷰](docs/SERVER_VERIFICATION.md). GitHub Pages는 API 없는 0.4 화면 데모입니다. 실제 공동 사용은 아래 서버를 실행해야 합니다. 모델 키는 포함하지 않습니다. 외부 모델 추론과 실제 팀의 업무 절감 효과는 아직 검증하지 않았습니다. [시범 운영 가이드](docs/PILOT_GUIDE.md)를 별도로 관리합니다.
 
 OpenAI 호환 또는 Claude Messages API의 **URL·모델 ID·인증 방식**을 직접 지정합니다. 제공자 API, 게이트웨이, 자체 호스팅 endpoint를 같은 설정 방식으로 연결하고, GitLab URL과 사용할 프로젝트도 선택합니다. [커스텀 연결 설정](docs/CONFIGURATION.md)
 

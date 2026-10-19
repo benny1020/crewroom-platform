@@ -1234,7 +1234,7 @@ function openDialog(type, data = {}) {
     title = "이번 실행이 참고한 기억";
     form = "memory-source";
     submit = "닫기";
-    body = `${data.semanticStatus === "capacity_limited" ? '<p class="cr-note" role="status">의미 검색의 안전 용량을 넘어 이번 실행은 원문 키워드 검색을 사용했습니다. 과거 원문은 보존되어 있습니다.</p>' : ""}<p class="cr-note">원본의 현재 버전과 접근 범위가 유효한 기록입니다. 변경·삭제된 출처 ${data.unavailable}개.</p>${data.items.map((m) => `<article class="cw-paper"><h3>${esc(m.title)}</h3><p class="cr-instructions">${esc(m.body)}</p><small>${esc(m.source)}</small></article>`).join("") || "<p>참고한 장기 기억이 없습니다.</p>"}`;
+    body = `${data.semanticStatus === "capacity_limited" ? '<p class="cr-note" role="status">기억 검색의 용량 문제가 기록되어 있습니다. 실행 상태와 확인 필요 사항을 먼저 확인해주세요.</p>' : ""}<p class="cr-note">원본의 현재 버전과 접근 범위가 유효한 기록입니다. 변경·삭제된 출처 ${data.unavailable}개.</p>${data.items.map((m) => `<article class="cw-paper"><h3>${esc(m.title)}</h3><p class="cr-instructions">${esc(m.body)}</p><small>${esc(m.source)}</small></article>`).join("") || "<p>참고한 장기 기억이 없습니다.</p>"}`;
   }
   if (type === "memory-source") {
     title = data.item.title;

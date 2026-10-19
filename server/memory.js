@@ -230,7 +230,8 @@ export async function searchMemory(
           new Date(b.created_at) - new Date(a.created_at),
       ),
   ];
-  let semanticStatus = vector && profileId ? "no_matches" : "disabled";
+  let semanticStatus = vector && profileId ? "no_matches" : "disabled",
+    semanticCoverageVersion = 0;
   if (vector && profileId) {
     // One statement snapshot decides capacity and reads its cache. There is no
     // check-then-search race with the embedding indexer.
@@ -238,17 +239,34 @@ export async function searchMemory(
       await db.query(
         `WITH bounded AS MATERIALIZED (
       SELECT * FROM cr_memory_embeddings WHERE status='ready' AND profile_id=$1 ORDER BY source_key LIMIT 2001
-    ), capacity AS MATERIALIZED (
-      SELECT count(*)>2000 OR coalesce(sum(vector_values),0)>2000000 OR coalesce(sum(vector_bytes),0)>32000000 AS limited FROM bounded
-    ), found AS (
-      SELECT d.*,e.vectors FROM bounded e JOIN cr_recall_documents d ON d.key=e.source_key AND d.revision=e.source_revision
-      CROSS JOIN capacity
-      WHERE NOT capacity.limited AND e.status='ready' AND e.profile_id=$1 AND ($2='' OR $2=ANY(d.agents) OR (d.audience='project' AND ($3='' OR d.project=$3))) AND ($3='' OR d.project='' OR d.project=$3)
+    ), sources AS MATERIALIZED (
+      SELECT d.* FROM cr_recall_documents d WHERE
+      ($2='' OR $2=ANY(d.agents) OR (d.audience='project' AND ($3='' OR d.project=$3))) AND ($3='' OR d.project='' OR d.project=$3)
       AND (d.owner_id=$4 OR d.visibility='team' OR (d.visibility='department' AND d.department=$5))
       AND (d.agent_owner_id IS NULL OR d.agent_owner_id=$4)
-      AND ($6='private' OR d.visibility='team' OR ($6='department' AND d.visibility='department' AND d.department=$7)) AND ($8::timestamptz IS NULL OR d.created_at<=$8)
+      AND ($6='private' OR d.visibility='team' OR ($6='department' AND d.visibility='department' AND d.department=$7))
+      AND ($8::timestamptz IS NULL OR d.created_at<=$8)
       AND (d.valid_from IS NULL OR d.valid_from<=$9::timestamptz) AND (d.valid_to IS NULL OR d.valid_to>$9::timestamptz) AND (d.memory_id IS NOT NULL OR d.created_at<=$9::timestamptz)
-    ) SELECT limited,coalesce((SELECT jsonb_agg(to_jsonb(found)) FROM found),'[]'::jsonb) AS documents FROM capacity`,
+      AND NOT EXISTS (
+        SELECT 1 FROM jsonb_array_elements(d.dependencies) ref
+        LEFT JOIN cr_recall_documents p ON p.key=ref->>'key'
+        WHERE p.key IS NULL
+        OR NOT ((p.owner_id=$4 OR p.visibility='team' OR (p.visibility='department' AND p.department=$5))
+          AND (p.agent_owner_id IS NULL OR p.agent_owner_id=$4)
+          AND ($6='private' OR p.visibility='team' OR ($6='department' AND p.visibility='department' AND p.department=$7)))
+        OR NOT CASE WHEN ref ? 'legacyRevision' THEN p.record_revision::text=ref->>'legacyRevision' ELSE p.revision=ref->>'revision' END
+      ) LIMIT 2001
+    ), capacity AS MATERIALIZED (
+      SELECT count(*)>2000 OR coalesce(sum(vector_values),0)>2000000 OR coalesce(sum(vector_bytes),0)>32000000
+        OR (SELECT count(*)>2000 FROM sources) AS limited FROM bounded
+    ), coverage AS MATERIALIZED (
+      SELECT NOT EXISTS(SELECT 1 FROM sources d LEFT JOIN bounded e ON e.source_key=d.key AND e.source_revision=d.revision WHERE e.source_key IS NULL) AS complete,
+      EXISTS(SELECT 1 FROM sources d JOIN bounded e ON e.source_key=d.key AND e.source_revision=d.revision WHERE jsonb_array_length(e.vectors->0->'vector') IS DISTINCT FROM $10::int) AS dimension_mismatch
+    ), found AS (
+      SELECT d.*,e.vectors FROM sources d JOIN bounded e ON d.key=e.source_key AND d.revision=e.source_revision
+      CROSS JOIN capacity CROSS JOIN coverage WHERE NOT capacity.limited AND coverage.complete AND NOT coverage.dimension_mismatch
+    ) SELECT CASE WHEN limited THEN 'capacity_limited' WHEN dimension_mismatch THEN 'profile_incompatible' WHEN NOT complete THEN 'index_incomplete' ELSE 'ready' END AS status,
+      coalesce((SELECT jsonb_agg(to_jsonb(found)) FROM found),'[]'::jsonb) AS documents FROM capacity CROSS JOIN coverage`,
         [
           profileId,
           agentId,
@@ -259,10 +277,12 @@ export async function searchMemory(
           scope.department || user.department,
           before,
           asOf,
+          vector.length,
         ],
       )
     ).rows[0];
-    if (result.limited) semanticStatus = "capacity_limited";
+    if (result.status !== "ready") semanticStatus = result.status;
+    else semanticCoverageVersion = 1;
     const semantic = result.documents;
     const semanticRank = [];
     for (const doc of semantic) {
@@ -281,7 +301,8 @@ export async function searchMemory(
       } else rows.push({ ...doc, lexical: 0 });
     }
     rankedLists.push(semanticRank.sort((a, b) => b.semantic - a.semantic));
-    if (semanticRank.length) semanticStatus = "matched";
+    if (result.status === "ready" && semanticRank.length)
+      semanticStatus = "matched";
   }
   const fused = reciprocalRankFusion(rankedLists);
   rows.sort(
@@ -316,6 +337,9 @@ export async function searchMemory(
     vectors: undefined,
   }));
   Object.defineProperty(output, "semanticStatus", { value: semanticStatus });
+  Object.defineProperty(output, "semanticCoverageVersion", {
+    value: semanticCoverageVersion,
+  });
   return output;
 }
 export function reciprocalRankFusion(lists, k = 60) {

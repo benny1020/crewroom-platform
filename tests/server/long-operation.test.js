@@ -123,10 +123,13 @@ test("exact semantic search stops at corpus ceiling without reading vector bodie
   assert.equal(calls, 0);
 
   assert.equal(docs.length, 0);
-  assert.equal(sql.filter((q) => q.includes("FROM bounded e JOIN")).length, 1);
+  assert.equal(
+    sql.filter((q) => q.includes("capacity CROSS JOIN coverage")).length,
+    1,
+  );
   assert.equal(
     (await operationStats(h.pool)).vectorProfiles[0].mode,
-    "keyword_capacity_limited",
+    "semantic_capacity_blocked",
   );
 });
 
@@ -215,7 +218,7 @@ test("coordinate and byte ceilings also agree with operator diagnostics below th
     const stats = (await operationStats(h.pool)).vectorProfiles.find(
       (r) => r.profile_id === profile,
     );
-    assert.equal(stats.mode, "keyword_capacity_limited");
+    assert.equal(stats.mode, "semantic_capacity_blocked");
     assert.equal(stats.ready_documents, n);
     const cfg = {
       embeddingUrl: "http://127.0.0.1:1/embeddings",

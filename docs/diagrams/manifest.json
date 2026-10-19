@@ -15,7 +15,7 @@
     },
     {
       "file": "package-lock.json",
-      "sha256": "f6393ed988bef3f32d4b6aff52d82a6a2af599cb05ae7a86731d2ccb3a15a4ba"
+      "sha256": "0b651232c615c0f513cbb33bca6bbe3f99376b9ae8d940eed7eb9f601bb713d1"
     }
   ],
   "diagrams": [
@@ -627,16 +627,16 @@
       "renderer": "illustrated",
       "width": 1280,
       "height": 780,
-      "sourceHash": "63644a2f63b169bba3dec8d1eb20ece5951b7443ee4c50eec4746ec0dccc714d",
+      "sourceHash": "b8ddbab18f23a14c5a09f656468fc89b2102c4743b45fafad4304d3771311641",
       "svg": {
         "file": "long-operation.svg",
-        "bytes": 11833,
-        "sha256": "faebe1aa444fc309d1732756cfadf4aaaed2c10fd38dacb6b4ad74fe61e81726"
+        "bytes": 11850,
+        "sha256": "baec044e74a48d79ce93fdab364291a23873a67bc79638f586f0c330bfb12a07"
       },
       "png": {
         "file": "long-operation.png",
-        "bytes": 215673,
-        "sha256": "a210a23f31977b23a980e4dc6d149a48b0ecb329fc136e9ad70c15e9cc185d92"
+        "bytes": 219036,
+        "sha256": "111957dfed789f3d03526b8118ded10ac37307a4c349d9b99e8c5f905d5969c4"
       }
     }
   ]

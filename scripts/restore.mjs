@@ -18,9 +18,16 @@ const directory = resolve(source),
   );
 if (
   manifest.format !== 1 ||
-  !["0.6.0", "0.7.0", "0.8.0", "0.8.1", "0.9.0", "0.10.0", "0.11.0"].includes(
-    manifest.release,
-  ) ||
+  ![
+    "0.6.0",
+    "0.7.0",
+    "0.8.0",
+    "0.8.1",
+    "0.9.0",
+    "0.10.0",
+    "0.11.0",
+    "0.11.1",
+  ].includes(manifest.release) ||
   manifest.files?.length !== 2
 )
   throw new Error("Unsupported backup manifest");
