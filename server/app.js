@@ -2,7 +2,13 @@ import Fastify from "fastify";
 import { readFile, stat } from "node:fs/promises";
 import { resolve, extname, sep } from "node:path";
 import { z } from "zod";
-import { digest, transaction, event, assertRuntimeReady } from "./db.js";
+import {
+  digest,
+  transaction,
+  event,
+  assertRuntimeReady,
+  lockContextMutation,
+} from "./db.js";
 import { configuration, modelEndpoint } from "./config.js";
 import {
   authenticate,
@@ -32,6 +38,7 @@ import {
   documentsByKeys,
   sourceAllowed,
 } from "./memory.js";
+import { listWorkspace, readWorkspace } from "./agent-workspace.js";
 import * as resources from "./resources.js";
 import { taskHistory, taskArchive } from "./history.js";
 import { EventHub, writeEvent } from "./event-hub.js";
@@ -350,6 +357,48 @@ export function buildApp(pool, config = configuration()) {
         messageId: message.id,
       });
       return { message };
+    });
+  });
+  app.get("/api/agents/:agentId/workspace", async (req) => {
+    const agent = (await resources.agents(pool, req.member)).find(
+      (a) => a.id === req.params.agentId,
+    );
+    if (!agent) fail(404, "NOT_FOUND", "동료를 찾을 수 없어요.");
+    const query = z
+      .object({
+        query: z.string().max(100).optional(),
+        cursor: z.string().uuid().optional(),
+      })
+      .parse(req.query);
+    return transaction(pool, async (db) => {
+      await lockContextMutation(db);
+      return listWorkspace(db, req.member, { agentId: agent.id, ...query });
+    });
+  });
+  app.get("/api/tasks/:id/workspace", async (req) => {
+    const task = await getTask(pool, req.member, id.parse(req.params.id));
+    const query = z
+      .object({
+        query: z.string().max(100).optional(),
+        cursor: z.string().uuid().optional(),
+      })
+      .parse(req.query);
+    return transaction(pool, async (db) => {
+      await lockContextMutation(db);
+      return listWorkspace(db, req.member, { taskId: task.id, ...query });
+    });
+  });
+  app.get("/api/workspace/documents/:id", async (req) => {
+    const query = z
+      .object({
+        offset: z.coerce.number().int().min(0).max(32768).optional(),
+        revision: z.coerce.number().int().min(1).optional(),
+        beforeRevision: z.coerce.number().int().min(1).optional(),
+      })
+      .parse(req.query);
+    return transaction(pool, async (db) => {
+      await lockContextMutation(db);
+      return readWorkspace(db, req.member, id.parse(req.params.id), query);
     });
   });
   app.get("/api/artifacts/:id", async (req, reply) => {

@@ -1,0 +1,23 @@
+{
+  "release": "0.14.0",
+  "previousRelease": "0.13.1",
+  "at": "2026-10-20T01:04:20.362633+00:00",
+  "encryptedPreUpgradeBackup": true,
+  "reviewedSourceMatches": {
+    "app": {
+      "filesMatched": 12
+    },
+    "worker": {
+      "filesMatched": 12
+    }
+  },
+  "migrations": 13,
+  "currentTasks": 0,
+  "currentMessages": 0,
+  "workspaceDocuments": 0,
+  "workerHealthy": true,
+  "automaticMaintenanceSucceeded": true,
+  "modelConfigured": false,
+  "embeddingConfigured": false,
+  "actualExternalModelCalls": 0
+}

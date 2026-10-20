@@ -15,7 +15,7 @@
     },
     {
       "file": "package-lock.json",
-      "sha256": "eba77b8b0c345d30b6181a6e98226e49bab798d4b63f680eb677820e907156ee"
+      "sha256": "b80e15c60974ffea70625123d34b560b5a91bd6a706dd4c6e3f030acaf686ab0"
     }
   ],
   "diagrams": [
@@ -657,6 +657,26 @@
         "file": "skill-studio.png",
         "bytes": 226408,
         "sha256": "d1b21e393e60b7ec1d690c9bf2ef2f8f180bf48224c611a5f4486c1f533cfddb"
+      }
+    },
+    {
+      "id": "agent-workspace",
+      "document": "docs/AGENT_WORKSPACE.md",
+      "title": "에이전트가 직접 관리하는 작업공간",
+      "source": "source/agent-workspace.json",
+      "renderer": "illustrated",
+      "width": 1280,
+      "height": 850,
+      "sourceHash": "b5c4d768f87f73cdbb53b9922cf17306f556eea9146690f95f9baa5baa1253d1",
+      "svg": {
+        "file": "agent-workspace.svg",
+        "bytes": 14221,
+        "sha256": "c49463318f19759487627ce7aa026090f06d15a75d76892baffaf413ae242b9a"
+      },
+      "png": {
+        "file": "agent-workspace.png",
+        "bytes": 253023,
+        "sha256": "2e92911d05b2dd4c81097d2c11f18ac535a91d94cc9253431c3ce7e0934c555b"
       }
     }
   ]

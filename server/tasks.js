@@ -9,7 +9,12 @@ import {
 } from "./permissions.js";
 import { fail, conflict } from "./errors.js";
 import { modelProfile, sourceProfile } from "./config.js";
-import { buildMemoryContext } from "./memory.js";
+import {
+  buildMemoryContext,
+  sourceProvenance,
+  sourceAllowed,
+  validReferences,
+} from "./memory.js";
 import { embeddingProfile } from "./memory-embedding.js";
 import { historyPage, pinnedHistory } from "./history.js";
 import { WORK_TYPES } from "./work-types.js";
@@ -555,6 +560,88 @@ export async function executeCommand(
             "CHECKPOINT_PROFILE_CHANGED",
             "저장한 수정분의 커밋·실행 설정이 달라요. 재작업으로 새 대상에서 시작해주세요.",
           );
+        const workspaceContinuation =
+          task.work_type !== "skill-design" &&
+          Boolean(
+            (
+              await db.query(
+                "SELECT 1 FROM cr_workspace_documents WHERE task_id=$1 LIMIT 1",
+                [id],
+              )
+            ).rowCount,
+          );
+        const sourceIds = [
+          ...((!workspaceContinuation || task.work_type === "code-qa") && input
+            ? [input.id]
+            : []),
+          ...(!workspaceContinuation &&
+          /^[a-f0-9-]{36}$/i.test(task.brief?.source || "")
+            ? [task.brief.source]
+            : []),
+          ...(!workspaceContinuation && task.rework?.previous?.artifactId
+            ? [task.rework.previous.artifactId]
+            : []),
+        ];
+        const inheritedRefs = [];
+        for (const artifactId of [...new Set(sourceIds)]) {
+          const original = (
+            await db.query("SELECT result FROM cr_artifacts WHERE id=$1", [
+              artifactId,
+            ])
+          ).rows[0];
+          const expected = [];
+          if (original?.result.summary)
+            expected.push([
+              `artifact:${artifactId}:summary:1`,
+              original.result.summary,
+            ]);
+          for (const section of ["evidence", "unknowns", "nextActions"])
+            for (const [i, body] of (original?.result[section] || []).entries())
+              if (body)
+                expected.push([
+                  `artifact:${artifactId}:${section}:${i + 1}`,
+                  body,
+                ]);
+          const docs = (
+            await db.query(
+              "SELECT * FROM cr_recall_documents WHERE key=ANY($1::text[])",
+              [expected.map(([key]) => key)],
+            )
+          ).rows;
+          const found = new Map(docs.map((d) => [d.key, d]));
+          if (
+            !expected.length ||
+            !expected.every(([key, body]) => found.get(key)?.body === body)
+          )
+            fail(
+              409,
+              "CONTEXT_REVOKED",
+              "이전 결과의 일부 출처가 제거되었어요. 현재 자료로 새 입력을 준비해주세요.",
+            );
+          for (const doc of docs) {
+            if (
+              !sourceAllowed(user, task, doc) ||
+              !(await validReferences(db, user, task, doc.dependencies, {
+                lock: true,
+              }))
+            )
+              fail(
+                409,
+                "CONTEXT_REVOKED",
+                "이전 결과의 출처가 변경됐어요. 현재 자료로 새 업무를 준비해주세요.",
+              );
+            inheritedRefs.push(...(await sourceProvenance(db, doc)).refs);
+          }
+        }
+        const pinnedInherited = [
+          ...new Map(inheritedRefs.map((r) => [r.key, r])).values(),
+        ];
+        if (pinnedInherited.length > 500)
+          fail(
+            409,
+            "CONTEXT_TOO_LARGE",
+            "이전 결과의 출처가 너무 많아요. 업무를 나눠주세요.",
+          );
         const snapshot = {
           agent: {
             id: agent.id,
@@ -579,6 +666,8 @@ export async function executeCommand(
           inputArtifactId: input?.id || null,
           inputArtifact: input?.result || null,
           inputArtifactHash: input?.content_hash || null,
+          workspaceContinuation,
+          inheritedRefs: pinnedInherited,
           brief: task.brief,
           rework: task.rework,
           questionRevision: task.question_revision,

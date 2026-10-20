@@ -1,6 +1,11 @@
 import { z } from "zod";
 import { runModel, resultSchema, modelMessages } from "./provider.js";
 import { HttpError } from "./errors.js";
+import {
+  callWorkspaceTool,
+  workspaceActionSchemas,
+  workspaceInstructions,
+} from "./agent-workspace.js";
 import { proposalSchema } from "./memory-protocol.js";
 export const memoryActionSchemas = [
   z
@@ -28,7 +33,7 @@ export async function runMemoryAgent(snapshot, config, options = {}) {
   const messages = modelMessages(snapshot);
   messages[0].content = messages[0].content.replace(
     "도구·파일·네트워크 실행 기능은 없습니다.",
-    "허용된 기억 조회와 근거 제안만 수행할 수 있습니다. 파일·네트워크 실행 권한은 없습니다.",
+    "허용된 기억 도구와 작업 문서 도구를 수행할 수 있습니다. OS 파일·네트워크 실행 권한은 없습니다.",
   );
   messages[0].content = messages[0].content.replace(
     "아래 네 필드의 JSON 객체만 출력하세요:",
@@ -37,10 +42,16 @@ export async function runMemoryAgent(snapshot, config, options = {}) {
   messages[0].content +=
     "\n" +
     memoryInstructions +
+    (options.workspaceTools ? "\n" + workspaceInstructions : "") +
     " 최종 답변은 기존 네 필드의 JSON 객체를 사용하세요.";
-  const validator = z.union([resultSchema, ...memoryActionSchemas]),
+  const validator = z.union([
+      resultSchema,
+      ...memoryActionSchemas,
+      ...(options.workspaceTools ? workspaceActionSchemas : []),
+    ]),
     requests = [];
-  for (let i = 0; i <= 4; i++) {
+  let memoryLookups = 0;
+  for (let i = 0; i <= 20; i++) {
     const value = await runModel(snapshot, config, {
       ...options,
       messagesOverride: messages,
@@ -50,18 +61,40 @@ export async function runMemoryAgent(snapshot, config, options = {}) {
     if (!value.result.action)
       return {
         ...value,
-        receipt: { ...value.receipt, requests, memoryLookups: i },
+        receipt: {
+          ...value.receipt,
+          requests,
+          memoryLookups,
+          toolCalls: i,
+          workspaceActions: i - memoryLookups,
+        },
       };
-    if (i === 4)
+    if (i === 20)
+      throw new HttpError(
+        409,
+        "AGENT_TURN_LIMIT",
+        "작업 단계 한도에 도달했어요. 저장한 초안에서 이어갈 수 있어요.",
+      );
+    const workspaceAction = value.result.action.endsWith("_workspace");
+    if (!workspaceAction && ++memoryLookups > 4)
       throw new HttpError(
         409,
         "MEMORY_LOOKUP_LIMIT",
-        "기억 조회 한도에 도달했어요. 질문을 좁혀 다시 요청해주세요.",
+        "기억 조회 한도에 도달했어요.",
       );
-    const result = await options.memoryTools(value.result);
+    const result = workspaceAction
+      ? await callWorkspaceTool(options.workspaceTools, value.result)
+      : await options.memoryTools(value.result);
     messages.push(
       { role: "assistant", content: JSON.stringify(value.result) },
-      { role: "user", content: JSON.stringify({ memoryResult: result }) },
+      {
+        role: "user",
+        content: JSON.stringify(
+          workspaceAction
+            ? { workspaceResult: result }
+            : { memoryResult: result },
+        ),
+      },
     );
   }
 }

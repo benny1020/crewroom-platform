@@ -61,6 +61,9 @@ const stamp = (v) =>
   });
 const pill = (t) =>
   `<span class="g-pill ${t.status === "running" ? "blue" : ["failed", "paused", "result_ready"].includes(t.status) ? "amber" : t.status === "done" ? "green" : ""}"><span class="g-dot"></span>${statusName[t.status] || esc(t.status)}</span>`;
+let documentFiles = { items: [] },
+  documentQuery = "",
+  documentRoute = "";
 let archiveResults = [];
 const historyPanels = new Map();
 let workArchive = null,
@@ -263,6 +266,18 @@ async function load(force = false) {
       page === "admin" && next.user.role === "lead"
         ? await api("/admin/operations")
         : null;
+    if (generation !== sessionGeneration || id !== refreshId) throw stale();
+    const fileRoute = [page, taskId].join("/");
+    if (fileRoute !== documentRoute) {
+      documentQuery = "";
+      documentRoute = fileRoute;
+    }
+    documentFiles =
+      ["agents", "tasks"].includes(page) && taskId
+        ? await api(
+            `/${page}/${encodeURIComponent(taskId)}/workspace?query=${encodeURIComponent(documentQuery)}`,
+          )
+        : { items: [] };
     if (generation !== sessionGeneration || id !== refreshId) throw stale();
     workspace = next;
     workspace.operations = ops;
@@ -729,7 +744,7 @@ function taskView() {
           t.responsible_id,
         )}<button type="submit" class="g-button">담당 변경 기록</button><p class="g-error" data-error></p></form></details>`
       : ""
-  }<div class="cr-workroom-grid"><div>${handoffCard(t, state)}${state.current ? `<section class="cr-current-result" aria-label="현재 결과">${resultView(state.current)}${resultComparison(state.current, state.previous)}<div class="cr-result-actions"><strong>근거와 미확인 사항을 확인한 뒤 결정하세요.</strong><div class="cw-actions">${controls}</div></div></section>` : '<div class="cw-paper cr-empty-inline">현재 단계와 대상에 맞는 결과가 아직 없습니다. 이전 결과는 아래 이력에서 볼 수 있어요.</div>'}${questionsView(t, operator, readyMembers, run)}<section class="cw-paper cr-brief"><div class="cw-section-heading"><h2>요청 요약과 정정 이력</h2>${operator ? button("요약 바로잡기", "brief", "", false, "pencil") : ""}</div><p class="cw-brief-text">${esc(t.brief.text)}</p><div class="cr-brief-meta">요약 v${t.brief.version} · 대상 ${esc(t.brief.targetVersion)} · 근거 ${t.brief.source === "request" ? "원래 요청" : "저장한 결과"}</div><details class="cr-history" data-history-details="briefs" data-history-region="briefs"><summary>완료 기준과 요약 이력</summary>${historyNav("briefs")}<p>${esc(t.done_criteria)}</p>${historyRows(
+  }<div class="cr-workroom-grid"><div>${workspaceView()}${handoffCard(t, state)}${state.current ? `<section class="cr-current-result" aria-label="현재 결과">${resultView(state.current)}${resultComparison(state.current, state.previous)}<div class="cr-result-actions"><strong>근거와 미확인 사항을 확인한 뒤 결정하세요.</strong><div class="cw-actions">${controls}</div></div></section>` : '<div class="cw-paper cr-empty-inline">현재 단계와 대상에 맞는 결과가 아직 없습니다. 이전 결과는 아래 이력에서 볼 수 있어요.</div>'}${questionsView(t, operator, readyMembers, run)}<section class="cw-paper cr-brief"><div class="cw-section-heading"><h2>요청 요약과 정정 이력</h2>${operator ? button("요약 바로잡기", "brief", "", false, "pencil") : ""}</div><p class="cw-brief-text">${esc(t.brief.text)}</p><div class="cr-brief-meta">요약 v${t.brief.version} · 대상 ${esc(t.brief.targetVersion)} · 근거 ${t.brief.source === "request" ? "원래 요청" : "저장한 결과"}</div><details class="cr-history" data-history-details="briefs" data-history-region="briefs"><summary>완료 기준과 요약 이력</summary>${historyNav("briefs")}<p>${esc(t.done_criteria)}</p>${historyRows(
     "briefs",
   )
     .map(
@@ -756,7 +771,7 @@ function taskView() {
     historyRows("runs")
       .map(
         (r) =>
-          `<details class="cr-run"><summary><strong>${esc(agent(r.agent_id)?.name)}</strong><span class="g-pill">${statusName[r.status] || esc(r.status)}</span></summary><p>${esc(r.snapshot.skill.name)} v${r.snapshot.skill.version} · 설정 v${r.snapshot.agent.configVersion}</p><small>대상 ${esc(r.snapshot.targetVersion)}<br>${esc(r.snapshot.provider)} / ${esc(r.snapshot.model || "모델 설정 필요")}<br>${r.snapshot.execution ? `격리 실행 · ${r.snapshot.execution.mode === "verify" ? "독립 QA" : "코드 수정"} · ${esc(r.progress?.action || "준비 중")}${r.progress?.path ? " · " + esc(r.progress.path) : ""} · ${r.progress?.sequence || 0}/30` : "도구 실행 없음"} · 세대 ${r.generation}</small>${r.snapshot.source?.url ? `<p class="cr-source">고정 저장소 SHA<br>${esc(r.snapshot.source.sha)}</p>` : ""}<code>${esc(r.id)}</code></details>`,
+          `<details class="cr-run"><summary><strong>${esc(agent(r.agent_id)?.name)}</strong><span class="g-pill">${statusName[r.status] || esc(r.status)}</span></summary><p>${esc(r.snapshot.skill.name)} v${r.snapshot.skill.version} · 설정 v${r.snapshot.agent.configVersion}</p><small>대상 ${esc(r.snapshot.targetVersion)}<br>${esc(r.snapshot.provider)} / ${esc(r.snapshot.model || "모델 설정 필요")}<br>${r.snapshot.execution ? `격리 실행 · ${r.snapshot.execution.mode === "verify" ? "독립 QA" : "코드 수정"} · ${esc(r.progress?.action || "준비 중")}${r.progress?.path ? " · " + esc(r.progress.path) : ""} · ${r.progress?.sequence || 0}/30` : r.snapshot.skillDesign ? "스킬 초안 작성" : `작업 문서·기억 도구${r.progress?.action ? " · " + esc(r.progress.action) : " · 준비 중"}`} · 세대 ${r.generation}</small>${r.snapshot.source?.url ? `<p class="cr-source">고정 저장소 SHA<br>${esc(r.snapshot.source.sha)}</p>` : ""}<code>${esc(r.id)}</code></details>`,
       )
       .join("") || '<p class="cr-empty-inline">아직 시작한 실행이 없어요.</p>'
   }</section><section class="cw-paper" data-history-region="events"><h2>결정과 인계</h2>${historyNav("events")}${historyRows(
@@ -766,13 +781,16 @@ function taskView() {
     .reverse()
     .map(
       (e) =>
-        `<div class="cr-event"><strong>${esc({ task_created: "업무 접수", run_started: "실행 시작", model_dispatched: "모델 호출 발송", result_ready: "결과 준비", assign: "책임자 변경", handoff: "다음 단계 인계", accept: "사람의 결과 수용", rework: "재작업 요청", brief: "요약 정정", message: "맥락 추가", claim: "업무 인수 요청", run_failed: "실행 확인 필요", recovery_required: "복구 확인 필요", context_revoked: "문맥 권한 변경", execution_action: "코드 실행 단계" }[e.type] || e.type)}</strong><small>${e.actor_type === "user" ? esc(person(e.actor_id)) : e.actor_type === "run" ? "에이전트 실행" : "운영 기록"} · ${stamp(e.created_at)}</small></div>`,
+        `<div class="cr-event"><strong>${esc({ task_created: "업무 접수", run_started: "실행 시작", model_dispatched: "모델 호출 발송", result_ready: "결과 준비", assign: "책임자 변경", handoff: "다음 단계 인계", accept: "사람의 결과 수용", rework: "재작업 요청", brief: "요약 정정", message: "맥락 추가", claim: "업무 인수 요청", run_failed: "실행 확인 필요", recovery_required: "복구 확인 필요", context_revoked: "문맥 권한 변경", execution_action: "코드 실행 단계", workspace_saved: "작업 문서 저장" }[e.type] || e.type)}</strong><small>${e.actor_type === "user" ? esc(person(e.actor_id)) : e.actor_type === "run" ? "에이전트 실행" : "운영 기록"} · ${stamp(e.created_at)}</small></div>`,
     )
     .join(
       "",
     )}</section>${manage && ["queued", "running", "paused"].includes(t.status) ? cmd("업무 중단", "cancel") : ""}</aside></div>`;
 }
 
+function workspaceView() {
+  return `<section class="cw-paper cr-documents" aria-label="에이전트 작업공간"><div class="cw-section-heading"><div><h2>${icon("folder-open")} 작업공간</h2><p class="g-small g-muted">에이전트가 저장한 계획과 중간 문서입니다. 업무가 중단돼도 초안은 남습니다.</p></div><span class="g-pill">초안 문서</span></div><form data-form="workspace-search" class="cr-document-search">${field("작업 문서 검색", "query", documentQuery, "search", 'maxlength="100" placeholder="문서 이름 또는 내용 검색"')}<button class="g-button" type="submit">검색</button></form><div class="cr-document-list">${documentFiles.items.map((d) => `<button class="cr-document-row" type="button" data-action="workspace-document" data-id="${d.id}">${icon("file-text")}<span><strong>${esc(d.path)}</strong><small>${esc(d.task_title)} · ${scopeName[d.visibility]} · v${d.revision}</small></span><time>${stamp(d.updated_at)}</time>${icon("arrow-up-right")}</button>`).join("") || '<p class="cr-empty-inline">저장된 문서가 없어요. 대화에서 계획이나 진행 내용을 문서로 남겨달라고 요청할 수 있습니다.</p>'}</div>${documentFiles.nextCursor ? button("다음 문서 보기", "workspace-more", `data-cursor="${documentFiles.nextCursor}"`) : ""}<p class="cr-note">작업 문서는 완료·검사 통과·공용 기억 게시를 뜻하지 않습니다. 출처가 바뀐 문서는 자동 사용을 중단합니다.</p></section>`;
+}
 function agentView(id) {
   const a = agent(id);
   if (!a) return '<div class="g-empty">동료를 찾을 수 없어요.</div>';
@@ -796,7 +814,7 @@ function agentView(id) {
       )
       .map(taskRow)
       .join("") || '<p class="cr-empty-inline">연결된 업무가 없어요.</p>'
-  }</div></section><aside><section class="cw-paper"><h2>공통 업무 기준</h2><p class="cr-instructions">${esc(a.instructions)}</p><div class="cr-bound-skills">${a.skills.map((s) => `<span class="g-pill">${esc(workspace.skills.find((x) => x.id === s.skillId)?.name)} v${s.version}</span>`).join("")}</div><a href="#/skills" class="g-text-button">스킬 버전 보기 ${icon("arrow-up-right")}</a></section>${manage ? `<details class="cw-paper cr-agent-config"><summary>비서·동료 설정</summary><form data-form="agent-config" data-id="${a.id}" data-revision="${a.config_version}">${field("이름", "name", a.name, "text", 'required maxlength="40"')}${area("업무 지침", "instructions", a.instructions, 'required maxlength="6000"')}<p class="g-small g-muted">설정 변경은 다음 실행부터 적용합니다.</p><p class="g-error" data-error></p><button class="g-button" type="submit">설정 저장</button></form></details>` : ""}${
+  }</div></section><aside>${workspaceView()}<section class="cw-paper"><h2>공통 업무 기준</h2><p class="cr-instructions">${esc(a.instructions)}</p><div class="cr-bound-skills">${a.skills.map((s) => `<span class="g-pill">${esc(workspace.skills.find((x) => x.id === s.skillId)?.name)} v${s.version}</span>`).join("")}</div><a href="#/skills" class="g-text-button">스킬 버전 보기 ${icon("arrow-up-right")}</a></section>${manage ? `<details class="cw-paper cr-agent-config"><summary>비서·동료 설정</summary><form data-form="agent-config" data-id="${a.id}" data-revision="${a.config_version}">${field("이름", "name", a.name, "text", 'required maxlength="40"')}${area("업무 지침", "instructions", a.instructions, 'required maxlength="6000"')}<p class="g-small g-muted">설정 변경은 다음 실행부터 적용합니다.</p><p class="g-error" data-error></p><button class="g-button" type="submit">설정 저장</button></form></details>` : ""}${
     !a.owner_id
       ? `<section class="cw-paper"><h2>이 동료의 기억</h2>${
           workspace.memories
@@ -1118,6 +1136,12 @@ function openDialog(type, data = {}) {
     body = "",
     form = "",
     submit = "저장";
+  if (type === "workspace-doc") {
+    title = data.document.path;
+    submit = "닫기";
+    const d = data.document;
+    body = `<p class="cr-note">${esc(agent(d.agent_id)?.name || "에이전트")} 작성 · 초안 v${d.revision} · ${stamp(d.updated_at)} · 실제 저장된 문서입니다.</p><pre class="cr-document-body">${esc(d.content)}</pre>${d.nextOffset !== null ? button("본문 더 읽기", "workspace-read-more", `data-id="${d.id}" data-offset="${d.nextOffset}" data-revision="${d.revision}"`) : ""}<details><summary>문서 버전 이력</summary><div class="cr-document-versions">${d.versions.map((v) => button(`v${v.revision} · ${esc(v.path)}`, "workspace-document", `data-id="${d.id}" data-revision="${v.revision}"`)).join("")}</div>${d.nextBeforeRevision ? button("이전 버전 더 보기", "workspace-version-more", `data-id="${d.id}" data-revision="${d.revision}" data-before="${d.nextBeforeRevision}"`) : ""}<p class="cr-note">한 번에 30개 버전을 표시합니다. 출처가 유효한 이전 버전을 열 수 있어요.</p></details><a class="g-text-button" href="#/tasks/${d.task_id}" data-action="workspace-task">원래 업무방 열기</a>`;
+  }
   if (type === "intake-confirm") {
     title = "이 내용으로 함께 시작해요";
     body = `<dl class="cw-facts"><div><dt>업무 대상</dt><dd>${esc(data.values.target)}</dd></div><div><dt>대상 버전</dt><dd>${esc(data.values.targetVersion)}</dd></div><div><dt>요청할 내용</dt><dd>${esc(data.values.goal)}</dd></div><div><dt>공개 범위</dt><dd>${scopeName[data.values.visibility]}</dd></div></dl>${data.values.imported ? `<div class="cw-import-preview"><strong>공개할 결과</strong><p>${esc(data.values.imported.body)}</p><small>${esc(data.values.imported.source)}</small></div>` : ""}`;
@@ -1441,6 +1465,34 @@ root.addEventListener("click", async (e) => {
   if (!el || busy) return;
   const { action } = el.dataset;
   try {
+    if (action === "workspace-task") {
+      closeDialog();
+      return;
+    }
+    if (
+      action === "workspace-document" ||
+      action === "workspace-read-more" ||
+      action === "workspace-version-more"
+    ) {
+      const d = await api(
+        `/workspace/documents/${el.dataset.id}?revision=${el.dataset.revision || ""}${el.dataset.offset ? "&offset=" + el.dataset.offset : ""}${el.dataset.before ? "&beforeRevision=" + el.dataset.before : ""}`
+          .replace("revision=&", "")
+          .replace(/\?revision=$/, ""),
+      );
+      if (action === "workspace-read-more")
+        d.content = dialog.document.content + d.content;
+      openDialog("workspace-doc", { document: d });
+      return;
+    }
+    if (action === "workspace-more") {
+      const [p, id] = route();
+      const d = await api(
+        `/${p}/${id}/workspace?query=${encodeURIComponent(documentQuery)}&cursor=${el.dataset.cursor}`,
+      );
+      documentFiles = d;
+      render();
+      return;
+    }
     if (action === "studio-new") {
       studioCreateKey = null;
       navigate("skill-studio/new");
@@ -1747,6 +1799,10 @@ root.addEventListener("submit", async (e) => {
       session = await api("/auth/login", { method: "POST", body: values });
       await load(true);
       connect();
+    }
+    if (kind === "workspace-search") {
+      documentQuery = values.query;
+      await load(true);
     }
     if (kind === "password") {
       await api("/auth/password", { method: "POST", body: values });

@@ -1,0 +1,14 @@
+{
+  "release": "0.14.0",
+  "reviewer": "gpt-6-astra",
+  "status": "approved_code_review",
+  "baseHead": "b7ebb9253f8efc191c9cb8a0fffbdee9b0cbefc4",
+  "filesReviewed": 28,
+  "sourceBundleHash": "2fbd12a291f2628e4d7c9fca53353f032b7f83c00ddcfa5be229da422b667748",
+  "manifestSha256": "5cafb72f45f97909d9b4e1ebcb3db3966e39c520c06ce3a29f4964b96aaf0347",
+  "mandatoryP0P1P2Remaining": 0,
+  "independentTestsRun": 0,
+  "executionValidation": "Reported separately by the implementation agent; not rerun by reviewer",
+  "sourceHashRecheckAtReviewEnd": "passed",
+  "exactCommitBinding": "Source manifest is compared to the final commit after creation."
+}

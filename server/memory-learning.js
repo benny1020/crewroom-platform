@@ -22,6 +22,7 @@ export async function recordProposal(db, user, task, run, input, sequence) {
   const provenance = doc ? await sourceProvenance(db, doc) : null;
   if (
     !doc ||
+    doc.kind === "workspace" ||
     (doc.kind === "episode" && doc.task_id === task.id) ||
     !sourceAllowed(user, task, doc) ||
     !agentSourceAllowed(doc, run.agent_id) ||

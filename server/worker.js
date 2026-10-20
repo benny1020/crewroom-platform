@@ -18,6 +18,7 @@ import { runMemoryAgent } from "./memory-agent.js";
 import { runSkillDesigner } from "./skill-designer.js";
 import { recordProposal } from "./memory-learning.js";
 import {
+  automaticContextDocuments,
   searchMemory,
   contextFromDocuments,
   validReferences,
@@ -31,6 +32,7 @@ import {
 import { runCodeAgent } from "./runner-client.js";
 import { insertArtifact } from "./tasks.js";
 import { HttpError } from "./errors.js";
+import { workspaceForRun, workspaceReadRefs } from "./agent-workspace.js";
 import { maintain } from "./operations.js";
 
 export async function contextAllowed(db, run, task) {
@@ -50,8 +52,10 @@ export async function contextAllowed(db, run, task) {
   ).rows;
   const refs = [
     ...(run.snapshot.skillDesign?.sourceRefs || []),
+    ...(run.snapshot.inheritedRefs || []),
     ...(run.snapshot.memoryContext?.refs || []),
     ...reads.flatMap((r) => r.refs),
+    ...(await workspaceReadRefs(db, run.id)),
   ];
   if (!(await validReferences(db, user, task, refs, { lock: true })))
     return false;
@@ -507,7 +511,7 @@ export async function recallForRun(pool, run, owner, action, semantic = {}) {
           (action.offset || 0) + 7000,
         );
     const context = contextFromDocuments(
-      docs.filter(
+      (await automaticContextDocuments(db, locked.task, docs)).filter(
         (d) =>
           !(d.kind === "episode" && d.task_id === run.task_id) &&
           !d.dependencies?.some((r) => r.key === "episode:" + run.task_id),
@@ -544,6 +548,106 @@ export async function recallForRun(pool, run, owner, action, semantic = {}) {
           : null,
       notice: "과거 기록입니다. 검사·승인·진행 상태는 현재 원본을 확인하세요.",
     };
+  });
+}
+export async function actInWorkspace(
+  pool,
+  run,
+  owner,
+  action,
+  operationId = digest(action),
+) {
+  return transaction(pool, async (db) => {
+    const locked = await lockedRun(db, run.id);
+    if (
+      !owns(locked.run, owner, run.generation) ||
+      locked.task.current_run_id !== run.id ||
+      locked.task.step_index !== run.step_index ||
+      locked.task.target_version !== run.snapshot.targetVersion ||
+      !(await contextAllowed(db, locked.run, locked.task))
+    )
+      throw new HttpError(
+        409,
+        "STALE_EXECUTION",
+        "실행 또는 출처가 변경되어 문서를 조작할 수 없어요.",
+      );
+    const user = (
+      await db.query("SELECT * FROM cr_members WHERE id=$1", [run.requested_by])
+    ).rows[0];
+    const step = (
+      await db.query(
+        "SELECT input_artifact_id FROM cr_steps WHERE task_id=$1 AND position=$2",
+        [locked.task.id, locked.task.step_index],
+      )
+    ).rows[0];
+    if ((step?.input_artifact_id || null) !== run.snapshot.inputArtifactId)
+      throw new HttpError(
+        409,
+        "STALE_EXECUTION",
+        "입력 결과가 변경되어 문서를 조작할 수 없어요.",
+      );
+    const mutation = [
+      "write_workspace",
+      "move_workspace",
+      "archive_workspace",
+    ].includes(action.action);
+    const previous = mutation
+      ? (
+          await db.query(
+            "SELECT * FROM cr_workspace_operations WHERE run_id=$1 AND generation=$2 AND operation_id=$3",
+            [run.id, run.generation, operationId],
+          )
+        ).rows[0]
+      : null;
+    if (previous) {
+      if (previous.request_hash !== digest(action))
+        throw new HttpError(
+          409,
+          "WORKSPACE_OPERATION_MISMATCH",
+          "같은 저장 요청의 내용이 달라졌어요.",
+        );
+      return previous.result;
+    }
+    const outcome = await workspaceForRun(
+      db,
+      user,
+      locked.task,
+      locked.run,
+      action,
+    );
+    if (!(await contextAllowed(db, locked.run, locked.task)))
+      throw new HttpError(
+        409,
+        "WORKSPACE_DEPENDENCY_CONFLICT",
+        "이 수정은 이미 참고한 다른 문서의 출처를 바꿔요. 새 경로에 후속 문서를 작성해주세요.",
+      );
+    if (
+      !(
+        await db.query(
+          "SELECT 1 FROM cr_runs WHERE id=$1 AND lease_until>clock_timestamp()",
+          [run.id],
+        )
+      ).rowCount
+    )
+      throw new HttpError(
+        409,
+        "STALE_EXECUTION",
+        "저장 중 실행 임대가 만료되어 반영하지 않았어요.",
+      );
+    if (mutation)
+      await db.query(
+        "INSERT INTO cr_workspace_operations(run_id,generation,operation_id,request_hash,result) VALUES($1,$2,$3,$4,$5)",
+        [run.id, run.generation, operationId, digest(action), outcome],
+      );
+    await db.query("UPDATE cr_runs SET progress=$2 WHERE id=$1", [
+      run.id,
+      {
+        action: action.action,
+        path: outcome.path || null,
+        at: new Date().toISOString(),
+      },
+    ]);
+    return outcome;
   });
 }
 function checkedEmbeddingProfile(run, config) {
@@ -604,7 +708,7 @@ async function semanticContext(pool, run, owner, config, options) {
     for (const d of base.values())
       if (!docs.some((s) => s.key === d.key)) docs.push(d);
     const context = contextFromDocuments(
-      docs.filter(
+      (await automaticContextDocuments(db, locked.task, docs)).filter(
         (d) =>
           !(d.kind === "episode" && d.task_id === run.task_id) &&
           !d.dependencies?.some((r) => r.key === "episode:" + run.task_id),
@@ -730,6 +834,7 @@ export async function processRun(pool, run, owner, config, dependencies = {}) {
       signal: controller.signal,
       ...dependencies,
       dispatch: (send) => dispatchRun(pool, run, owner, send),
+      workspaceTools: (action) => actInWorkspace(pool, run, owner, action),
       memoryTools: async (action) => {
         let semantic = {};
         if (action.action === "search_memory" && config.embeddingUrl) {

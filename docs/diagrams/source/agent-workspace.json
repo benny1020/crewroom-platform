@@ -1,0 +1,218 @@
+{
+  "width": 1280,
+  "height": 850,
+  "title": "에이전트가 직접 관리하는 작업공간",
+  "subtitle": "문서는 DB에 남고, 모델은 실제 도구 결과를 받아 다음 행동을 선택합니다.",
+  "groups": [],
+  "nodes": [
+    {
+      "id": "web",
+      "x": 45,
+      "y": 150,
+      "w": 310,
+      "h": 165,
+      "title": "팀원의 웹 업무방",
+      "icon": "MessagesSquare",
+      "color": "service",
+      "tech": "대화와 문서를 함께 확인",
+      "lines": [
+        "현재 초안 · 버전 · 원래 업무"
+      ]
+    },
+    {
+      "id": "worker",
+      "x": 465,
+      "y": 150,
+      "w": 350,
+      "h": 165,
+      "title": "서버의 에이전트 루프",
+      "icon": "Bot",
+      "color": "service",
+      "tech": "필요할 때 모델 API 호출",
+      "lines": [
+        "행동 선택 → 실행 결과 → 다음 행동"
+      ]
+    },
+    {
+      "id": "model",
+      "x": 925,
+      "y": 150,
+      "w": 310,
+      "h": 165,
+      "title": "설정한 모델 endpoint",
+      "icon": "Sparkles",
+      "color": "external",
+      "tech": "Claude / OpenAI 호환",
+      "lines": [
+        "역할 · 스킬 · 필요한 문맥"
+      ]
+    },
+    {
+      "id": "documents",
+      "x": 45,
+      "y": 450,
+      "w": 350,
+      "h": 205,
+      "title": "영속 텍스트 작업공간",
+      "icon": "FolderOpen",
+      "color": "data",
+      "tech": "PostgreSQL · task 소유",
+      "lines": [
+        "계획 · Markdown · 진행 메모",
+        "불변 버전 · 출처 · 저장 receipt",
+        "중단 후에도 저장한 초안 유지"
+      ]
+    },
+    {
+      "id": "fence",
+      "x": 465,
+      "y": 450,
+      "w": 350,
+      "h": 205,
+      "title": "실행과 출처 검사",
+      "icon": "ShieldCheck",
+      "color": "service",
+      "tech": "현재 Run · generation · lease",
+      "lines": [
+        "사용자 권한 · 단계 · 대상",
+        "CAS 충돌 · 중복 저장 차단",
+        "정정·사용 중단의 의존성 전파"
+      ]
+    },
+    {
+      "id": "runner",
+      "x": 885,
+      "y": 450,
+      "w": 350,
+      "h": 205,
+      "title": "격리된 코드 실행",
+      "icon": "Container",
+      "color": "job",
+      "tech": "필요한 코드·QA 업무만 생성",
+      "lines": [
+        "파일 수정 · 등록 검사",
+        "Run별 tmpfs · patch checkpoint",
+        "문서와 검사 성공은 별도 상태"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "points": [
+        [
+          355,
+          230
+        ],
+        [
+          465,
+          230
+        ]
+      ],
+      "label": {
+        "text": "요청 · 상태",
+        "x": 410,
+        "y": 213
+      }
+    },
+    {
+      "points": [
+        [
+          815,
+          230
+        ],
+        [
+          925,
+          230
+        ]
+      ],
+      "label": {
+        "text": "반복 호출",
+        "x": 870,
+        "y": 213
+      }
+    },
+    {
+      "points": [
+        [
+          640,
+          315
+        ],
+        [
+          640,
+          450
+        ]
+      ],
+      "label": {
+        "text": "문서 · 실행 행동",
+        "x": 735,
+        "y": 390
+      }
+    },
+    {
+      "points": [
+        [
+          465,
+          550
+        ],
+        [
+          395,
+          550
+        ]
+      ],
+      "label": {
+        "text": "저장",
+        "x": 430,
+        "y": 532
+      }
+    },
+    {
+      "points": [
+        [
+          815,
+          550
+        ],
+        [
+          885,
+          550
+        ]
+      ],
+      "label": {
+        "text": "코드",
+        "x": 850,
+        "y": 532
+      }
+    }
+  ],
+  "notes": [
+    {
+      "x": 45,
+      "y": 700,
+      "w": 1190,
+      "h": 64,
+      "lines": [
+        "공용 agent ID는 권한이 아닙니다. 개인·부서·팀 공개 범위와 원본 출처를 매번 검사합니다."
+      ],
+      "icon": "Lock",
+      "color": "neutral",
+      "size": 19
+    }
+  ],
+  "legend": [
+    {
+      "label": "서버 · 도구 루프",
+      "color": "service"
+    },
+    {
+      "label": "영속 저장",
+      "color": "data"
+    },
+    {
+      "label": "모델 API",
+      "color": "external"
+    },
+    {
+      "label": "코드 실행",
+      "color": "job"
+    }
+  ]
+}

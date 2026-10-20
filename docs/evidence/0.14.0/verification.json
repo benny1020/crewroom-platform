@@ -1,0 +1,49 @@
+{
+  "release": "0.14.0",
+  "at": "2026-10-20T01:04:57.240610+00:00",
+  "status": "passed_local_with_targeted_fixture_retest",
+  "uniqueAutomaticTests": 268,
+  "tests": {
+    "unit": {
+      "passed": 66,
+      "failed": 0,
+      "skipped": 0
+    },
+    "postgresAndDocker": {
+      "uniquePassed": 141,
+      "fullBatchPassed": 140,
+      "fullBatchFailed": 1,
+      "retestedDockerCasePassed": 1,
+      "reasonForRetest": "The code fixture was updated to read the persisted document during rework before asserting inherited workspace provenance. Runtime code was unchanged.",
+      "skipped": 0
+    },
+    "dockerRunner": {
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0
+    },
+    "staticBrowser": {
+      "passed": 31,
+      "failed": 0
+    },
+    "serverBrowser": {
+      "passed": 24,
+      "failed": 0
+    },
+    "newWorkspaceCases": {
+      "passed": 14,
+      "alreadyIncludedInPostgresTotal": true
+    }
+  },
+  "build": "passed",
+  "syntaxAndDocs": "passed",
+  "encryptedBackupRestore": "passed",
+  "serviceSecretOwnership": "passed",
+  "knownNpmVulnerabilities": 0,
+  "gitleaksPublishTreeFindings": 0,
+  "gitleaksExistingHistoryFindings": 0,
+  "actualExternalModelCalls": 0,
+  "modelQuality": "unverified; fixture and loopback tests only",
+  "ci": "The published commit is verified again by the repository GitHub Actions workflow. See the commit checks.",
+  "sourceManifest": "reviewed-files.json"
+}

@@ -66,9 +66,53 @@ test(
       if (!actions.length) contexts.push(context);
       if (!actions.length)
         action = { action: "search_memory", query: "합계 함수 개발 규칙" };
-      else if (!actions.some((a) => a.action === "read_file"))
-        action = { action: "read_file", path: "sum.js" };
       else if (
+        context.mode === "edit" &&
+        !actions.some((a) => a.action === "write_workspace")
+      )
+        action = {
+          action: "write_workspace",
+          path: "notes/execution.md",
+          content: "구현 계획 · 실제 검사 전 초안",
+          expectedRevision: 0,
+        };
+      else if (
+        context.mode === "edit" &&
+        actions.filter((a) => a.action === "write_workspace").length === 1
+      )
+        action = {
+          action: "write_workspace",
+          path: "notes/execution.md",
+          content: "충돌로 덮어쓰면 안 되는 내용",
+          expectedRevision: 0,
+        };
+      else if (!actions.some((a) => a.action === "list_workspace")) {
+        if (context.mode === "edit")
+          assert.equal(
+            JSON.parse(payload.messages.at(-1).content).toolResult.error,
+            "WORKSPACE_CONFLICT",
+          );
+        action = { action: "list_workspace" };
+      } else if (!actions.some((a) => a.action === "read_workspace")) {
+        const listing = payload.messages
+          .filter((m) => m.role === "user")
+          .map((m) => JSON.parse(m.content))
+          .find((m) =>
+            m.toolResult?.items?.some((d) => d.path === "notes/execution.md"),
+          );
+        assert.ok(
+          listing,
+          "QA must see the developer's saved document in the same task",
+        );
+        action = {
+          action: "read_workspace",
+          id: listing.toolResult.items.find(
+            (d) => d.path === "notes/execution.md",
+          ).id,
+        };
+      } else if (!actions.some((a) => a.action === "read_file")) {
+        action = { action: "read_file", path: "sum.js" };
+      } else if (
         context.mode === "edit" &&
         !actions.some((a) => a.action === "write_file")
       )
@@ -209,6 +253,10 @@ test(
     detail = (await member.request("GET", `/api/tasks/${task.id}`)).json().task;
     assert.equal((await command(member, detail, "start")).statusCode, 200);
     run = await claimRun(h.pool, "qa-worker", h.config);
+    assert.ok(
+      run.snapshot.inheritedRefs.some((r) => r.key.startsWith("workspace:")),
+      "patch provenance is inherited before QA explicitly reads documents",
+    );
     await processRun(h.pool, run, "qa-worker", h.config);
     detail = (await member.request("GET", `/api/tasks/${task.id}`)).json().task;
     assert.equal(detail.status, "result_ready", JSON.stringify(detail.runs));

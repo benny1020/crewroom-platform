@@ -209,5 +209,12 @@
     "title": "대화형 스킬 생성과 게시·적용",
     "source": "source/skill-studio.json",
     "renderer": "illustrated"
+  },
+  {
+    "id": "agent-workspace",
+    "document": "docs/AGENT_WORKSPACE.md",
+    "title": "에이전트가 직접 관리하는 작업공간",
+    "source": "source/agent-workspace.json",
+    "renderer": "illustrated"
   }
 ]

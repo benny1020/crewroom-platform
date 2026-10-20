@@ -135,6 +135,7 @@ try {
     await api("/auth/login", { email: "drill@example.invalid", password })
   ).csrfToken;
   await fixture(source, "skill-studio", {});
+  await fixture(source, "workspace", {});
   const originalMemory = await api("/memories", {
     agentId: "dev",
     visibility: "private",
@@ -244,7 +245,7 @@ try {
     "1",
   );
   const comparison =
-    "SELECT json_build_object('briefRevisions',(SELECT json_agg(json_build_object('id',id,'task',task_id,'body',body) ORDER BY id) FROM cr_brief_revisions),'recallProjection',(SELECT json_agg(key||md5(title||body) ORDER BY key) FROM cr_recall_text),'skillStudios',(SELECT json_agg(json_build_object('id',id,'design',skill_design) ORDER BY id) FROM cr_tasks WHERE skill_design IS NOT NULL),'skillVersions',(SELECT json_agg(json_build_object('id',skill_id,'version',version,'hash',content_hash) ORDER BY skill_id,version) FROM cr_skill_versions),'bindings',(SELECT json_agg(json_build_object('agent',agent_id,'skill',skill_id,'version',version) ORDER BY agent_id,skill_id) FROM cr_skill_bindings),'workInputs',(SELECT json_agg(json_build_object('id',id,'rework',rework,'questionRevision',question_revision) ORDER BY id) FROM cr_tasks),'questions',(SELECT json_agg(json_build_object('id',id,'task',task_id,'target',target_version,'prompt',prompt,'assignee',assignee_id,'status',status,'answer',answer,'revision',revision) ORDER BY id) FROM cr_questions),'tasks',(SELECT json_agg(id ORDER BY id) FROM cr_tasks),'artifacts',(SELECT json_agg(content_hash ORDER BY id) FROM cr_artifacts),'memories',(SELECT json_agg(json_build_object('body',body,'kind',kind,'pinned',pinned,'audience',audience,'valid_from',valid_from,'valid_to',valid_to,'supersedes_id',supersedes_id,'source_key',source_key,'source_refs',source_refs,'origin_task_id',origin_task_id,'source_corrected',source_corrected) ORDER BY id) FROM cr_memories),'proposals',(SELECT json_agg(json_build_object('id',id,'status',status,'source_key',source_key,'source_revision',source_revision,'source_quote',source_quote,'body',body,'valid_from',valid_from,'valid_to',valid_to) ORDER BY id) FROM cr_memory_candidates),'reads',(SELECT json_agg(refs ORDER BY run_id,generation,sequence) FROM cr_memory_reads),'vectors',(SELECT json_agg(json_build_object('key',source_key,'revision',source_revision,'profile',profile_id,'vectors',vectors) ORDER BY source_key) FROM cr_memory_embeddings),'documents',(SELECT json_agg(key||revision ORDER BY key) FROM cr_recall_documents))";
+    "SELECT json_build_object('workspaceHeads',(SELECT json_agg(w ORDER BY w.id) FROM cr_workspace_documents w),'workspaceVersions',(SELECT json_agg(v ORDER BY v.document_id,v.revision) FROM cr_workspace_versions v),'workspaceReads',(SELECT json_agg(wr ORDER BY wr.run_id,wr.generation,wr.document_id) FROM cr_workspace_reads wr),'workspaceObservations',(SELECT json_agg(wo ORDER BY wo.id) FROM cr_workspace_observations wo),'workspaceOperations',(SELECT json_agg(op ORDER BY op.run_id,op.generation,op.operation_id) FROM cr_workspace_operations op),'briefRevisions',(SELECT json_agg(json_build_object('id',id,'task',task_id,'body',body) ORDER BY id) FROM cr_brief_revisions),'recallProjection',(SELECT json_agg(key||md5(title||body) ORDER BY key) FROM cr_recall_text),'skillStudios',(SELECT json_agg(json_build_object('id',id,'design',skill_design) ORDER BY id) FROM cr_tasks WHERE skill_design IS NOT NULL),'skillVersions',(SELECT json_agg(json_build_object('id',skill_id,'version',version,'hash',content_hash) ORDER BY skill_id,version) FROM cr_skill_versions),'bindings',(SELECT json_agg(json_build_object('agent',agent_id,'skill',skill_id,'version',version) ORDER BY agent_id,skill_id) FROM cr_skill_bindings),'workInputs',(SELECT json_agg(json_build_object('id',id,'rework',rework,'questionRevision',question_revision) ORDER BY id) FROM cr_tasks),'questions',(SELECT json_agg(json_build_object('id',id,'task',task_id,'target',target_version,'prompt',prompt,'assignee',assignee_id,'status',status,'answer',answer,'revision',revision) ORDER BY id) FROM cr_questions),'tasks',(SELECT json_agg(id ORDER BY id) FROM cr_tasks),'artifacts',(SELECT json_agg(content_hash ORDER BY id) FROM cr_artifacts),'memories',(SELECT json_agg(json_build_object('body',body,'kind',kind,'pinned',pinned,'audience',audience,'valid_from',valid_from,'valid_to',valid_to,'supersedes_id',supersedes_id,'source_key',source_key,'source_refs',source_refs,'origin_task_id',origin_task_id,'source_corrected',source_corrected) ORDER BY id) FROM cr_memories),'proposals',(SELECT json_agg(json_build_object('id',id,'status',status,'source_key',source_key,'source_revision',source_revision,'source_quote',source_quote,'body',body,'valid_from',valid_from,'valid_to',valid_to) ORDER BY id) FROM cr_memory_candidates),'reads',(SELECT json_agg(refs ORDER BY run_id,generation,sequence) FROM cr_memory_reads),'vectors',(SELECT json_agg(json_build_object('key',source_key,'revision',source_revision,'profile',profile_id,'vectors',vectors) ORDER BY source_key) FROM cr_memory_embeddings),'documents',(SELECT json_agg(key||revision ORDER BY key) FROM cr_recall_documents))";
   const before = (await sql(source, comparison)).trim();
   const runtimePath = "/data/runs/restore-drill/input.json";
   await compose(source, [
@@ -281,6 +282,10 @@ try {
     await heldBackup();
   }
   await script(source, "backup", [backup, keyFile]);
+  assert.equal(
+    JSON.parse(await readFile(join(backup, "manifest.json"), "utf8")).release,
+    "0.14.0",
+  );
   const checkpoint = (
     await sql(
       source,
@@ -433,11 +438,12 @@ try {
   );
   const receipt = {
     date: new Date().toISOString(),
-    release: "0.13.1",
+    release: "0.14.0",
     elapsedSeconds: Math.round((Date.now() - started) / 1000),
     checks: [
       "concurrent backup and restore commands refused before service or database mutation",
       "DB Task/Artifact hashes/Memory identical",
+      "workspace heads, immutable versions, source refs, tombstones, observations, active read sets and idempotency receipts identical",
       "private skill studio conversation, manual draft, saved version and selected binding identical",
       "normalized brief revisions and indexed recall projection identical",
       "rework input, question ownership/answers/revisions and task question revision identical",

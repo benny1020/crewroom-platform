@@ -5,6 +5,7 @@ import { bootstrap, createMember } from "../server/auth.js";
 import { configuration } from "../server/config.js";
 import { buildApp } from "../server/app.js";
 import {
+  actInWorkspace,
   startWorker,
   claimRun,
   recallForRun,
@@ -107,6 +108,57 @@ await recallForRun(pool, seedRun, "proposal-e2e-seed", {
   audience: "project",
 });
 await processRun(pool, seedRun, "proposal-e2e-seed", config);
+// Persisted synthetic documents exercise the real service, never production data.
+const documentTask = await createTask(
+  pool,
+  lead,
+  {
+    workType: "chat",
+    agentId: "dev",
+    skillId: "conversation",
+    title: "작업공간 브라우저 검증",
+    project: "workspace-fixture",
+    target: "합성 문서 업무",
+    targetVersion: "workspace-v1",
+    goal: "계획과 진행 문서를 남기고 이어가기",
+    visibility: "team",
+  },
+  randomUUID(),
+);
+await executeCommand(
+  pool,
+  lead,
+  documentTask.id,
+  { action: "start", revision: documentTask.revision },
+  config,
+);
+const documentRun = await claimRun(pool, "workspace-e2e-seed", config);
+const initialDocument = await actInWorkspace(
+  pool,
+  documentRun,
+  "workspace-e2e-seed",
+  {
+    action: "write_workspace",
+    path: 'notes/<input data-action="logout" value="문서 열기">.md',
+    content: "첫 번째 계획 초안",
+    expectedRevision: 0,
+  },
+);
+await actInWorkspace(pool, documentRun, "workspace-e2e-seed", {
+  action: "move_workspace",
+  id: initialDocument.id,
+  path: "notes/plan.md",
+  expectedRevision: 1,
+});
+await actInWorkspace(pool, documentRun, "workspace-e2e-seed", {
+  action: "write_workspace",
+  path: "notes/plan.md",
+  content:
+    "# 이어서 할 일\n\n요청을 확인하고 작업 계획을 저장했습니다.\n\n## 완료한 일\n- 요청과 완료 기준 정리\n- 필요한 자료와 작업 범위 확인\n\n## 다음 작업\n- 변경할 코드와 문서 확인\n- 작은 단위로 구현하고 등록 검사 실행\n- 변경 내용과 남은 문제를 QA에 인계\n\n## 확인 상태\n검사: 미실행\n현재 문서는 계획 초안이며 완료된 결과가 아닙니다.\n\n## 원문 부록\n" +
+    "작업 원문을 나눠 읽을 수 있습니다.\n".repeat(350),
+  expectedRevision: 2,
+});
+await processRun(pool, documentRun, "workspace-e2e-seed", config);
 const longTask = await createTask(
   pool,
   lead,

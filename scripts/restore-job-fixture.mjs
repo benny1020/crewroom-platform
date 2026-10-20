@@ -2,8 +2,13 @@
 import assert from "node:assert/strict";
 import { secret, configuration, modelProfile } from "../server/config.js";
 import { database, digest } from "../server/db.js";
-import { executeCommand } from "../server/tasks.js";
-import { claimRun, processRun } from "../server/worker.js";
+import { createTask, executeCommand } from "../server/tasks.js";
+import {
+  actInWorkspace,
+  failRun,
+  claimRun,
+  processRun,
+} from "../server/worker.js";
 import { createSkillStudio, saveSkillStudio } from "../server/skill-studio.js";
 import { randomUUID } from "node:crypto";
 let input = "";
@@ -26,7 +31,68 @@ const request = async (path, body, key = token) => {
 };
 const db = database();
 try {
-  if (process.argv[2] === "skill-studio") {
+  if (process.argv[2] === "workspace") {
+    const user = (
+      await db.query("SELECT * FROM cr_members ORDER BY created_at LIMIT 1")
+    ).rows[0];
+    const config = {
+      ...configuration(),
+      provider: "fixture",
+      model: "restore-workspace",
+      allowFixture: true,
+    };
+    const task = await createTask(
+      db,
+      user,
+      {
+        workType: "chat",
+        agentId: "dev",
+        project: "restore-documents",
+        target: "synthetic",
+        targetVersion: "v1",
+        goal: "문서 복원",
+        visibility: "private",
+      },
+      randomUUID(),
+    );
+    await executeCommand(
+      db,
+      user,
+      task.id,
+      { action: "start", revision: task.revision },
+      config,
+    );
+    const run = await claimRun(db, "restore-documents", config);
+    const write = (path, content, expectedRevision) =>
+      actInWorkspace(db, run, "restore-documents", {
+        action: "write_workspace",
+        path,
+        content,
+        expectedRevision,
+      });
+    const doc = await write("plan.md", "first persisted draft", 0);
+    await write("plan.md", "second persisted draft", 1);
+    const archived = await write("archive.md", "retained tombstone bytes", 0);
+    await actInWorkspace(db, run, "restore-documents", {
+      action: "archive_workspace",
+      id: archived.id,
+      expectedRevision: 1,
+    });
+    await failRun(
+      db,
+      run.id,
+      "restore-documents",
+      run.generation,
+      new Error("synthetic draft failure"),
+    );
+    await db.query(
+      "UPDATE cr_runs SET lease_owner=NULL,lease_until=NULL WHERE id=$1",
+      [run.id],
+    );
+    console.log(
+      JSON.stringify({ taskId: task.id, documentId: doc.id, runId: run.id }),
+    );
+  } else if (process.argv[2] === "skill-studio") {
     const user = (
       await db.query("SELECT * FROM cr_members ORDER BY created_at LIMIT 1")
     ).rows[0];

@@ -1894,3 +1894,113 @@
     gap: 20px;
   }
 }
+
+/* The agent's desk: a quiet file index beside the conversation. */
+.cr-documents {
+  margin-bottom: 20px;
+}
+.cr-documents h2 {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+}
+.cr-document-search {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin: 16px 0;
+}
+.cr-document-search .g-field {
+  flex: 1;
+  margin: 0;
+}
+.cr-document-list {
+  border-top: 1px solid var(--g-line, #e4e6eb);
+}
+.cr-document-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--g-line, #e4e6eb);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.cr-document-row:hover,
+.cr-document-row:focus-visible {
+  background: #f3f5fc;
+}
+.cr-document-row > span {
+  flex: 1;
+  min-width: 0;
+}
+.cr-document-row strong,
+.cr-document-row small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.cr-document-row small,
+.cr-document-row time {
+  margin-top: 4px;
+  color: #73798a;
+  font-size: 12px;
+}
+.cr-document-body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 50vh;
+  overflow: auto;
+  font:
+    14px/1.8 ui-monospace,
+    monospace;
+  padding: 18px;
+  background: #f5f6fa;
+  border-radius: 8px;
+}
+.cr-document-versions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.cr-document-search > label {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+.cr-agent-layout .cr-documents .cw-section-heading {
+  align-items: flex-start;
+}
+.cr-agent-layout .cr-documents .cr-document-row {
+  flex-wrap: wrap;
+}
+.cr-agent-layout .cr-documents .cr-document-row time {
+  margin-left: 29px;
+}
+#gyeot-demo .cr-document-search .g-field {
+  margin: 0;
+}
+.cr-agent-layout .cr-documents .cr-document-row {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) 18px;
+  column-gap: 10px;
+  row-gap: 5px;
+}
+.cr-agent-layout .cr-documents .cr-document-row > span {
+  grid-column: 2;
+  grid-row: 1;
+}
+.cr-agent-layout .cr-documents .cr-document-row time {
+  grid-column: 2;
+  grid-row: 2;
+  margin: 0;
+}
+.cr-agent-layout .cr-documents .cr-document-row > .g-icon:last-child {
+  grid-column: 3;
+  grid-row: 1;
+}

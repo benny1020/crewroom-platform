@@ -175,7 +175,7 @@ export async function searchMemory(
     ? (
         await db.query(
           `WITH allowed AS (
-    SELECT d.* FROM cr_recall_documents d WHERE
+    SELECT d.* FROM cr_recall_documents d WHERE d.kind<>'workspace' AND
     (d.owner_id=$1 OR d.visibility='team' OR (d.visibility='department' AND d.department=$2))
     AND (d.agent_owner_id IS NULL OR d.agent_owner_id=$1)
     AND ($3='private' OR d.visibility='team' OR ($3='department' AND d.visibility='department' AND d.department=$4))
@@ -240,7 +240,7 @@ export async function searchMemory(
         `WITH bounded AS MATERIALIZED (
       SELECT * FROM cr_memory_embeddings WHERE status='ready' AND profile_id=$1 ORDER BY source_key LIMIT 2001
     ), sources AS MATERIALIZED (
-      SELECT d.* FROM cr_recall_documents d WHERE
+      SELECT d.* FROM cr_recall_documents d WHERE d.kind<>'workspace' AND
       ($2='' OR $2=ANY(d.agents) OR (d.audience='project' AND ($3='' OR d.project=$3))) AND ($3='' OR d.project='' OR d.project=$3)
       AND (d.owner_id=$4 OR d.visibility='team' OR (d.visibility='department' AND d.department=$5))
       AND (d.agent_owner_id IS NULL OR d.agent_owner_id=$4)
@@ -414,6 +414,22 @@ export function contextFromDocuments(docs, budget = MEMORY_CHARS) {
     method: "rrf",
   };
 }
+// Working documents are re-read through workspace tools on continuation. Injecting
+// old answers derived from those mutable heads would pin their obsolete revisions.
+export async function automaticContextDocuments(db, task, docs) {
+  const keys = (
+    await db.query(
+      "SELECT 'workspace:'||id AS key FROM cr_workspace_documents WHERE task_id=$1",
+      [task.id],
+    )
+  ).rows.map((r) => r.key);
+  if (!keys.length) return docs;
+  return docs.filter(
+    (d) =>
+      !(d.task_id === task.id && ["answer", "episode"].includes(d.kind)) &&
+      !(d.dependencies || []).some((r) => keys.includes(r.key)),
+  );
+}
 export async function buildMemoryContext(db, user, task, agentId) {
   const query = [
     task.recallQuery,
@@ -442,7 +458,7 @@ export async function buildMemoryContext(db, user, task, agentId) {
     );
   }
   return contextFromDocuments(
-    docs.filter(
+    (await automaticContextDocuments(db, task, docs)).filter(
       (d) =>
         !(d.kind === "episode" && d.task_id === task.id) &&
         !d.dependencies?.some((r) => r.key === "episode:" + task.id),

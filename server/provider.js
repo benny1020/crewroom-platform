@@ -28,9 +28,19 @@ export function modelMessages(snapshot) {
         target: snapshot.target,
         targetVersion: snapshot.targetVersion,
         source: snapshot.source,
-        inputArtifact: snapshot.inputArtifact,
-        brief: snapshot.brief,
-        rework: snapshot.rework,
+        inputArtifact: snapshot.workspaceContinuation
+          ? null
+          : snapshot.inputArtifact,
+        workspaceContinuation: snapshot.workspaceContinuation
+          ? "이전 답변은 화면 이력에 남습니다. 현재 작업 문서는 list_workspace/read_workspace로 읽고 이어가세요. 이전 답변·초안은 검사나 수용의 증거가 아닙니다."
+          : undefined,
+        brief:
+          snapshot.workspaceContinuation && snapshot.brief?.source !== "request"
+            ? { text: snapshot.goal, source: "request" }
+            : snapshot.brief,
+        rework: snapshot.workspaceContinuation
+          ? { ...snapshot.rework, previous: null }
+          : snapshot.rework,
         questions: snapshot.questions,
         messages: snapshot.messages,
         example: snapshot.example,

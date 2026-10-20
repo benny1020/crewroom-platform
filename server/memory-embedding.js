@@ -199,8 +199,8 @@ export async function indexNextMemoryDocument(pool, config, options = {}) {
     const row = (
       await db.query(
         `SELECT d.* FROM cr_recall_documents d LEFT JOIN cr_memory_embeddings e ON e.source_key=d.key
-      WHERE e.source_key IS NULL OR e.source_revision<>d.revision OR e.profile_id<>$1
-       OR (e.status<>'ready' AND e.attempts<3 AND e.lease_until<clock_timestamp())
+      WHERE d.kind<>'workspace' AND (e.source_key IS NULL OR e.source_revision<>d.revision OR e.profile_id<>$1
+       OR (e.status<>'ready' AND e.attempts<3 AND e.lease_until<clock_timestamp()))
       ORDER BY d.created_at,d.key LIMIT 1`,
         [profile.id],
       )

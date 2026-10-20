@@ -1,0 +1,32 @@
+{
+  "release": "0.14.0",
+  "capturedAt": "2026-10-20T00:59:20.302Z",
+  "mode": "isolated PostgreSQL fixture; three-screen walkthrough; no live AI calls",
+  "viewport": {
+    "width": 1440,
+    "height": 1080
+  },
+  "pageErrors": [],
+  "files": [
+    {
+      "name": "agent-home.png",
+      "bytes": 161441,
+      "sha256": "81aa744879a4f1c0a037acaff2faacbc852f45e25f0fd6ad81d196995c4ac365"
+    },
+    {
+      "name": "document.png",
+      "bytes": 208700,
+      "sha256": "601fe64cf096f20cbf620ee32eb4bebc8c3a216e2339be5f614fede4c7120b05"
+    },
+    {
+      "name": "workroom.png",
+      "bytes": 150289,
+      "sha256": "b34d4aad6d6b768bdb859f8aee9f555c85a26af91e8f995a9602f60205a0f440"
+    },
+    {
+      "name": "workflow.gif",
+      "bytes": 284662,
+      "sha256": "c0c7f1142053f9eddbe5deb121e44fedbad12c983d914e306be588541e206af0"
+    }
+  ]
+}
