@@ -4,6 +4,10 @@
 
 [![장기 운영의 저장·조회·관리 경계](diagrams/long-operation.png)](diagrams/long-operation.svg)
 
+## 0.14.1 문서·협업 부하 보강
+
+현재 업무 문서 우선 검색, 공유 GET 잠금과 대기 후 재인증, 같은 이력 출처의 중복 검사 제거, 모델 목록의 문서별 출처 일괄 저장을 적용한다. migration 014는 과거 Run 전체의 출처를 먼저 materialize하던 읽기 전용 CTE를 inline한다. 저장된 출처·fingerprint는 유지한다. 인계한 checkpoint의 근거도 새 책임자에게 재검증한다. [조건·재현 명령·한계](TEAM_QUALITY.md).
+
 ## 0.13 운영 복구 보강
 
 | 누적·장애 경계 | 구현 |

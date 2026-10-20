@@ -54,6 +54,14 @@ test("agent home and task share real documents, paged body and escaped version p
   await expect(
     page.getByLabel("에이전트 작업공간", { exact: true }),
   ).toContainText("notes/plan.md");
+  await expect(
+    page.getByText("작업 문서 본문 0회 조회 · 0자 읽음 · 0회 저장", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(/작업 문서 본문을 읽지 않은 답변입니다/),
+  ).toBeVisible();
   if (process.env.CAPTURE_WORKSPACE)
     await page.screenshot({ path: "docs/media/workspace/workroom.png" });
   await page.setViewportSize({ width: 1024, height: 900 });

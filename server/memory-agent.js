@@ -5,6 +5,8 @@ import {
   callWorkspaceTool,
   workspaceActionSchemas,
   workspaceInstructions,
+  workspaceUsage,
+  recordWorkspaceUsage,
 } from "./agent-workspace.js";
 import { proposalSchema } from "./memory-protocol.js";
 export const memoryActionSchemas = [
@@ -49,7 +51,8 @@ export async function runMemoryAgent(snapshot, config, options = {}) {
       ...memoryActionSchemas,
       ...(options.workspaceTools ? workspaceActionSchemas : []),
     ]),
-    requests = [];
+    requests = [],
+    usage = workspaceUsage();
   let memoryLookups = 0;
   for (let i = 0; i <= 20; i++) {
     const value = await runModel(snapshot, config, {
@@ -67,6 +70,8 @@ export async function runMemoryAgent(snapshot, config, options = {}) {
           memoryLookups,
           toolCalls: i,
           workspaceActions: i - memoryLookups,
+          workspaceUsage: usage,
+          workspaceContinuation: Boolean(snapshot.workspaceContinuation),
         },
       };
     if (i === 20)
@@ -85,6 +90,7 @@ export async function runMemoryAgent(snapshot, config, options = {}) {
     const result = workspaceAction
       ? await callWorkspaceTool(options.workspaceTools, value.result)
       : await options.memoryTools(value.result);
+    if (workspaceAction) recordWorkspaceUsage(usage, value.result, result);
     messages.push(
       { role: "assistant", content: JSON.stringify(value.result) },
       {

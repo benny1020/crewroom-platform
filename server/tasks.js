@@ -19,6 +19,7 @@ import { embeddingProfile } from "./memory-embedding.js";
 import { historyPage, pinnedHistory } from "./history.js";
 import { WORK_TYPES } from "./work-types.js";
 import { requestContract } from "../src/request-contract.js";
+import { checkpointReferences } from "./checkpoint-context.js";
 
 export async function getTask(db, user, id, lock = false) {
   if (lock) await lockContextMutation(db);
@@ -428,6 +429,30 @@ export async function executeCommand(
         );
       if (run?.status === "running")
         fail(409, "RUN_ACTIVE", "실행을 일시정지한 뒤 책임자를 변경해주세요.");
+      if (run?.lease_owner)
+        fail(
+          409,
+          "STOP_CONFIRMATION_REQUIRED",
+          "이전 실행의 종료를 확인한 뒤 책임자를 변경해주세요.",
+        );
+      // A transferred task must not resume under the previous requester's
+      // permissions or reuse that requester's pinned context. Keep the old Run
+      // pointer until start so its verified code checkpoint remains available.
+      if (
+        member.id !== task.responsible_id &&
+        run &&
+        ["queued", "paused"].includes(run.status)
+      ) {
+        await db.query(
+          "UPDATE cr_runs SET status='cancelled',generation=generation+1,finished_at=clock_timestamp(),error_code='RESPONSIBILITY_TRANSFERRED',error_message='새 책임자의 권한으로 실행 입력을 다시 준비합니다.' WHERE id=$1",
+          [run.id],
+        );
+        await db.query("UPDATE cr_tasks SET status='queued' WHERE id=$1", [id]);
+        await event(db, id, actor, "run_replaced_for_handoff", {
+          previousRunId: run.id,
+          responsibleId: member.id,
+        });
+      }
       await db.query("UPDATE cr_tasks SET responsible_id=$2 WHERE id=$1", [
         id,
         member.id,
@@ -477,6 +502,12 @@ export async function executeCommand(
           409,
           "STOP_CONFIRMATION_REQUIRED",
           "이전 실행의 종료 확인이 필요해요.",
+        );
+      if (run?.status === "queued")
+        fail(
+          409,
+          "RUN_ALREADY_QUEUED",
+          "이미 실행 대기 중이에요. 새 실행을 중복으로 만들지 않았어요.",
         );
       if (run?.status === "paused")
         await db.query(
@@ -560,6 +591,9 @@ export async function executeCommand(
             "CHECKPOINT_PROFILE_CHANGED",
             "저장한 수정분의 커밋·실행 설정이 달라요. 재작업으로 새 대상에서 시작해주세요.",
           );
+        const checkpointRefs = checkpoint
+          ? await checkpointReferences(db, user, task, run)
+          : [];
         const workspaceContinuation =
           task.work_type !== "skill-design" &&
           Boolean(
@@ -582,7 +616,7 @@ export async function executeCommand(
             ? [task.rework.previous.artifactId]
             : []),
         ];
-        const inheritedRefs = [];
+        const inheritedRefs = [...checkpointRefs];
         for (const artifactId of [...new Set(sourceIds)]) {
           const original = (
             await db.query("SELECT result FROM cr_artifacts WHERE id=$1", [
@@ -715,6 +749,8 @@ export async function executeCommand(
                           baselineSha: checkpoint.baselineSha,
                           profileId: checkpoint.profileId,
                           sourceRunId: run.id,
+                          contextVersion: 1,
+                          sourceRefs: checkpointRefs,
                         },
                       }
                     : {}),

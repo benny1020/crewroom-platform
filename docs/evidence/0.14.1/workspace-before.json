@@ -1,0 +1,68 @@
+{
+  "synthetic": true,
+  "release": "0.14.0",
+  "at": "2026-10-20T14:45:18.585Z",
+  "corpus": {
+    "documents": 20000,
+    "versionsPerArchive": 8,
+    "historicalRuns": 100000,
+    "currentDocuments": 20,
+    "currentHistoryPerDocument": 32,
+    "sourceRefsPerDocument": 20,
+    "activeReadSetRefs": 420,
+    "bodyCharacters": 512
+  },
+  "concurrency": 8,
+  "rounds": 10,
+  "measurements": [
+    {
+      "name": "single_document_with_30_history_sources",
+      "p50Ms": 26161.1,
+      "p95Ms": 28068.5,
+      "maxMs": 28068.5
+    }
+  ],
+  "checks": {},
+  "completed": false,
+  "actualExternalModelCalls": 0,
+  "limits": [
+    "One local PostgreSQL18 and Fastify inject API; fixture responses, not model quality or public-network performance.",
+    "Short synthetic bodies and bounded read-set; not multi-year uptime, full 64KB bodies, HA or production SLO.",
+    "Source/permission/renewal/completion assertions are independent of latency measurements."
+  ],
+  "ingestionSeconds": 13.5,
+  "failure": {
+    "phase": "measure",
+    "code": "ERR_ASSERTION"
+  },
+  "sourceFiles": [
+    {
+      "path": "server/agent-workspace.js",
+      "sha256": "873f6f5ca2eeed99550e1b3103b7c4646a344649a37f0164412bdfbe4386e8b0"
+    },
+    {
+      "path": "server/app.js",
+      "sha256": "ac731625f295c6ecb47069342dc4d618af4ede4bb9ff81bab96f2de1cba8c4fb"
+    },
+    {
+      "path": "server/db.js",
+      "sha256": "0f34d793b8f5ae7be8a4c6319c12f8019eb140b8967d2aa681afe2a8416f2c74"
+    },
+    {
+      "path": "server/tasks.js",
+      "sha256": "94ed6d3e5691d68f6b7a7a70e07f3fe7d53c6e38bb463d0f8cc2a1d0a6009bac"
+    },
+    {
+      "path": "server/worker.js",
+      "sha256": "0d8c5598081781d1aab377c67c4b2f729e289a0a3f12d007f9639670e95bae8c"
+    },
+    {
+      "path": "server/memory.js",
+      "sha256": "e0f2a8b519f48894fae03be18eca9132c11cbf9fe98daca4c4bdef91d7f04b8f"
+    },
+    {
+      "path": "server/migrations/013_agent_workspace.sql",
+      "sha256": "2b8a7af85ad9679cb265c4783596e66bb91c7a31d7a52bd01f1fb793f48d75d5"
+    }
+  ]
+}

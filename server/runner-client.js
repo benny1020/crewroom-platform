@@ -5,6 +5,8 @@ import {
   callWorkspaceTool,
   workspaceActionSchemas,
   workspaceInstructions,
+  workspaceUsage,
+  recordWorkspaceUsage,
 } from "./agent-workspace.js";
 import { memoryActionSchemas, memoryInstructions } from "./memory-agent.js";
 import { z } from "zod";
@@ -177,7 +179,8 @@ export async function runCodeAgent(
     },
   ];
   const traces = [],
-    receipts = [];
+    receipts = [],
+    usage = workspaceUsage();
   let runnerSequence = 0;
   let finished = false,
     stopped = false;
@@ -249,6 +252,8 @@ export async function runCodeAgent(
         exitCode: outcome.exitCode,
         durationMs: outcome.durationMs,
       });
+      if (action.action.endsWith("_workspace"))
+        recordWorkspaceUsage(usage, action, outcome);
       if (action.action === "finish") {
         finished = true;
         stopped = true;
@@ -268,6 +273,8 @@ export async function runCodeAgent(
             toolCalls: sequence,
             requests: receipts,
             runnerProfile: profile.id,
+            workspaceUsage: usage,
+            workspaceContinuation: Boolean(snapshot.workspaceContinuation),
           },
         };
       }

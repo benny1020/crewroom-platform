@@ -180,6 +180,11 @@ test(
     let detail = (await lead.request("GET", `/api/tasks/${task.id}`)).json()
       .task;
     assert.equal(detail.status, "result_ready", JSON.stringify(detail.runs));
+    assert.equal(detail.artifacts[0].result.receipt.workspaceUsage.writes, 1);
+    assert.equal(
+      detail.artifacts[0].result.receipt.workspaceUsage.bodyReads,
+      1,
+    );
     assert.equal(
       Number(
         (
@@ -262,6 +267,10 @@ test(
     assert.equal(detail.status, "result_ready", JSON.stringify(detail.runs));
     const qa = detail.artifacts.find((a) => a.step_index === 1).result
       .execution;
+    const qaReceipt = detail.artifacts.find((a) => a.step_index === 1).result
+      .receipt;
+    assert.equal(qaReceipt.workspaceUsage.writes, 0);
+    assert.equal(qaReceipt.workspaceUsage.bodyReads, 1);
     assert.equal(qa.passed, true);
     assert.equal(qa.mode, "verify");
     const qaContext = contexts.find((c) => c.mode === "verify");

@@ -173,6 +173,12 @@ export async function updateMember(pool, user, id, input) {
     .strict()
     .parse(input);
   return transaction(pool, async (db) => {
+    await lockContextMutation(db);
+    const actor = (
+      await db.query("SELECT * FROM cr_members WHERE id=$1", [user.id])
+    ).rows[0];
+    if (!actor?.active) fail(401, "UNAUTHENTICATED", "다시 로그인해주세요.");
+    requireLead(actor);
     await db.query(
       "SELECT pg_advisory_xact_lock(hashtext('crewroom-members'))",
     );

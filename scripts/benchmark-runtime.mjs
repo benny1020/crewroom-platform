@@ -75,7 +75,9 @@ try {
     "server/migrations/012_operational_resilience.sql",
   ];
   const report = {
-    release: "0.13.0",
+    release: JSON.parse(
+      await readFile(new URL("../package.json", import.meta.url)),
+    ).version,
     at: new Date().toISOString(),
     synthetic: true,
     historicalRuns: 100000,

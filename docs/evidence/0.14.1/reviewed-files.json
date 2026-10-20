@@ -1,0 +1,122 @@
+{
+  "baseHead": "024f2cda1d0c4d86f43926dbaf2cd8029e172d89",
+  "bundleSha256": "09e323d1f72b1219a05c7a3ae05be23c32509a5a8aba98aa102813c200d24566",
+  "files": [
+    {
+      "path": "compose.yaml",
+      "sha256": "632b77716e5f9c3f8b1acfc3d54ad21bf3875b39014e6db70f671f731190d006"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "96992c13a26249573accc453b208608d4af78879be007efd2d6bec6805762b6a"
+    },
+    {
+      "path": "package.json",
+      "sha256": "99cddb9aadb2879c265457852cb0011a53e66aacf7d9197872dc38bc3ad6cba3"
+    },
+    {
+      "path": "playwright.server.config.js",
+      "sha256": "00ccac80b39c77b5729cfc80564b31cb6865c10c1f26d2d1816705651614245f"
+    },
+    {
+      "path": "scripts/backup.mjs",
+      "sha256": "070d9d79fe1d96b4a632d4c0ec4ac779e3eb49d3820f09d1910167cbadefda24"
+    },
+    {
+      "path": "scripts/benchmark-runtime.mjs",
+      "sha256": "119c7adcb1aa6f90294726e3102178d8ad3b35a006c8979236424ab1dda48e40"
+    },
+    {
+      "path": "scripts/benchmark-workspace.mjs",
+      "sha256": "747b6813450101d5160d9ff448dc97383e4fb0a4640d7a6f7f7dc295eb7ea05d"
+    },
+    {
+      "path": "scripts/capture-workspace.mjs",
+      "sha256": "ce9d1ec0222b5b325fd223498aa073bce968eee0f2026704640a115030b5428f"
+    },
+    {
+      "path": "scripts/restore.mjs",
+      "sha256": "3850bbb017cc91345a1a358222e0e15043421f7ead8315284b7dde6febe91ed5"
+    },
+    {
+      "path": "scripts/server-e2e.mjs",
+      "sha256": "aebc6945f67933710564e4dd10b3246509c65eb054a9788b4fdb8eb9d9f63481"
+    },
+    {
+      "path": "scripts/verify-restore.mjs",
+      "sha256": "628469f8cacda685e63fc099ac29b4576a5f95cc8624a2127013575475a7a874"
+    },
+    {
+      "path": "server/agent-workspace.js",
+      "sha256": "5dc15c98cbff67357c867e5f44a686e66b316d02768d38ad19808da0b2b476fc"
+    },
+    {
+      "path": "server/app.js",
+      "sha256": "e31da23a0cec77b4a34f16b990a768986440c1f40c2e00e97c3a681cb45c65c3"
+    },
+    {
+      "path": "server/checkpoint-context.js",
+      "sha256": "3e413a074c9f1c835bdc7ca77f327136ca3097ea20f7a90edba577f9af3a5c49"
+    },
+    {
+      "path": "server/config.js",
+      "sha256": "bfb26fd744d1fa828b61d757b9c5ec173008b5e758671e52a415d8a2cc9178f1"
+    },
+    {
+      "path": "server/db.js",
+      "sha256": "10052c2df51ba251d3c0be5ee71b31c137a948b55b3e7f12b0cde3c1b710e527"
+    },
+    {
+      "path": "server/memory-agent.js",
+      "sha256": "a9b53316b93c24e56d4f76b5945356678ad041586083cd5644579ee511f7e984"
+    },
+    {
+      "path": "server/migrations/014_recall_source_planning.sql",
+      "sha256": "d91507572dd90ee2d3d89bc82da9641cbdec928217629807b16aea7c5e9142ae"
+    },
+    {
+      "path": "server/resources.js",
+      "sha256": "54665beb04a7216b0e6586501f0a6597fa55ab677fcb734f3f3d0ab03ee8e45e"
+    },
+    {
+      "path": "server/runner-client.js",
+      "sha256": "079d6738a283317131b4cd6c4ae982538d64bc4e8cc58c23bc32a33d91183b8e"
+    },
+    {
+      "path": "server/tasks.js",
+      "sha256": "f05949b3b8c6eda50190970abe5289b205ef527f9d43752e72f855d5ebdd3ef5"
+    },
+    {
+      "path": "src/live-app.js",
+      "sha256": "3a8d19396a77d22d98bcedf0a3bd8126cd5e9fdf04a0da3ebfbfec9900bc8f99"
+    },
+    {
+      "path": "tests/server-e2e/agent-workspace.spec.js",
+      "sha256": "dbccc9e60f6bfaa2ce985900ba88a5599b853b9d148dbed341fb36ef2e4fca9f"
+    },
+    {
+      "path": "tests/server/agent-workspace.test.js",
+      "sha256": "3e1a144cf7af32c7a24b83d61e15fbd9443a92ccd608b6e0b4e21e3f3aad9338"
+    },
+    {
+      "path": "tests/server/checkpoint.test.js",
+      "sha256": "ae10d8c041b620ed2f1d7bfdf8bc07f1e41cb511933a7b6ff87811fbfa7bdf3a"
+    },
+    {
+      "path": "tests/server/execution.test.js",
+      "sha256": "4ea556eb00fa4b6e5a54c93828426b1b0cb07d0b341016ed0baa3cfcf081b7be"
+    },
+    {
+      "path": "tests/server/recall-view.test.js",
+      "sha256": "aa5b6e9ca718d3e06d6ef1fbeecf5e7f26ce2b49cb28497e2158c29f2969dc5c"
+    },
+    {
+      "path": "tests/server/team-quality.test.js",
+      "sha256": "831fa3b7325f47c33ebabdf48a4e38373b3e9421ee57892280c21ea4a4a63ad9"
+    },
+    {
+      "path": "tests/server/workspace-concurrency.test.js",
+      "sha256": "e3c3f9101939e26a589b8a3de1e635d526a3918306385e8a6d111f6a9fb743ba"
+    }
+  ]
+}

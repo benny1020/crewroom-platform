@@ -1,3 +1,25 @@
+# 0.14.1 공용 업무·문서 부하 검증
+
+2026-10-21. [협업·장기 부하 개선](TEAM_QUALITY.md)에 발견한 문제와 변경 동작을 정리했다. 아래 0.14.0 이하는 과거 릴리스 기록이다.
+
+| 검사 | 결과 | 범위 |
+| --- | --- | --- |
+| 단위·adapter·빌드 | 67 통과 | 기존 진단·provider·품질 gate·릴리스 이미지 회귀 |
+| PostgreSQL + 실제 Docker 개발/QA | 157 통과 | 현재 업무 문서 발견, 새 요청자 인계, checkpoint 출처와 legacy chain, 공유 조회·권한 회수, bulk 기록·rollback, 실제 조회량, 013→014 동일성 포함 |
+| Docker Runner | 6 통과 | 실제 코드 수정·등록 검사·새 QA·중단·재시작 |
+| 정적/서버 브라우저 | 31 + 24 통과 | 문서·스킬·협업·긴 대화·권한·실제 본문 미조회 표시·데스크톱 경계 |
+| Linux 비밀 파일·암호화 복원 | 통과 | 최신 014 이미지에서 저장 자료·출처·스킬·checkpoint 동일성, 미완료 격리·실패 차단 |
+
+고유 자동 검사 **285개**와 별도 비밀 파일·복원 훈련을 수행했다. [검증 영수증](evidence/0.14.1/verification.json) · [복원 14개 확인](evidence/0.14.1/restore.json) · [로컬 0.14.1 배포](evidence/0.14.1/deployment.json). 커밋별 최종 CI는 [GitHub Actions](https://github.com/benny1020/crewroom-platform/actions/workflows/verify-and-deploy.yml)에서 확인한다.
+
+실행 이력 10만 개·문서 20,020개·160,640개 버전의 합성 검사에서 30개 이력 조회 p95는 변경 전 28,068.5ms에서 최종 1,088.0ms로 줄었다. 현재 문서 목록·모델 목록의 출처 기록·8명 동시 GET·GET/목록 혼합을 각 10회 완료했다. 유효 lease 갱신·파생 출처 무효화·버전 보존도 별도 단언했다. 각 burst 전 lease를 60초로 직접 설정하므로 장기 자연 heartbeat나 자동 복구 증거가 아니다. [원자료·조건·한계](evidence/0.14.1/workspace-scale.json).
+
+Astra는 [동결 파일 29개](evidence/0.14.1/reviewed-files.json)를 검토 전후 대조하고 필수 P0/P1/P2 추가 발견 없이 승인했다. 리뷰어의 독립 테스트 실행은 0개다. 전체 검사와 중복 합산하지 않는다. [리뷰 범위·반영](reviews/ASTRA_TEAM_QUALITY.md).
+
+실제 외부 생성·embedding 호출은 **0회**다. 모델 URL·ID와 GitLab 연결이 미설정이며, 서비스·도구·저장·협업 검증을 실제 모델의 업무 판단·문서 관리·스킬 생성 품질로 해석하지 않는다. 새 외부 런타임 의존성은 없다. 화면·GIF는 격리된 서버 fixture다.
+
+---
+
 # 0.14.0 에이전트 영속 작업공간 검증
 
 2026-10-20. [작업공간 계약](AGENT_WORKSPACE.md)에 구현·구조·한도·이어가기의 경계를 정리했다. 아래 0.13.1 이하는 과거 릴리스 기록이다.

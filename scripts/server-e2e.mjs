@@ -10,6 +10,7 @@ import {
   claimRun,
   recallForRun,
   processRun,
+  completeRun,
 } from "../server/worker.js";
 import { createTask, executeCommand } from "../server/tasks.js";
 if (!process.env.TEST_DATABASE_URL)
@@ -158,7 +159,32 @@ await actInWorkspace(pool, documentRun, "workspace-e2e-seed", {
     "작업 원문을 나눠 읽을 수 있습니다.\n".repeat(350),
   expectedRevision: 2,
 });
-await processRun(pool, documentRun, "workspace-e2e-seed", config);
+await completeRun(
+  pool,
+  documentRun.id,
+  "workspace-e2e-seed",
+  documentRun.generation,
+  {
+    origin: "fixture",
+    result: {
+      summary: "작업 문서 표시 검증용 합성 결과",
+      evidence: [],
+      unknowns: ["실제 모델 호출 미실행"],
+      nextActions: [],
+    },
+    receipt: {
+      workspaceContinuation: true,
+      workspaceUsage: {
+        lists: 1,
+        bodyReads: 0,
+        charactersRead: 0,
+        writes: 0,
+        moves: 0,
+        archives: 0,
+      },
+    },
+  },
+);
 const longTask = await createTask(
   pool,
   lead,

@@ -1,0 +1,86 @@
+{
+  "release": "0.14.1",
+  "at": "2026-10-20T15:27:12.431978+00:00",
+  "status": "passed_local_full_suite",
+  "uniqueAutomaticTests": 285,
+  "tests": {
+    "unit": {
+      "passed": 67,
+      "failed": 0,
+      "skipped": 0
+    },
+    "postgresAndDocker": {
+      "passed": 157,
+      "failed": 0,
+      "skipped": 0,
+      "fullBatchDurationMs": 165168.768875
+    },
+    "dockerRunner": {
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0
+    },
+    "staticBrowser": {
+      "passed": 31,
+      "failed": 0
+    },
+    "serverBrowser": {
+      "passed": 24,
+      "failed": 0
+    },
+    "newRegressionCases": {
+      "passed": 16,
+      "alreadyIncludedInPostgresTotal": true
+    }
+  },
+  "encryptedBackupRestore": "passed; 14 checks in current 014 image",
+  "serviceSecretOwnership": "passed",
+  "workspaceScale": {
+    "completed": true,
+    "report": "workspace-scale.json",
+    "roundsPerPath": 10,
+    "modelProvenanceLists": 10,
+    "leaseRenewals": 10,
+    "mixedLeaseRenewals": 10,
+    "syntheticWorkflowCompletions": 2,
+    "leaseBoundary": "Each burst starts with a manually extended 60s lease. Not a sustained heartbeat/automatic-recovery test."
+  },
+  "sourceManifest": "reviewed-files.json",
+  "knownNpmVulnerabilities": 0,
+  "actualExternalModelCalls": 0,
+  "actualEmbeddingCalls": 0,
+  "modelQuality": "unverified; no endpoint/model configured; fixture and loopback protocol tests only",
+  "memoryEvaluation": "20 synthetic Korean keyword queries; required-source and ACL gates passed; not semantic or generated-answer quality",
+  "ci": {
+    "workflowUrl": "https://github.com/benny1020/crewroom-platform/actions/workflows/verify-and-deploy.yml",
+    "scope": "Local checks recorded here; commit-specific result is in GitHub Actions."
+  },
+  "limits": [
+    "Single local PostgreSQL18 and short synthetic text; no production SLO, HA or multi-year uptime evidence.",
+    "No actual repository endpoint access, public server TLS or real teammate pilot verified."
+  ],
+  "longOperation": {
+    "messages": 1000000,
+    "tasks": 100001,
+    "report": "long-operation-scale.json",
+    "before": "long-operation-before.json",
+    "limits": "10 samples per path, short synthetic text; not generated-answer quality or production SLO"
+  },
+  "runtimeScale": {
+    "historicalRuns": 100000,
+    "report": "runtime-scale.json",
+    "claimTwoAndExpiryP95Ms": 13.4
+  },
+  "recallQueryPlan": "recall-query-plans.json; before CTE scans 100000 Runs, after index reads one referenced Run; complete rows/dependencies/fingerprints identical; tiny output corpus and one EXPLAIN each",
+  "build": "passed",
+  "syntaxAndDocs": "passed",
+  "gitleaksPublishTreeFindings": 0,
+  "gitleaksPriorHistoryFindings": 0,
+  "gitleaksPriorCommitsScanned": 18,
+  "testFixtureCleanup": {
+    "serverBrowserCasesPassed": 24,
+    "termination": "SIGTERM with 10000ms bound",
+    "schemasFromCurrentTaskRemaining": 0,
+    "priorSchemasPreserved": 44
+  }
+}

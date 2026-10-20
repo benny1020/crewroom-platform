@@ -39,6 +39,12 @@ export async function lockContextMutation(db) {
     "SELECT pg_advisory_xact_lock(hashtext(current_schema()),hashtext('crewroom-context-mutation'))",
   );
 }
+// HTTP document reads may coexist; writers and model reads remain exclusive.
+export async function lockContextRead(db) {
+  await db.query(
+    "SELECT pg_advisory_xact_lock_shared(hashtext(current_schema()),hashtext('crewroom-context-mutation'))",
+  );
+}
 export async function transaction(pool, operation) {
   const client = await pool.connect();
   try {

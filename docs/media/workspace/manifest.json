@@ -1,6 +1,6 @@
 {
-  "release": "0.14.0",
-  "capturedAt": "2026-10-20T00:59:20.302Z",
+  "release": "0.14.1",
+  "capturedAt": "2026-10-20T15:17:57.541Z",
   "mode": "isolated PostgreSQL fixture; three-screen walkthrough; no live AI calls",
   "viewport": {
     "width": 1440,
@@ -10,23 +10,23 @@
   "files": [
     {
       "name": "agent-home.png",
-      "bytes": 161441,
-      "sha256": "81aa744879a4f1c0a037acaff2faacbc852f45e25f0fd6ad81d196995c4ac365"
+      "bytes": 160979,
+      "sha256": "36f1f7f81c8690263dc08dba97a3d93771550b79aebd6b280dffd0792ebbd7e7"
     },
     {
       "name": "document.png",
-      "bytes": 208700,
-      "sha256": "601fe64cf096f20cbf620ee32eb4bebc8c3a216e2339be5f614fede4c7120b05"
+      "bytes": 207803,
+      "sha256": "b807d94eb708b24d4175d90a52e239f011a447f8f397d4439e561787c0b15ff1"
     },
     {
       "name": "workroom.png",
-      "bytes": 150289,
-      "sha256": "b34d4aad6d6b768bdb859f8aee9f555c85a26af91e8f995a9602f60205a0f440"
+      "bytes": 149421,
+      "sha256": "246eba795b3c3be5924da41fa44e98ace250343a5e452d0c4de0b87524d5fb16"
     },
     {
       "name": "workflow.gif",
-      "bytes": 284662,
-      "sha256": "c0c7f1142053f9eddbe5deb121e44fedbad12c983d914e306be588541e206af0"
+      "bytes": 284464,
+      "sha256": "6b144ec573ebbb32f25c2cf3bd7fd87f78a0f5c9254e428370ed18a24775b801"
     }
   ]
 }

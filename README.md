@@ -11,7 +11,7 @@
 
 </div>
 
-**현재 버전: 0.14.0 · 2026-10-20.** 직속·개발·운영·QA의 공용 에이전트를 같은 서버에서 함께 사용합니다. 요청·대화·적용한 스킬·작업 문서·결과를 업무방에 모으고, 개인 비서는 소유자만 사용합니다.
+**현재 버전: 0.14.1 · 2026-10-21.** 직속·개발·운영·QA의 공용 에이전트를 같은 서버에서 함께 사용합니다. 요청·대화·적용한 스킬·작업 문서·결과를 업무방에 모으고, 개인 비서는 소유자만 사용합니다.
 
 | 현재 기능 | 동작 |
 | --- | --- |
@@ -22,7 +22,7 @@
 | 코드 수정·QA | 고정 GitLab SHA에서 격리 실행, 등록 검사, 같은 patch의 독립 QA, 사람의 수용 |
 | 공동 업무·운영 | 책임 인계·질문·재작업, 긴 대화 검색, 팀장 운영 현황, 암호화 백업·복원 |
 
-0.14.0의 작업 문서는 중간 실패 후에도 저장한 초안이 남습니다. 웹에서 현재 문서와 이전 버전을 확인합니다. [기능·구조·한도](docs/AGENT_WORKSPACE.md).
+0.14.1은 현재 업무 문서를 먼저 찾고, 담당자 인계 때 새 권한과 출처를 검증합니다. 여러 사람의 동시 조회와 많은 문서 이력을 개선했고, 결과에는 실제 본문 조회·저장 횟수를 표시합니다. [개선·부하 검사](docs/TEAM_QUALITY.md). 작업 중 실패해도 저장한 초안과 이전 버전은 남습니다. [기능·구조·한도](docs/AGENT_WORKSPACE.md).
 
 [![작업공간 구조](docs/diagrams/agent-workspace.png)](docs/diagrams/agent-workspace.svg)
 
@@ -34,7 +34,7 @@
 
 OpenAI 호환 또는 Claude Messages API의 **URL·모델 ID·인증 방식**을 직접 지정합니다. 제공자 API, 게이트웨이, 자체 호스팅 endpoint를 같은 설정 방식으로 연결하고, GitLab URL과 사용할 프로젝트도 선택합니다. [커스텀 연결 설정](docs/CONFIGURATION.md)
 
-서버·도구 실행·저장·협업 흐름은 구현했고 **고유 자동 검사 269개와 암호화 복원 훈련**을 통과했습니다. 실제 모델의 업무 품질·비용·시간 절감은 endpoint를 연결한 뒤 평가해야 합니다. GitHub Pages는 API 없는 화면 데모이며, 실제 공동 사용과 AI 실행에는 아래 서버와 모델 설정이 필요합니다. 화면·GIF의 모델 응답은 격리된 fixture입니다. [검증 결과](docs/SERVER_VERIFICATION.md) · [시범 운영](docs/PILOT_GUIDE.md) · [마일스톤](docs/MILESTONES.md)
+서버·도구 실행·저장·협업 흐름은 구현했고 **고유 자동 검사 285개와 암호화 복원 훈련**을 통과했습니다. 실제 모델의 업무 품질·비용·시간 절감은 endpoint를 연결한 뒤 평가해야 합니다. GitHub Pages는 API 없는 화면 데모이며, 실제 공동 사용과 AI 실행에는 아래 서버와 모델 설정이 필요합니다. 화면·GIF의 모델 응답은 격리된 fixture입니다. [검증 결과](docs/SERVER_VERIFICATION.md) · [시범 운영](docs/PILOT_GUIDE.md) · [마일스톤](docs/MILESTONES.md)
 
 ![실제 서버의 부서별 공용 동료와 스킬](docs/media/readiness/office.png)
 
@@ -291,16 +291,16 @@ npm run doctor -- --code
 
 ## 검증
 
-0.14.0의 [구현 커밋 `fa0ade9`](https://github.com/benny1020/crewroom-platform/commit/fa0ade92471f59c07a272547ae7f88fac7f11700)은 [최종 CI](https://github.com/benny1020/crewroom-platform/actions/runs/39352757679)에서 아래 검사를 모두 통과했습니다. Astra는 해당 커밋의 동결 파일 30개를 코드 검토하고 해시를 대조했습니다. 이 리뷰의 독립 테스트 실행은 0개이며, 아래 자동 검사와 구분합니다. [리뷰 범위·반영](docs/reviews/ASTRA_WORKSPACE.md)
+0.14.1의 로컬 전체 검사는 아래와 같습니다. [검증 원자료](docs/evidence/0.14.1/verification.json)와 [Astra 동결 코드 리뷰](docs/reviews/ASTRA_TEAM_QUALITY.md)를 구분해 기록합니다. 리뷰어의 독립 테스트 실행은 0개입니다. 커밋별 CI는 [GitHub Actions](https://github.com/benny1020/crewroom-platform/actions/workflows/verify-and-deploy.yml)에서 확인할 수 있습니다. 이전 0.14.0의 269개 검사는 [과거 기록](docs/SERVER_VERIFICATION.md#0140-에이전트-영속-작업공간-검증)에 보존합니다.
 
 | 검사 | 통과 |
 | --- | ---: |
 | 단위·HTTP adapter | 67 |
-| PostgreSQL + 실제 Docker 개발·QA | 141 |
+| PostgreSQL + 실제 Docker 개발·QA | 157 |
 | Docker Runner | 6 |
 | 정적 화면 브라우저 | 31 |
 | 실제 서버 브라우저 | 24 |
-| **고유 자동 검사 합계** | **269** |
+| **고유 자동 검사 합계** | **285** |
 | 별도 Linux 비밀 파일 소유권·암호화 백업 복원 | 통과 |
 
 외부 모델 호출은 0회이며 모델 프로토콜에는 loopback 응답을 사용했습니다. 등록 검사의 성공을 실제 모델의 업무 품질·비용·실사용 성과로 해석하지 않습니다.
@@ -330,6 +330,7 @@ TEST_DATABASE_URL=postgresql://crewroom@127.0.0.1:5448/crewroom npm run test:ser
 
 | 문서                                                                  | 내용                                                          |
 | --------------------------------------------------------------------- | ------------------------------------------------------------- |
+| [공동 사용 품질·장기 부하](docs/TEAM_QUALITY.md) | 인계·출처·실제 조회량·동시 사용·대량 문서 검증 |
 | [직접 사용 시작](docs/READINESS.md)                                  | 설치·모델 연결·계정·진단·첫 업무와 실제 품질 검증             |
 | [에이전트 영속 작업공간](docs/AGENT_WORKSPACE.md)                     | 문서 도구·불변 버전·출처·이어가기·용량·연구 근거              |
 | [AI와 스킬 만들기](docs/SKILL_STUDIO.md)                              | 업무 설명·대화 수정·예시·게시·에이전트 적용                   |

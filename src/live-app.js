@@ -657,7 +657,15 @@ function workView() {
   );
 }
 function resultView(a) {
-  const r = a.result;
+  const r = a.result,
+    usage = r.receipt?.workspaceUsage,
+    workspace =
+      usage &&
+      [usage.bodyReads, usage.charactersRead, usage.writes].every(
+        (n) => Number.isSafeInteger(n) && n >= 0,
+      )
+        ? `<p class="cw-provenance">작업 문서 본문 ${usage.bodyReads}회 조회 · ${usage.charactersRead.toLocaleString()}자 읽음 · ${usage.writes}회 저장</p>${r.receipt.workspaceContinuation && usage.bodyReads === 0 ? '<p class="cr-note">작업 문서 본문을 읽지 않은 답변입니다. 이전 문서를 참고해야 하는 요청이면 문서를 읽고 다시 답하도록 요청해주세요.</p>' : ""}`
+        : "";
   return `<article class="cw-artifact"><div class="cw-section-heading"><h3>결과 v${a.version}</h3><span class="g-pill ${a.origin === "model" ? "blue" : "amber"}">${r.execution ? (r.execution.passed ? "실제 검사 통과" : "실제 검사 확인 필요") : a.origin === "model" ? "모델 분석" : a.origin === "external" ? "외부 작성 · 미검증" : "테스트 fixture"}</span></div><p class="cw-provenance">대상 ${esc(a.target_version)} · ${r.execution ? "고정 수정본의 실제 실행 기록" : "사실·실행 검증 미확인"}</p><p class="cw-artifact-body">${esc(r.summary)}</p>${[
     ["근거", r.evidence],
     ["미확인 사항", r.unknowns],
@@ -669,7 +677,7 @@ function resultView(a) {
     )
     .join(
       "",
-    )}${executionView(a)}<div class="cw-evidence"><span>${a.run_id ? "실행 기록 연결됨" : "외부에서 가져옴 · 실행 없음"}</span><span>${stamp(a.created_at)}</span><a href="/api/artifacts/${a.id}">Markdown 다운로드 ${icon("download")}</a></div></article>`;
+    )}${workspace}${executionView(a)}<div class="cw-evidence"><span>${a.run_id ? "실행 기록 연결됨" : "외부에서 가져옴 · 실행 없음"}</span><span>${stamp(a.created_at)}</span><a href="/api/artifacts/${a.id}">Markdown 다운로드 ${icon("download")}</a></div></article>`;
 }
 function taskView() {
   if (!task)

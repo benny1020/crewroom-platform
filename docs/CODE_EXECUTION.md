@@ -18,6 +18,8 @@ App과 Worker는 Docker socket을 갖지 않는다. Job에는 모델/GitLab/DB/R
 
 [![실제 업무 흐름](diagrams/development-qa-sequence.png)](diagrams/development-qa-sequence.svg)
 
+0.14.1에서는 코드 checkpoint를 새 Run·새 책임자에게 넘길 때 이전 기억·문서·legacy retry 출처를 다시 검증한다. 현재 출처만 상속하며 정정된 자료는 재사용을 거절하고 patch는 보존한다.
+
 0.14에서는 [영속 문서 도구](AGENT_WORKSPACE.md)도 같은 루프에서 사용한다. 개발·QA는 서로 다른 문서 작성자로 남고 같은 업무의 허용된 문서를 함께 읽는다.
 
 코드 Runner가 실행할 수 있는 행동은 `list_files`, `read_file`, `write_file`, `run_check`, `finish`다. 임의 shell, Docker 옵션, 이미지, host mount, URL, command argv를 모델이 지정하지 않는다. `run_check`에는 운영자가 등록한 ID만 보낸다. 명령 배열·timeout은 실행 profile에서 결정한다.

@@ -67,7 +67,9 @@ await writeFile(
   `${directory}/manifest.json`,
   JSON.stringify(
     {
-      release: "0.14.0",
+      release: JSON.parse(
+        await readFile(new URL("../package.json", import.meta.url), "utf8"),
+      ).version,
       capturedAt: new Date().toISOString(),
       mode: "isolated PostgreSQL fixture; three-screen walkthrough; no live AI calls",
       viewport: { width: 1440, height: 1080 },

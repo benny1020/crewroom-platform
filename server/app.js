@@ -8,6 +8,7 @@ import {
   event,
   assertRuntimeReady,
   lockContextMutation,
+  lockContextRead,
 } from "./db.js";
 import { configuration, modelEndpoint } from "./config.js";
 import {
@@ -359,33 +360,40 @@ export function buildApp(pool, config = configuration()) {
       return { message };
     });
   });
+  const workspaceRead = (req, read) =>
+    transaction(pool, async (db) => {
+      await db.query("SET TRANSACTION READ ONLY");
+      await lockContextRead(db);
+      // Auth before waiting on the gate may be stale after a membership change.
+      const member = await authenticate(db, req);
+      return read(db, member);
+    });
   app.get("/api/agents/:agentId/workspace", async (req) => {
-    const agent = (await resources.agents(pool, req.member)).find(
-      (a) => a.id === req.params.agentId,
-    );
-    if (!agent) fail(404, "NOT_FOUND", "동료를 찾을 수 없어요.");
     const query = z
       .object({
         query: z.string().max(100).optional(),
         cursor: z.string().uuid().optional(),
       })
       .parse(req.query);
-    return transaction(pool, async (db) => {
-      await lockContextMutation(db);
-      return listWorkspace(db, req.member, { agentId: agent.id, ...query });
+    return workspaceRead(req, async (db, member) => {
+      const agent = (await resources.agents(db, member)).find(
+        (a) => a.id === req.params.agentId,
+      );
+      if (!agent) fail(404, "NOT_FOUND", "동료를 찾을 수 없어요.");
+      return listWorkspace(db, member, { agentId: agent.id, ...query });
     });
   });
   app.get("/api/tasks/:id/workspace", async (req) => {
-    const task = await getTask(pool, req.member, id.parse(req.params.id));
+    const taskId = id.parse(req.params.id);
     const query = z
       .object({
         query: z.string().max(100).optional(),
         cursor: z.string().uuid().optional(),
       })
       .parse(req.query);
-    return transaction(pool, async (db) => {
-      await lockContextMutation(db);
-      return listWorkspace(db, req.member, { taskId: task.id, ...query });
+    return workspaceRead(req, async (db, member) => {
+      const task = await getTask(db, member, taskId);
+      return listWorkspace(db, member, { taskId: task.id, ...query });
     });
   });
   app.get("/api/workspace/documents/:id", async (req) => {
@@ -396,9 +404,8 @@ export function buildApp(pool, config = configuration()) {
         beforeRevision: z.coerce.number().int().min(1).optional(),
       })
       .parse(req.query);
-    return transaction(pool, async (db) => {
-      await lockContextMutation(db);
-      return readWorkspace(db, req.member, id.parse(req.params.id), query);
+    return workspaceRead(req, async (db, member) => {
+      return readWorkspace(db, member, id.parse(req.params.id), query);
     });
   });
   app.get("/api/artifacts/:id", async (req, reply) => {
