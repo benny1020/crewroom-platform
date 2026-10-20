@@ -22,7 +22,7 @@ DB에 이름 있는 영속 문서·불변 버전·출처를 두고 기존 행동
 | 새 배포에서 이전 이미지 tag를 찾는 검증 스크립트 | 실제 Compose app image를 사용하고 미래 릴리스 회귀와 Linux 소유권 재검증 |
 | 응답 유실 후 중복 저장 | Run/generation/operation fingerprint와 저장 receipt로 멱등 처리 |
 
-핵심 코드 16개 승인 후 화면·실행 fixture·배포·복원·시연 파일까지 확장한 **30개 동결 파일**도 추가 P0/P1/P2 발견 없이 승인했다. [현재 동결 범위](../evidence/0.14.0/reviewed-files.json)의 검토 종료 hash 재대조도 일치했다. 묶음은 `34cc07eaf680f01351ee3fd145fb5ac94a598a009ae5f1805f6d660ebf1f520f`이다. 최종 커밋 연결은 GitHub 검증 기록과 함께 확인한다.
+핵심 코드 16개 승인 후 화면·실행 fixture·배포·복원·시연 파일까지 확장한 **30개 동결 파일**도 추가 P0/P1/P2 발견 없이 승인했다. [현재 동결 범위](../evidence/0.14.0/reviewed-files.json)의 검토 종료 hash 재대조도 일치했다. 묶음은 `34cc07eaf680f01351ee3fd145fb5ac94a598a009ae5f1805f6d660ebf1f520f`이다. Astra는 최종 구현 커밋 [`fa0ade9`](https://github.com/benny1020/crewroom-platform/commit/fa0ade92471f59c07a272547ae7f88fac7f11700)의 commit blob·작업 트리 30개와 manifest의 일치를 읽기 전용으로 확인하고 승인을 결합했다. [해당 커밋의 CI](https://github.com/benny1020/crewroom-platform/actions/runs/39352757679)는 이후 모두 성공했다. 리뷰어의 독립 테스트 실행은 0개다.
 
 ## 남은 제품 경계
 

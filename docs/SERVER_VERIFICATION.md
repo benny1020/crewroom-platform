@@ -10,7 +10,7 @@
 | 정적/서버 브라우저 | 31 + 24 통과 | 문서 열기·부분 읽기·이전 버전·HTML 경로 escape·원래 업무·1024px 경계 포함 |
 | Linux 비밀 파일·암호화 복원 | 통과 | 문서 head·모든 버전·출처·보관 상태·관찰/현재 read-set·저장 receipt까지 동일성 비교 |
 
-고유 자동 검사 **269개**를 확인했다. 최초 CI의 DB·Docker 141개와 서버 브라우저 24개가 모두 통과했다. 이후 비밀 파일 검사에서 이전 이미지 tag를 찾던 릴리스 스크립트를 발견해 현재 Compose 이미지 선택으로 고쳤고, 미래 릴리스 회귀와 실제 0.14.0 Linux 검사를 추가 확인했다. 최종 게시 커밋의 CI는 전체 명령을 다시 실행한다. [검증 영수증](evidence/0.14.0/verification.json) · [복원](evidence/0.14.0/restore.json) · [로컬 배포](evidence/0.14.0/deployment.json).
+고유 자동 검사 **269개**와 Linux 비밀 파일·암호화 복원 검사를 [구현 커밋 `fa0ade9`의 최종 CI](https://github.com/benny1020/crewroom-platform/actions/runs/39352757679)에서 모두 통과했다. 최초 CI의 릴리스 검사에서 이전 이미지 tag를 찾던 문제는 실제 Compose 이미지 선택으로 수정했고, 미래 릴리스 회귀를 추가했다. 최종 CI의 verify·server·deploy job은 모두 성공했다. [검증 영수증](evidence/0.14.0/verification.json) · [복원](evidence/0.14.0/restore.json) · [로컬 배포](evidence/0.14.0/deployment.json).
 
 새 문서는 자동 embedding/기억 제안 대상이 아니며 실제 도구로 조회한다. 목록 제목도 출처로 기록하고, 자기 수정은 현재 기대 revision만 갱신하며 원래 관찰 기록을 보존한다. 문서 A→B→A로 무효 출처를 우회하는 저장은 commit 전 rollback한다. 옛 답변은 화면에서 유지하며 현재 업무 문서는 다시 읽어 이어간다. [독립 리뷰](reviews/ASTRA_WORKSPACE.md) · [동결 파일](evidence/0.14.0/reviewed-files.json).
 

@@ -1,7 +1,7 @@
 {
   "release": "0.14.0",
   "at": "2026-10-20T01:04:57.240610+00:00",
-  "status": "passed_local_and_ci_application_suites_with_release_probe_repair",
+  "status": "passed_final_implementation_ci",
   "uniqueAutomaticTests": 269,
   "tests": {
     "unit": {
@@ -14,7 +14,7 @@
       "fullBatchPassed": 141,
       "fullBatchFailed": 0,
       "skipped": 0,
-      "evidence": "GitHub Actions run 39351606166 completed all PostgreSQL and real Docker cases; release-secret image probe failed later and was repaired separately."
+      "evidence": "All 141 PostgreSQL and actual Docker cases passed in final GitHub Actions run 39352757679."
     },
     "dockerRunner": {
       "passed": 6,
@@ -47,7 +47,17 @@
   "gitleaksExistingHistoryFindings": 0,
   "actualExternalModelCalls": 0,
   "modelQuality": "unverified; fixture and loopback tests only",
-  "ci": "The published commit is verified again by the repository GitHub Actions workflow. See the commit checks.",
+  "ci": {
+    "implementationCommit": "fa0ade92471f59c07a272547ae7f88fac7f11700",
+    "run": 39352757679,
+    "url": "https://github.com/benny1020/crewroom-platform/actions/runs/39352757679",
+    "conclusion": "success",
+    "jobs": {
+      "verify": "success",
+      "server": "success",
+      "deploy": "success"
+    }
+  },
   "sourceManifest": "reviewed-files.json",
-  "ciReleaseProbeRepair": "Secret ownership probe now reads the effective Compose app image; tested against a synthetic future release and actual crewroom:0.14.0. Final commit CI is required."
+  "ciReleaseProbeRepair": "Secret ownership probe reads the effective Compose app image. Future-release regression, actual crewroom:0.14.0 ownership and encrypted restore all passed in final implementation CI."
 }

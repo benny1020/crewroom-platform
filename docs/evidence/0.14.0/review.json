@@ -10,6 +10,11 @@
   "independentTestsRun": 0,
   "executionValidation": "Reported separately by the implementation agent; not rerun by reviewer",
   "sourceHashRecheckAtReviewEnd": "passed",
-  "exactCommitBinding": "Source manifest is compared to the final commit after creation.",
+  "exactCommitBinding": {
+    "implementationCommit": "fa0ade92471f59c07a272547ae7f88fac7f11700",
+    "status": "approved",
+    "commitBlobAndWorktreeFilesMatched": 30,
+    "independentTestsRun": 0
+  },
   "supplementalReview": "Configured Compose image selection and future-release regression approved; previous 28 files unchanged."
 }

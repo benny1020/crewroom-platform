@@ -67,16 +67,16 @@
       "renderer": "illustrated",
       "width": 1280,
       "height": 940,
-      "sourceHash": "f0740b070f64e4b22634d3e0d79bb0c33d9247e945babdbac152e16a82040397",
+      "sourceHash": "373481c8b41f481a74f6637f16744343a29e59cc14ad35bcb709b22a5ed24c9b",
       "svg": {
         "file": "platform-architecture.svg",
-        "bytes": 19345,
-        "sha256": "64a3530c3363e4e9db7e7ddf76eb9a9bfaddb57ed3a8535ae842fd43b028d284"
+        "bytes": 19358,
+        "sha256": "7dc9a82355e538e0f0ccec9e080955f65087cc72616ba57c026d081ad0d7348c"
       },
       "png": {
         "file": "platform-architecture.png",
-        "bytes": 269966,
-        "sha256": "95867c4fd1a807f3e2701029611d3c6fe9256cb330151ae18384fb717ebd93c5"
+        "bytes": 269491,
+        "sha256": "20fa052565af145c1ea283d9515b82d7a7e92d27114fde5b03f6ed018e9f26eb"
       }
     },
     {
@@ -490,16 +490,16 @@
       "renderer": "illustrated",
       "width": 1280,
       "height": 940,
-      "sourceHash": "f0740b070f64e4b22634d3e0d79bb0c33d9247e945babdbac152e16a82040397",
+      "sourceHash": "373481c8b41f481a74f6637f16744343a29e59cc14ad35bcb709b22a5ed24c9b",
       "svg": {
         "file": "server-components.svg",
-        "bytes": 19361,
-        "sha256": "cf1014cfb38d0288b5174b27b10f97ba1689bfaa5044755b1b5931b042b2e65a"
+        "bytes": 19374,
+        "sha256": "23f28eaa7b4ac60069771bc254688f5e7b4cb1c9630e278b91587ef210363963"
       },
       "png": {
         "file": "server-components.png",
-        "bytes": 269966,
-        "sha256": "95867c4fd1a807f3e2701029611d3c6fe9256cb330151ae18384fb717ebd93c5"
+        "bytes": 269491,
+        "sha256": "20fa052565af145c1ea283d9515b82d7a7e92d27114fde5b03f6ed018e9f26eb"
       }
     },
     {

@@ -6,7 +6,7 @@
 
 **코드 실행 추가 구조와 실제 검사 계약은 [0.6 실행 아키텍처](CODE_EXECUTION.md)가 기준이다.** 아래 협업·인증·큐 계약은 유지한다.
 
-2026-10-19. 이 문서와 소스가 현재 구현의 기준이다. 0.4 문서의 Paperclip 재사용·원격 하네스·자율 도구 실행은 이전 검토안이다.
+2026-10-20. 이 문서와 소스가 현재 구현의 기준이다. [README의 에이전트 동작 방식](../README.md#에이전트는-어떻게-실행되나요)에 Agent/Task/Run·상주 서비스·행동 루프·기억/문서/코드 저장·복구를 함께 정리했다. 0.4 문서의 Paperclip 재사용·원격 하네스는 이전 검토안이다.
 
 ## 구성과 데이터 소유권
 
@@ -47,7 +47,7 @@ Migration 008은 `cr_tasks.rework`, `question_revision`, 대상별 `cr_questions
 
 GitHub PR은 7~40자리 head SHA를 받는다. head를 확인하고 불변 base/head SHA compare diff를 가져온다. GitHub 고정 host만 호출하며 redirect·응답 크기·시간을 제한한다. GitHub private 저장소·임의 URL 크롤링은 지원하지 않는다. 다른 대상은 사용자가 입력한 내용만 분석하고 실제 환경을 조회하지 않았음을 남긴다.
 
-`server/provider.js`는 설정한 endpoint의 Claude Messages 또는 OpenAI 호환 `chat/completions` 계약을 사용한다. 전체 endpoint와 인증 header/raw·bearer 설정을 지원하며 외부 모델 주소로 자동 fallback하지 않는다. Claude는 system/user를 native Messages body로 보내고 text·usage·request ID를 읽는다. 읽기 전용 분석은 `tools: []`, `tool_choice: none`을 사용한다. 코드 업무는 native JSON 행동을 검증해 Runner에 전달하며 모델이 임의 command argv를 정하지 못한다. JSON의 summary/evidence/unknowns/nextActions를 검사하고 모델/요청 ID/사용량을 receipt로 남긴다. 허용 입력 크기를 넘으면 명시적으로 실패한다. fixture는 test 플래그와 비운영 환경에서만 허용된다. Hermes runtime은 명시적 미설정 오류이며 안전하지 않은 기본 CLI 실행으로 대체하지 않는다.
+`server/provider.js`는 설정한 endpoint의 Claude Messages 또는 OpenAI 호환 `chat/completions` 계약을 사용한다. 전체 endpoint와 인증 header/raw·bearer 설정을 지원하며 외부 모델 주소로 자동 fallback하지 않는다. Claude는 system/user를 Messages body로 보내고 text·usage·request ID를 읽는다. 제공자의 native function calling은 사용하지 않으며 OpenAI 호환 요청은 `tools: []`, `tool_choice: none`이다. 모델이 본문으로 응답한 JSON `action`을 앱이 검증·실행하고 실제 결과를 다음 요청에 넣는다. 일반 분석은 기억·영속 문서 도구를, 코드 업무는 여기에 Runner의 허용 행동을 더한다. 모델이 임의 command argv를 정하지 못한다. 최종 JSON의 summary/evidence/unknowns/nextActions를 검사하고 모델/요청 ID/사용량을 receipt로 남긴다. 허용 입력 크기를 넘으면 명시적으로 실패한다. fixture는 test 플래그와 비운영 환경에서만 허용된다. Hermes runtime은 명시적 미설정 오류이며 기본 CLI 실행으로 대체하지 않는다.
 
 ## 인증과 정보 경계
 
@@ -82,6 +82,8 @@ GitHub PR은 7~40자리 head SHA를 받는다. head를 확인하고 불변 base/
 | `/api/memories`                                     | 검색·출처·정정·삭제                 | resources.js                  |
 | `/api/memory/search`, `/sources/:key`, `/proposals` | 시점 검색·원문·제안 검토            | memory.js, memory-learning.js |
 | `/api/agents`, `/api/skills`, `/api/members`        | 설정·버전·담당·역할                 | resources.js                  |
+| `/api/agents/:id/workspace`, `/api/tasks/:id/workspace` | 에이전트/업무의 허용된 작업 문서 목록 | app.js, agent-workspace.js |
+| `/api/workspace/documents/:id`                     | 현재/이전 문서·부분 본문·버전 조회 | app.js, agent-workspace.js |
 | `/api/health`, `/api/ready`                         | 프로세스 / DB·복원 준비 상태        | app.js                        |
 
 기억 원문·정정 이력은 DB에 보관한다. 핵심 기억과 대화 원문·자동 발췌 업무 요약을 검색하고 출처를 추적한다. 선택적 embedding URL은 Worker가 별도로 호출한다. 자동 요약을 승인된 사실·검사 결과로 승격하지 않는다. [구조·설정·검증](MEMORY_ARCHITECTURE.md)

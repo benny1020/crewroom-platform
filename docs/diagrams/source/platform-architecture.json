@@ -114,7 +114,7 @@
       "title": "PostgreSQL 18",
       "icon": "Database",
       "color": "data",
-      "lines": ["업무 · 기억 · 스킬", "대화 · 상태 · 실행 큐"],
+      "lines": ["문서 · 기억 · 스킬 · 버전", "업무 · 대화 · 상태 · 큐"],
       "titleSize": 20
     },
     {
