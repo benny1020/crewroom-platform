@@ -3,7 +3,10 @@ import assert from "node:assert/strict";
 import { command } from "../runner/broker.mjs";
 const namespace = "crewroom-secret-test-" + Date.now(),
   names = ["source", "app", "worker", "runner"].map((n) => namespace + "-" + n),
-  image = "crewroom:0.13.1";
+  image = JSON.parse(
+    (await command("docker", ["compose", "config", "--format", "json"])).stdout,
+  ).services.app.image;
+assert.equal(typeof image, "string");
 const mount = (name, path, ro = false) => [
   "--mount",
   `type=volume,source=${name},target=${path}${ro ? ",readonly" : ""}`,
@@ -101,6 +104,7 @@ try {
     ]);
   console.log(
     JSON.stringify({
+      image,
       sourceUid1001Mode600DeniedToUid1000: true,
       perServiceSecretOwnership: true,
       appHasNoRunnerToken: true,

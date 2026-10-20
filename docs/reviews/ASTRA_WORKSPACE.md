@@ -19,9 +19,10 @@ DB에 이름 있는 영속 문서·불변 버전·출처를 두고 기존 행동
 | 버전 이름에 저장형 HTML이 들어갈 수 있음 | 경로 escape와 브라우저 회귀 |
 | 조회 중 저장으로 본문과 표시 revision이 달라질 수 있음 | HTTP 문서 조회를 context gate 트랜잭션으로 직렬화 |
 | 코드 루프에서 복구 가능한 문서 충돌이 즉시 실패함 | 분석·코드 공통 오류 receipt로 반환, 권한/출처 취소는 종료 유지 |
+| 새 배포에서 이전 이미지 tag를 찾는 검증 스크립트 | 실제 Compose app image를 사용하고 미래 릴리스 회귀와 Linux 소유권 재검증 |
 | 응답 유실 후 중복 저장 | Run/generation/operation fingerprint와 저장 receipt로 멱등 처리 |
 
-핵심 코드 16개 승인 후 화면·실행 fixture·배포·복원·시연 파일까지 확장한 **28개 동결 파일**도 추가 P0/P1/P2 발견 없이 승인했다. [현재 동결 범위](../evidence/0.14.0/reviewed-files.json)의 검토 종료 hash 재대조도 일치했다. 묶음은 `2fbd12a291f2628e4d7c9fca53353f032b7f83c00ddcfa5be229da422b667748`이다. 최종 커밋 연결은 GitHub 검증 기록과 함께 확인한다.
+핵심 코드 16개 승인 후 화면·실행 fixture·배포·복원·시연 파일까지 확장한 **30개 동결 파일**도 추가 P0/P1/P2 발견 없이 승인했다. [현재 동결 범위](../evidence/0.14.0/reviewed-files.json)의 검토 종료 hash 재대조도 일치했다. 묶음은 `34cc07eaf680f01351ee3fd145fb5ac94a598a009ae5f1805f6d660ebf1f520f`이다. 최종 커밋 연결은 GitHub 검증 기록과 함께 확인한다.
 
 ## 남은 제품 경계
 

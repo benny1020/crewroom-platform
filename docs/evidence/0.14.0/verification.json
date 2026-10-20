@@ -1,21 +1,20 @@
 {
   "release": "0.14.0",
   "at": "2026-10-20T01:04:57.240610+00:00",
-  "status": "passed_local_with_targeted_fixture_retest",
-  "uniqueAutomaticTests": 268,
+  "status": "passed_local_and_ci_application_suites_with_release_probe_repair",
+  "uniqueAutomaticTests": 269,
   "tests": {
     "unit": {
-      "passed": 66,
+      "passed": 67,
       "failed": 0,
       "skipped": 0
     },
     "postgresAndDocker": {
       "uniquePassed": 141,
-      "fullBatchPassed": 140,
-      "fullBatchFailed": 1,
-      "retestedDockerCasePassed": 1,
-      "reasonForRetest": "The code fixture was updated to read the persisted document during rework before asserting inherited workspace provenance. Runtime code was unchanged.",
-      "skipped": 0
+      "fullBatchPassed": 141,
+      "fullBatchFailed": 0,
+      "skipped": 0,
+      "evidence": "GitHub Actions run 39351606166 completed all PostgreSQL and real Docker cases; release-secret image probe failed later and was repaired separately."
     },
     "dockerRunner": {
       "passed": 6,
@@ -33,6 +32,10 @@
     "newWorkspaceCases": {
       "passed": 14,
       "alreadyIncludedInPostgresTotal": true
+    },
+    "releaseImageRegression": {
+      "passed": 1,
+      "alreadyIncludedInUnitTotal": true
     }
   },
   "build": "passed",
@@ -45,5 +48,6 @@
   "actualExternalModelCalls": 0,
   "modelQuality": "unverified; fixture and loopback tests only",
   "ci": "The published commit is verified again by the repository GitHub Actions workflow. See the commit checks.",
-  "sourceManifest": "reviewed-files.json"
+  "sourceManifest": "reviewed-files.json",
+  "ciReleaseProbeRepair": "Secret ownership probe now reads the effective Compose app image; tested against a synthetic future release and actual crewroom:0.14.0. Final commit CI is required."
 }
