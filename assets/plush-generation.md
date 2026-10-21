@@ -45,3 +45,5 @@ Premium soft plush studio photography, cream navy teal warm yellow, simple eyes,
 ## Additional character
 
 0.15.2 adds the optional Rururu portrait and twelve-scene diary. See [reference-guided prompts and production files](rururu-generation.md). The ten-character atlas and otter diary remain unchanged.
+
+0.15.3 adds the optional Pomeranian portrait and twelve-scene diary. See [identity and style reference prompts](pom-generation.md). Original pet photographs are not part of the public source.

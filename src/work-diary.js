@@ -45,11 +45,27 @@ const rururuScenes = {
   blocked: [697, 1068, 389, 347],
 };
 
+const pomScenes = {
+  ready: [12, 25, 345, 350],
+  coding: [374, 28, 350, 347],
+  investigating: [734, 25, 352, 345],
+  testing: [12, 382, 345, 350],
+  review: [390, 390, 330, 342],
+  celebrating: [735, 383, 351, 349],
+  question: [20, 735, 342, 320],
+  writing: [376, 738, 345, 328],
+  queued: [725, 747, 361, 311],
+  planning: [16, 1070, 347, 340],
+  paused: [390, 1071, 310, 336],
+  blocked: [723, 1067, 363, 344],
+};
+
 export function developerDiaryEnabled(agent) {
   const character = characterById(agent?.character, "otter").id;
   return (
     Boolean(agent) &&
-    (character === "rururu" || (agent.id === "dev" && character === "otter"))
+    (["rururu", "pom"].includes(character) ||
+      (agent.id === "dev" && character === "otter"))
   );
 }
 
@@ -180,8 +196,10 @@ export function diaryIllustration(
   character = "otter",
 ) {
   const key = Object.hasOwn(diaryScenes, phase) ? phase : "ready";
-  const identity = character === "rururu" ? "rururu" : "otter";
-  const scenes = identity === "rururu" ? rururuScenes : diaryScenes;
+  const identity = ["rururu", "pom"].includes(character) ? character : "otter";
+  const scenes = { otter: diaryScenes, rururu: rururuScenes, pom: pomScenes }[
+    identity
+  ];
   return `<span class="g-diary-illustration ${esc(className)}" data-diary-character="${identity}" data-diary-scene="${key}" aria-hidden="true">${atlasViewport(scenes[key], [1086, 1448])}</span>`;
 }
 

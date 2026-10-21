@@ -1,0 +1,146 @@
+{
+  "release": "0.15.3",
+  "at": "2026-10-21T14:16:36.473842+00:00",
+  "baseHead": "601f60672fe9f452ad9addc385c1888a8ef6a773",
+  "scope": "Final Pomeranian implementation, assets, capture and release receipts; self and review narrative excluded",
+  "bundleSha256": "2075f75471103a7c0ef048c74d9f58be02a775569403f8612143e4cccc636979",
+  "bundleEncoding": "UTF-8; path-sorted entries; path + NUL + lowercase sha256 + LF",
+  "files": [
+    {
+      "path": "README.md",
+      "sha256": "bf0cf2001c15c19706a9264b24a77790b49837c4a5ef29077d167881624daf88"
+    },
+    {
+      "path": "THIRD_PARTY_NOTICES.md",
+      "sha256": "83e7a3ac66d40ed815ed95541edd4a1fa98fea701460e44c138bf6ca94db3b72"
+    },
+    {
+      "path": "assets/plush-generation.md",
+      "sha256": "ac5777e4b2ae27c957da1f4a850f9bd1f089a11320315486c82643fcce6b4b0d"
+    },
+    {
+      "path": "assets/pom-diary-v1.webp",
+      "sha256": "a8f2a5f7631c4cd802e66dc2e37378564ba1fa994f86cbdaefa0c14e6eaa16de"
+    },
+    {
+      "path": "assets/pom-generation.md",
+      "sha256": "1a71d7e700236942ac56fb78c02b28cbc598a72f4594e22f3b906f71a6b93771"
+    },
+    {
+      "path": "assets/pom-portrait-v1.webp",
+      "sha256": "e557daf1e9f5579283a5348d57a42cdf4e2ec069b18e7232c94a3728e98f5cf6"
+    },
+    {
+      "path": "compose.yaml",
+      "sha256": "d0b0a639e6c29ee139013c0eaf08304c95e427a497c1ec8f59dfff8022c9d327"
+    },
+    {
+      "path": "docs/ARCHITECTURE.md",
+      "sha256": "5c3608a7bdebcb0df4a73cd864e73c28fd26b44aef98ecb8e37fff0ac7c14562"
+    },
+    {
+      "path": "docs/CHARACTERS.md",
+      "sha256": "8b0cee6aae1c77572a04ee793ecf0fdf64202286aa6be43077ffe6ef07ae62c6"
+    },
+    {
+      "path": "docs/READINESS.md",
+      "sha256": "01d9f5411177e6ce6fc203c048bd844a10a8b922de546efd6413610675f6d87e"
+    },
+    {
+      "path": "docs/SERVER_VERIFICATION.md",
+      "sha256": "d1abc0147ac9290c28d9d03b6d15a1812e941ff0c93545d43e176ea6f497ed35"
+    },
+    {
+      "path": "docs/diagrams/manifest.json",
+      "sha256": "20836a77f8a8f43f12d36bec330c8640fbe0de983ea8abee9f5b64aa041389e8"
+    },
+    {
+      "path": "docs/evidence/0.15.3/deployment.json",
+      "sha256": "b77a9d7269fbbed190bd1a5cc36f78c07f660925543f22162731b219b6a2c70a"
+    },
+    {
+      "path": "docs/evidence/0.15.3/restore.json",
+      "sha256": "e0999b9fa7e5943e9bb21080aad73f78d3dffef288966e712febf64f1e74a8b3"
+    },
+    {
+      "path": "docs/evidence/0.15.3/verification.json",
+      "sha256": "10a8acadb6ac17afd16cc5b22c567df51f8b81a74d84325748f797f078776f00"
+    },
+    {
+      "path": "docs/media/pom/developer-diary.gif",
+      "sha256": "82be681e7ac4d7d50205612d2c9651fa9d1ba8023f929311848e57661304dbc1"
+    },
+    {
+      "path": "docs/media/pom/developer-diary.png",
+      "sha256": "1336749c22af0695d1c7c175e05b9c79505542974b502c06962e022dcb401559"
+    },
+    {
+      "path": "docs/media/pom/manifest.json",
+      "sha256": "626446a54be5ee3c75c521f020e03f3f669ec6a9758bb83c0a29e0188d0506a1"
+    },
+    {
+      "path": "docs/media/pom/office.gif",
+      "sha256": "67c56003d10170764328e47dc304a2727f1d27c2948145968029e2218747a3c2"
+    },
+    {
+      "path": "docs/media/pom/office.png",
+      "sha256": "56403e08da745e071ba96a57785702a80f85ddfc52d1ced17cb693dc159f7bb4"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "11b6ac4ab8388ac44a2cf4bf7ae20210dac0d526e5cc318a9f658096080616a6"
+    },
+    {
+      "path": "package.json",
+      "sha256": "6e6800ad8dd0e797359f42c21a85eebdad3a59c372308728b36e90e527105259"
+    },
+    {
+      "path": "scripts/backup.mjs",
+      "sha256": "ebb59042cc3017bec304803ae5e71f051093e1d9028d442f93d892270e9bce15"
+    },
+    {
+      "path": "scripts/capture-plush.mjs",
+      "sha256": "1265f35b093e871c3d051b08ae1afa2841172c5cee2c823113819db6239a961d"
+    },
+    {
+      "path": "scripts/restore.mjs",
+      "sha256": "b92a45020e7546c6047ba79fa8cc4032c772ad9709f5ce1f689e7d1543f6d70d"
+    },
+    {
+      "path": "scripts/validate-docs.mjs",
+      "sha256": "bbc2c827c8cea671b0ae8da81972d086e90c1db8e40ae6834b5cb04f4faa6f89"
+    },
+    {
+      "path": "scripts/verify-restore.mjs",
+      "sha256": "80759c831a9a1713e3ea1a5b37d3dcb84a6e17309ba5e48e4d7c8c0fa3a5269f"
+    },
+    {
+      "path": "server/config.js",
+      "sha256": "908096e31b7bb1d55ac2113e3ea7db5ad35988cf66f4033935ba68a2900870ce"
+    },
+    {
+      "path": "src/data.js",
+      "sha256": "399cad1fd6f4d53a55273e0227c6d04db469ec07697773c2d3661f38e59aa0df"
+    },
+    {
+      "path": "src/plush-sprites.js",
+      "sha256": "24ecbd5f4943536a53b7a8e467d5592eb2b3f2c90e0933a83bfd5908d4902643"
+    },
+    {
+      "path": "src/plush.css",
+      "sha256": "f1b170de34431efbd38d1e58d90219408d7efc1bd3ecbdeb98b4a638072a2651"
+    },
+    {
+      "path": "src/work-diary.js",
+      "sha256": "b66506e90440a095cf558ab5a0ef92b77e7ff9421c25f878b9a2950e17fb4fdc"
+    },
+    {
+      "path": "tests/e2e/workspace.spec.js",
+      "sha256": "52402d455cca5564461732cf48feeeca624763b0dcc5fcf3ec1237b926113073"
+    },
+    {
+      "path": "tests/work-diary.test.js",
+      "sha256": "55ca9c799895bb9c3e8c212d9f5cda3619734fbbec2209f2a9e1e1d2fea02a2a"
+    }
+  ]
+}

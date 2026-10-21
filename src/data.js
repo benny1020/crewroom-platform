@@ -206,6 +206,7 @@ export const characters = [
   { id: "fox", name: "여우", x: 75, y: 100 },
   { id: "rabbit", name: "토끼", x: 100, y: 100 },
   { id: "rururu", name: "르르르" },
+  { id: "pom", name: "포메 친구" },
 ];
 export const defaultPersonas = {
   chief: {

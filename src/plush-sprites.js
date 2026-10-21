@@ -22,6 +22,8 @@ export function atlasViewport(
 }
 
 export function characterIllustration(character) {
+  if (character.id === "pom")
+    return `<span class="g-character-portrait" data-portrait-character="pom">${atlasViewport([75, 18, 1100, 1220], [1254, 1254])}</span>`;
   if (character.id === "rururu")
     return `<span class="g-character-portrait" data-portrait-character="rururu">${atlasViewport([90, 65, 1030, 1120], [1254, 1254])}</span>`;
   const rect = Object.hasOwn(portraitRects, character.id)

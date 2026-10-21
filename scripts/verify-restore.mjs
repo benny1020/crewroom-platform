@@ -284,7 +284,7 @@ try {
   await script(source, "backup", [backup, keyFile]);
   assert.equal(
     JSON.parse(await readFile(join(backup, "manifest.json"), "utf8")).release,
-    "0.15.2",
+    "0.15.3",
   );
   const checkpoint = (
     await sql(
@@ -438,7 +438,7 @@ try {
   );
   const receipt = {
     date: new Date().toISOString(),
-    release: "0.15.2",
+    release: "0.15.3",
     elapsedSeconds: Math.round((Date.now() - started) / 1000),
     checks: [
       "concurrent backup and restore commands refused before service or database mutation",

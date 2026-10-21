@@ -6,9 +6,14 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { diaryIllustration } from "../src/work-diary.js";
 import { motionAttributes, plushEffects } from "../src/plush-motion.js";
+import { characterById } from "../src/data.js";
 
-const character = process.env.PLUSH_CHARACTER === "rururu" ? "rururu" : "otter",
-  directory = character === "rururu" ? "docs/media/rururu" : "docs/media/plush",
+const character = ["rururu", "pom"].includes(process.env.PLUSH_CHARACTER)
+    ? process.env.PLUSH_CHARACTER
+    : "otter",
+  characterName = characterById(character).name,
+  directory =
+    character === "otter" ? "docs/media/plush" : `docs/media/${character}`,
   origin = "http://127.0.0.1:4174",
   encoder = process.env.FFMPEG_BIN || "ffmpeg",
   errors = [];
@@ -57,24 +62,24 @@ try {
   });
   await page.goto(origin);
   await page.locator(".g-office-station").first().waitFor();
-  if (character === "rururu") {
+  if (character !== "otter") {
     await page
       .getByRole("button", { name: "카이 캐릭터 바꾸기", exact: true })
       .click();
     await page
-      .getByRole("button", { name: "르르르 캐릭터", exact: true })
+      .getByRole("button", { name: `${characterName} 캐릭터`, exact: true })
       .click();
     await page
       .getByRole("button", { name: "캐릭터 적용", exact: true })
       .click();
     await page
       .locator(
-        '.g-office-station[data-id="dev"] [data-diary-character="rururu"]',
+        `.g-office-station[data-id="dev"] [data-diary-character="${character}"]`,
       )
       .waitFor();
   }
   await page.evaluate(() => document.fonts.ready);
-  if (character === "rururu")
+  if (character !== "otter")
     await page.locator(".g-toast").waitFor({ state: "hidden" });
   await page.screenshot({
     path: `${directory}/office.png`,
@@ -112,7 +117,7 @@ try {
   });
   const gallery = await galleryContext.newPage();
   gallery.on("pageerror", (e) => errors.push(e.message));
-  const galleryHtml = `<!doctype html><html lang="ko"><meta charset="utf-8">${styles.map((href) => `<link rel="stylesheet" href="${href}">`).join("")}<style>body{margin:0;background:#faf9f7}#gyeot-demo{box-sizing:border-box;width:100%;min-width:0!important;margin:0!important;border:0!important;border-radius:0!important;padding:50px 64px;font-family:"Apple SD Gothic Neo","Malgun Gothic",sans-serif}#gyeot-demo .plush-title{text-align:center;margin-bottom:32px}#gyeot-demo .plush-title h1{font-size:44px;color:#18304e;margin:0 0 10px;letter-spacing:-2px}#gyeot-demo .plush-title p{font-size:15px;color:#687485}#gyeot-demo .plush-gallery{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px 38px}#gyeot-demo .plush-gallery article{text-align:center}#gyeot-demo .plush-gallery .g-diary-illustration{height:280px;max-width:280px;margin:auto;}#gyeot-demo .plush-motion-preview{width:280px;height:280px;margin:auto;}#gyeot-demo .plush-gallery h2{margin:10px 0 0;font-size:22px;color:#18304e}#gyeot-demo .plush-note{margin:36px 0 0;text-align:center;color:#687485;font-size:13px}</style><div id="gyeot-demo"><div class="plush-title"><h1>카이의 개발 일지</h1><p>${character === "rururu" ? "르르르 · " : ""}작은 진척을 함께 쌓아가요.</p></div><div class="plush-gallery">${scenes.map(([phase, label]) => `<article><div class="plush-motion-preview g-diary-art" ${motionAttributes({ surface: "preview", agentId: "dev", character, phase })}>${diaryIllustration(phase, "", character)}${plushEffects()}</div><h2>${label}</h2></article>`).join("")}</div><p class="plush-note">장면 디자인 미리보기 · 실제 업무 상태는 서버 기록에 따라 표시됩니다.</p></div></html>`;
+  const galleryHtml = `<!doctype html><html lang="ko"><meta charset="utf-8">${styles.map((href) => `<link rel="stylesheet" href="${href}">`).join("")}<style>body{margin:0;background:#faf9f7}#gyeot-demo{box-sizing:border-box;width:100%;min-width:0!important;margin:0!important;border:0!important;border-radius:0!important;padding:50px 64px;font-family:"Apple SD Gothic Neo","Malgun Gothic",sans-serif}#gyeot-demo .plush-title{text-align:center;margin-bottom:32px}#gyeot-demo .plush-title h1{font-size:44px;color:#18304e;margin:0 0 10px;letter-spacing:-2px}#gyeot-demo .plush-title p{font-size:15px;color:#687485}#gyeot-demo .plush-gallery{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px 38px}#gyeot-demo .plush-gallery article{text-align:center}#gyeot-demo .plush-gallery .g-diary-illustration{height:280px;max-width:280px;margin:auto;}#gyeot-demo .plush-motion-preview{width:280px;height:280px;margin:auto;}#gyeot-demo .plush-gallery h2{margin:10px 0 0;font-size:22px;color:#18304e}#gyeot-demo .plush-note{margin:36px 0 0;text-align:center;color:#687485;font-size:13px}</style><div id="gyeot-demo"><div class="plush-title"><h1>카이의 개발 일지</h1><p>${character === "otter" ? "" : characterName + " · "}작은 진척을 함께 쌓아가요.</p></div><div class="plush-gallery">${scenes.map(([phase, label]) => `<article><div class="plush-motion-preview g-diary-art" ${motionAttributes({ surface: "preview", agentId: "dev", character, phase })}>${diaryIllustration(phase, "", character)}${plushEffects()}</div><h2>${label}</h2></article>`).join("")}</div><p class="plush-note">장면 디자인 미리보기 · 실제 업무 상태는 서버 기록에 따라 표시됩니다.</p></div></html>`;
   await gallery.route(`${origin}/__plush-gallery`, (route) =>
     route.fulfill({ contentType: "text/html", body: galleryHtml }),
   );

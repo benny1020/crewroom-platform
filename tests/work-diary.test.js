@@ -36,27 +36,29 @@ test("plush skin retains old saved avatar choices and server role presets", () =
   assert.ok(!customized.includes("g-diary-illustration"));
 });
 
-test("Rururu keeps its own portrait and twelve scenes when changing agents or phases", () => {
-  const portrait = characterIllustration(characterById("rururu"));
-  assert.ok(portrait.includes('data-portrait-character="rururu"'));
-  assert.ok(!portrait.includes("NaN"));
-  for (const id of ["dev", "qa", "roopre"])
-    assert.equal(developerDiaryEnabled({ id, character: "rururu" }), true);
-  for (const phase of Object.keys(diaryScenes)) {
-    const own = diaryIllustration(phase, "", "rururu");
-    assert.ok(own.includes('data-diary-character="rururu"'));
-    assert.ok(own.includes(`data-diary-scene="${phase}"`));
-    assert.notEqual(own, diaryIllustration(phase));
-    assert.ok(!/NaN|Infinity/.test(own));
+test("dedicated characters keep their own portraits and twelve scenes across agents or phases", () => {
+  for (const character of ["rururu", "pom"]) {
+    const portrait = characterIllustration(characterById(character));
+    assert.ok(portrait.includes(`data-portrait-character="${character}"`));
+    assert.ok(!portrait.includes("NaN"));
+    for (const id of ["dev", "qa", "roopre"])
+      assert.equal(developerDiaryEnabled({ id, character }), true);
+    for (const phase of Object.keys(diaryScenes)) {
+      const own = diaryIllustration(phase, "", character);
+      assert.ok(own.includes(`data-diary-character="${character}"`));
+      assert.ok(own.includes(`data-diary-scene="${phase}"`));
+      assert.notEqual(own, diaryIllustration(phase));
+      assert.ok(!/NaN|Infinity/.test(own));
+    }
+    const html = workDiary({
+      agent: { id: "qa", name: "린", character },
+      task: { status: "result_ready" },
+    });
+    assert.ok(html.includes("린의 업무 일지"));
+    assert.ok(html.includes(`data-diary-character="${character}"`));
+    assert.ok(html.includes('data-phase="review"'));
+    assert.ok(!html.includes("등록한 검사를 통과했어요"));
   }
-  const html = workDiary({
-    agent: { id: "qa", name: "린", character: "rururu" },
-    task: { status: "result_ready" },
-  });
-  assert.ok(html.includes("린의 업무 일지"));
-  assert.ok(html.includes('data-diary-character="rururu"'));
-  assert.ok(html.includes('data-phase="review"'));
-  assert.ok(!html.includes("등록한 검사를 통과했어요"));
   assert.ok(
     diaryIllustration("coding", "", "__proto__").includes(
       'data-diary-character="otter"',

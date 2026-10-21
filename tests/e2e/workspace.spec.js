@@ -128,6 +128,46 @@ test("developer diary follows the selected task and respects both motion control
   await page
     .getByRole("button", { name: "카이 캐릭터 바꾸기", exact: true })
     .click();
+  await expect(page.locator(".g-character-option")).toHaveCount(12);
+  await page
+    .getByRole("button", { name: "포메 친구 캐릭터", exact: true })
+    .click();
+  await page.getByRole("button", { name: "캐릭터 적용", exact: true }).click();
+  const pom = diary.locator('[data-diary-character="pom"]');
+  await expect(pom).toBeVisible();
+  expect(
+    await pom.evaluate(
+      (el) =>
+        getComputedStyle(el.querySelector(".g-atlas-sprite")).backgroundImage,
+    ),
+  ).toContain("pom-diary-v1");
+  await expect(
+    page.locator(
+      '.g-office-station[data-id="dev"] [data-diary-character="pom"]',
+    ),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "시연 이어보기", exact: true })
+    .click();
+  expect(
+    await pom.evaluate((el) => getComputedStyle(el).animationPlayState),
+  ).toBe("running");
+  await page.locator('[data-action="office-motion"]').click();
+  expect(
+    await pom.evaluate((el) => getComputedStyle(el).animationPlayState),
+  ).toBe("paused");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  expect(await pom.evaluate((el) => getComputedStyle(el).animationName)).toBe(
+    "none",
+  );
+  await page.reload();
+  await expect(pom).toBeVisible();
+  expect(
+    (await snapshot(page)).agents.find((a) => a.id === "dev").character,
+  ).toBe("pom");
+  await page
+    .getByRole("button", { name: "카이 캐릭터 바꾸기", exact: true })
+    .click();
   await page.getByRole("button", { name: "수달 캐릭터", exact: true }).click();
   await page.getByRole("button", { name: "캐릭터 적용", exact: true }).click();
   await expect(diary.locator(".g-diary-illustration")).toBeVisible();
