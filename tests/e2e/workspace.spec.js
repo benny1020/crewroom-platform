@@ -90,9 +90,51 @@ test("developer diary follows the selected task and respects both motion control
   await page
     .getByRole("button", { name: "카이 캐릭터 바꾸기", exact: true })
     .click();
+  await page
+    .getByRole("button", { name: "르르르 캐릭터", exact: true })
+    .click();
+  await page.getByRole("button", { name: "캐릭터 적용", exact: true }).click();
+  const rururu = diary.locator('[data-diary-character="rururu"]');
+  await expect(rururu).toBeVisible();
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  const motionToggle = page.locator('[data-action="office-motion"]');
+  if ((await motionToggle.getAttribute("aria-pressed")) !== "true")
+    await motionToggle.click();
+  await page
+    .getByRole("button", { name: "시연 이어보기", exact: true })
+    .click();
+  expect(
+    await rururu.evaluate((el) => getComputedStyle(el).animationName),
+  ).not.toBe("none");
+  expect(
+    await rururu.evaluate((el) => getComputedStyle(el).animationPlayState),
+  ).toBe("running");
+  expect(
+    await rururu.evaluate(
+      (el) =>
+        getComputedStyle(el.querySelector(".g-atlas-sprite")).backgroundImage,
+    ),
+  ).toContain("rururu-diary-v1");
+  await expect(
+    page.locator(
+      '.g-office-station[data-id="dev"] [data-diary-character="rururu"]',
+    ),
+  ).toBeVisible();
+  await page.reload();
+  await expect(rururu).toBeVisible();
+  expect(
+    (await snapshot(page)).agents.find((a) => a.id === "dev").character,
+  ).toBe("rururu");
+  await page
+    .getByRole("button", { name: "카이 캐릭터 바꾸기", exact: true })
+    .click();
   await page.getByRole("button", { name: "수달 캐릭터", exact: true }).click();
   await page.getByRole("button", { name: "캐릭터 적용", exact: true }).click();
   await expect(diary.locator(".g-diary-illustration")).toBeVisible();
+  await expect(diary.locator(".g-diary-illustration")).toHaveAttribute(
+    "data-diary-character",
+    "otter",
+  );
   await expect(
     page.locator('.g-office-station[data-id="dev"] .g-diary-illustration'),
   ).toBeVisible();

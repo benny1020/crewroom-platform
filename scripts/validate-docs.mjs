@@ -39,6 +39,7 @@ for (const directory of [
   "docs/media/resilience",
   "docs/media/workspace",
   "docs/media/plush",
+  "docs/media/rururu",
 ]) {
   const manifest = JSON.parse(
     await readFile(directory + "/manifest.json", "utf8"),

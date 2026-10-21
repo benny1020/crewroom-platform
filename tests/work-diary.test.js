@@ -1,11 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { characterById } from "../src/data.js";
+import { characterIllustration } from "../src/plush-sprites.js";
 import {
   diaryState,
   diaryIllustration,
   workDiary,
   developerDiaryEnabled,
+  diaryScenes,
 } from "../src/work-diary.js";
 
 test("plush skin retains old saved avatar choices and server role presets", () => {
@@ -32,6 +34,34 @@ test("plush skin retains old saved avatar choices and server role presets", () =
   assert.ok(customized.includes("카이의 개발 일지"));
   assert.ok(customized.includes('data-character="rabbit"'));
   assert.ok(!customized.includes("g-diary-illustration"));
+});
+
+test("Rururu keeps its own portrait and twelve scenes when changing agents or phases", () => {
+  const portrait = characterIllustration(characterById("rururu"));
+  assert.ok(portrait.includes('data-portrait-character="rururu"'));
+  assert.ok(!portrait.includes("NaN"));
+  for (const id of ["dev", "qa", "roopre"])
+    assert.equal(developerDiaryEnabled({ id, character: "rururu" }), true);
+  for (const phase of Object.keys(diaryScenes)) {
+    const own = diaryIllustration(phase, "", "rururu");
+    assert.ok(own.includes('data-diary-character="rururu"'));
+    assert.ok(own.includes(`data-diary-scene="${phase}"`));
+    assert.notEqual(own, diaryIllustration(phase));
+    assert.ok(!/NaN|Infinity/.test(own));
+  }
+  const html = workDiary({
+    agent: { id: "qa", name: "린", character: "rururu" },
+    task: { status: "result_ready" },
+  });
+  assert.ok(html.includes("린의 업무 일지"));
+  assert.ok(html.includes('data-diary-character="rururu"'));
+  assert.ok(html.includes('data-phase="review"'));
+  assert.ok(!html.includes("등록한 검사를 통과했어요"));
+  assert.ok(
+    diaryIllustration("coding", "", "__proto__").includes(
+      'data-diary-character="otter"',
+    ),
+  );
 });
 
 test("diary preserves queued, stopped, failed and awaiting-human states regardless of old progress", () => {

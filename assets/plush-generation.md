@@ -41,3 +41,7 @@ Premium soft plush studio photography, cream navy teal warm yellow, simple eyes,
 - Generated spacing is not a mathematically exact grid. The UI uses measured CSS viewports from `src/plush-sprites.js` and `src/work-diary.js` to isolate each scene, preserve aspect ratio and prevent neighboring artwork from bleeding into the view. The bitmap is not repainted by code.
 - Existing stored IDs `owl`, `red-panda`, `cat` map to `cloud`, `fennec`, `otter` without changing the saved record.
 
+
+## Additional character
+
+0.15.2 adds the optional Rururu portrait and twelve-scene diary. See [reference-guided prompts and production files](rururu-generation.md). The ten-character atlas and otter diary remain unchanged.

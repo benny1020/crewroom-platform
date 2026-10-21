@@ -17,6 +17,12 @@
   background-image: none;
   --g-sprite-atlas: var(--g-character-atlas);
 }
+#gyeot-demo [data-portrait-character="rururu"] {
+  --g-sprite-atlas: url("../assets/rururu-portrait-v1.webp");
+}
+#gyeot-demo [data-diary-character="rururu"] {
+  --g-sprite-atlas: url("../assets/rururu-diary-v1.webp");
+}
 #gyeot-demo .g-atlas-sprite {
   display: block;
   background-image: var(--g-sprite-atlas);

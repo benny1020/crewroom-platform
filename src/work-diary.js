@@ -30,10 +30,26 @@ export const diaryScenes = {
   blocked: [707, 1080, 373, 321],
 };
 
+const rururuScenes = {
+  ready: [12, 18, 350, 357],
+  coding: [375, 30, 345, 345],
+  investigating: [724, 30, 362, 345],
+  testing: [8, 376, 350, 342],
+  review: [385, 374, 330, 344],
+  celebrating: [725, 380, 361, 342],
+  question: [20, 719, 320, 330],
+  writing: [380, 736, 330, 315],
+  queued: [735, 782, 341, 260],
+  planning: [15, 1047, 347, 365],
+  paused: [390, 1070, 292, 335],
+  blocked: [697, 1068, 389, 347],
+};
+
 export function developerDiaryEnabled(agent) {
+  const character = characterById(agent?.character, "otter").id;
   return (
-    agent?.id === "dev" &&
-    characterById(agent.character, "otter").id === "otter"
+    Boolean(agent) &&
+    (character === "rururu" || (agent.id === "dev" && character === "otter"))
   );
 }
 
@@ -158,9 +174,15 @@ export function diaryState({ task, run, artifact, sample = false } = {}) {
   };
 }
 
-export function diaryIllustration(phase = "ready", className = "") {
+export function diaryIllustration(
+  phase = "ready",
+  className = "",
+  character = "otter",
+) {
   const key = Object.hasOwn(diaryScenes, phase) ? phase : "ready";
-  return `<span class="g-diary-illustration ${esc(className)}" data-diary-scene="${key}" aria-hidden="true">${atlasViewport(diaryScenes[key], [1086, 1448])}</span>`;
+  const identity = character === "rururu" ? "rururu" : "otter";
+  const scenes = identity === "rururu" ? rururuScenes : diaryScenes;
+  return `<span class="g-diary-illustration ${esc(className)}" data-diary-character="${identity}" data-diary-scene="${key}" aria-hidden="true">${atlasViewport(scenes[key], [1086, 1448])}</span>`;
 }
 
 export function workDiary({
@@ -175,18 +197,19 @@ export function workDiary({
 }) {
   if (!agent) return "";
   const state = diaryState({ task, run, artifact, sample }),
+    character = characterById(
+      agent.character,
+      defaultPersonas[agent.id]?.character,
+    ).id,
     developer = agent.id === "dev",
     title = `${agent.name}의 ${developer ? "개발" : "업무"} 일지`,
     motion = motionAttributes({
       surface: "diary",
       agentId: agent.id,
-      character: characterById(
-        agent.character,
-        defaultPersonas[agent.id]?.character,
-      ).id,
+      character,
       task,
       phase: state.phase,
       artifactId: artifact?.id,
     });
-  return `<section class="g-work-diary ${compact ? "is-compact" : ""}" data-phase="${state.phase}" aria-label="${esc(title)}"><div class="g-diary-heading"><h2>${esc(title)}</h2><span>${sample ? "샘플 상태" : "기록 기준"}</span></div><div class="g-diary-body"><div class="g-diary-art" ${motion}>${developerDiaryEnabled(agent) ? diaryIllustration(state.phase) : portrait}${plushEffects()}</div><div class="g-diary-copy"><strong>${esc(state.label)}</strong><p>${esc(state.detail)}</p>${task && showTask ? `<div class="g-diary-task">${esc(task.title)}</div>` : ""}</div></div></section>`;
+  return `<section class="g-work-diary ${compact ? "is-compact" : ""}" data-phase="${state.phase}" aria-label="${esc(title)}"><div class="g-diary-heading"><h2>${esc(title)}</h2><span>${sample ? "샘플 상태" : "기록 기준"}</span></div><div class="g-diary-body"><div class="g-diary-art" ${motion}>${developerDiaryEnabled(agent) ? diaryIllustration(state.phase, "", character) : portrait}${plushEffects()}</div><div class="g-diary-copy"><strong>${esc(state.label)}</strong><p>${esc(state.detail)}</p>${task && showTask ? `<div class="g-diary-task">${esc(task.title)}</div>` : ""}</div></div></section>`;
 }

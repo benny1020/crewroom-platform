@@ -1,3 +1,17 @@
+# 0.15.2 르르르 캐릭터 추가 검증
+
+2026-10-21. 르르르를 열한 번째 선택 캐릭터로 추가하고 전용 초상·개발 일지 12장면에 기존 상태별 모션을 연결했다. 기존 수달 기본값과 저장된 선택, Task/Run/검사 근거 판정은 유지했다. [구현·선택 방법·이미지](CHARACTERS.md#새-친구--르르르).
+
+로컬 **단위 75 + 정적 브라우저 34 + 서버 브라우저 24 = 133개**를 통과했다. 신규 단위 1개는 전용 atlas·전체 장면·다른 역할·잘못된 성공 표시·알 수 없는 ID fallback을 확인한다. 기존 브라우저 사례에 르르르 선택·실제 모션 켜짐·새로고침 저장·수달 복귀를 추가했다. 새로고침 뒤 시연은 멈추므로 모션 검사는 명시적으로 시연을 재개한다. [검증 영수증](evidence/0.15.2/verification.json).
+
+기존 PostgreSQL/실제 Docker 157개와 Runner 6개는 이번 로컬 검사에 재합산하지 않는다. 전체 **296개**는 정확한 커밋의 [Linux CI](https://github.com/benny1020/crewroom-platform/actions/workflows/verify-and-deploy.yml)에서 실행한다. 비밀 격리와 암호화 복원 14개 확인도 통과했다. [복원 영수증](evidence/0.15.2/restore.json).
+
+내장 image_gen으로 초상·장면 시트 두 개를 생성했고, 참고 원본은 공개 저장소에 포함하지 않았다. [전체 프롬프트](../assets/rururu-generation.md) · [화면·GIF 영수증](media/rururu/manifest.json). 플랫폼의 업무용 실모델 호출과 신규 런타임 의존성은 0이다. 서버의 캐릭터 선택 UI와 저장 API는 이번 범위에 포함하지 않았다. 새 캐릭터 선택은 정적 데모에서 제공한다.
+
+암호화 백업 뒤 로컬 0.15.2의 App·schema·Worker·Runner를 확인했다. 운영 Task·Message·작업 문서 수는 0으로 유지했다. 모델·GitLab은 미설정이므로 전체 ready=false다. [배포 영수증](evidence/0.15.2/deployment.json). Astra의 집중 코드 리뷰는 필수 발견 없음, 독립 단위 10개 통과이며 작성자의 브라우저·복원 검사를 독립 재실행했다고 주장하지 않는다. [리뷰 범위](reviews/ASTRA_RURURU.md) · [동결 파일](evidence/0.15.2/reviewed-files.json).
+
+---
+
 # 0.15.1 상황별 캐릭터 모션 검증
 
 2026-10-21. [장면별 동작·구현·한계](CHARACTERS.md)를 추가했다. 같은 업무·Run·상태·결과·캐릭터의 장면 노드와 animation 재생 위치를 유지하며, 완료·차단 동작은 한 번 재생한다. 상태의 진위 판정과 API·DB schema·모델 호출 방식은 변경하지 않았다.
