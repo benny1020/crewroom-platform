@@ -48,7 +48,7 @@ export function configuration(env = process.env) {
     maxOutputTokens: Number(env.MODEL_MAX_OUTPUT_TOKENS || 4096),
     workerLeaseSeconds: 60,
     workerHeartbeatMs: 15000,
-    release: "0.15.0",
+    release: "0.15.1",
     embeddingUrl: env.EMBEDDING_ENDPOINT_URL || "",
     embeddingModel: env.EMBEDDING_MODEL || "",
     embeddingAuthHeader: env.EMBEDDING_AUTH_HEADER || "",

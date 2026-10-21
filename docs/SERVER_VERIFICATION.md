@@ -1,3 +1,15 @@
+# 0.15.1 상황별 캐릭터 모션 검증
+
+2026-10-21. [장면별 동작·구현·한계](CHARACTERS.md)를 추가했다. 같은 업무·Run·상태·결과·캐릭터의 장면 노드와 animation 재생 위치를 유지하며, 완료·차단 동작은 한 번 재생한다. 상태의 진위 판정과 API·DB schema·모델 호출 방식은 변경하지 않았다.
+
+로컬 **단위 74 + 정적 브라우저 34 + 서버 브라우저 24 = 132개**를 통과했다. 신규 4개 사례는 키의 격리·escape, 실제 오피스의 재생 위치와 모션 제어, 모의 document.hidden 정책, 완료된 동작의 재갱신·새 업무 분리를 확인한다. 기존 실제 DB/Docker 157개와 Runner 6개는 이번 로컬 결과에 재합산하지 않는다. Linux CI는 이 둘을 포함한 전체 **295개**를 실행한다. [검증 영수증](evidence/0.15.1/verification.json) · [비밀 격리·암호화 복원 14개 확인](evidence/0.15.1/restore.json) · [커밋별 CI](https://github.com/benny1020/crewroom-platform/actions/workflows/verify-and-deploy.yml).
+
+새 이미지 생성·외부 업무 모델 호출·런타임 의존성 추가는 0이다. [모션 GIF](media/plush/developer-diary.gif)는 합성 장면 디자인 미리보기다. GIF 파일은 반복되지만 앱의 완료 모션은 한 번만 재생한다. 같은 화면 갱신과 페이지를 새로 여는 상황은 구분하며, 스크롤로 가려진 개별 요소의 감지나 손·꼬리의 독립 프레임 애니메이션은 구현하지 않았다.
+
+Astra는 동결 코드 27개를 전후 대조하고 집중 단위 9개를 독립 실행해 승인했다. [리뷰 범위](reviews/ASTRA_MOTION.md) · [릴리스 해시](evidence/0.15.1/reviewed-files.json). 로컬은 암호화 백업 뒤 0.15.1로 갱신했고 App·schema·Worker·Runner를 확인했다. 모델·GitLab 미설정에 따른 전체 ready=false를 유지한다. [배포 영수증](evidence/0.15.1/deployment.json).
+
+---
+
 # 0.15.0 봉제 캐릭터·개발 일지 검증
 
 2026-10-21. [캐릭터와 개발 일지](CHARACTERS.md)의 10종 초상·12장면·실제 기록 매핑을 확인했다. 아래 0.14.1 이하는 과거 릴리스 기록이다.

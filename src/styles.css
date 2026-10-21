@@ -2900,11 +2900,14 @@ button {
     opacity: 0.3;
   }
 }
-#gyeot-demo .g-office-station.is-working .g-desk-scene > .g-character {
+#gyeot-demo
+  .g-office-station:not(.g-plush-station).is-working
+  .g-desk-scene
+  > .g-character {
   animation: gyeot-typing 0.48s ease-in-out infinite;
 }
 #gyeot-demo
-  .g-office-station.is-working[data-motion="read"]
+  .g-office-station:not(.g-plush-station).is-working[data-motion="read"]
   .g-desk-scene
   > .g-character {
   animation: gyeot-reading 2.4s ease-in-out infinite;
@@ -2937,7 +2940,10 @@ button {
 #gyeot-demo .g-office-station.is-waiting .g-station-bubble {
   animation: gyeot-bubble 2s ease-in-out infinite;
 }
-#gyeot-demo .g-office-station.is-done .g-desk-scene > .g-character {
+#gyeot-demo
+  .g-office-station:not(.g-plush-station).is-done
+  .g-desk-scene
+  > .g-character {
   animation: gyeot-done 5s ease-in-out infinite;
 }
 #gyeot-demo .g-flow-connector.is-delivering .g-flow-packet {

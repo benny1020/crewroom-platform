@@ -5,6 +5,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { diaryIllustration } from "../src/work-diary.js";
+import { motionAttributes, plushEffects } from "../src/plush-motion.js";
 
 const directory = "docs/media/plush",
   origin = "http://127.0.0.1:4174",
@@ -85,44 +86,59 @@ try {
     ["paused", "잠깐 멈춤"],
     ["blocked", "멈춘 지점을 확인해요"],
   ];
-  const gallery = await browser.newPage({
+  const galleryContext = await browser.newContext({
     viewport: { width: 1200, height: 1740 },
     colorScheme: "light",
+    recordVideo: { dir: ".capture/plush", size: { width: 1200, height: 1740 } },
   });
+  const gallery = await galleryContext.newPage();
   gallery.on("pageerror", (e) => errors.push(e.message));
-  const galleryHtml = `<!doctype html><html lang="ko"><meta charset="utf-8">${styles.map((href) => `<link rel="stylesheet" href="${href}">`).join("")}<style>body{margin:0;background:#faf9f7}#gyeot-demo{box-sizing:border-box;width:100%;min-width:0!important;margin:0!important;border:0!important;border-radius:0!important;padding:50px 64px;font-family:"Apple SD Gothic Neo","Malgun Gothic",sans-serif}#gyeot-demo .plush-title{text-align:center;margin-bottom:32px}#gyeot-demo .plush-title h1{font-size:44px;color:#18304e;margin:0 0 10px;letter-spacing:-2px}#gyeot-demo .plush-title p{font-size:15px;color:#687485}#gyeot-demo .plush-gallery{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px 38px}#gyeot-demo .plush-gallery article{text-align:center}#gyeot-demo .plush-gallery .g-diary-illustration{height:280px;max-width:280px;margin:auto;animation:none!important}#gyeot-demo .plush-gallery h2{margin:10px 0 0;font-size:22px;color:#18304e}#gyeot-demo .plush-note{margin:36px 0 0;text-align:center;color:#687485;font-size:13px}</style><div id="gyeot-demo"><div class="plush-title"><h1>카이의 개발 일지</h1><p>작은 진척을 함께 쌓아가요.</p></div><div class="plush-gallery">${scenes.map(([phase, label]) => `<article>${diaryIllustration(phase)}<h2>${label}</h2></article>`).join("")}</div><p class="plush-note">장면 디자인 미리보기 · 실제 업무 상태는 서버 기록에 따라 표시됩니다.</p></div></html>`;
+  const galleryHtml = `<!doctype html><html lang="ko"><meta charset="utf-8">${styles.map((href) => `<link rel="stylesheet" href="${href}">`).join("")}<style>body{margin:0;background:#faf9f7}#gyeot-demo{box-sizing:border-box;width:100%;min-width:0!important;margin:0!important;border:0!important;border-radius:0!important;padding:50px 64px;font-family:"Apple SD Gothic Neo","Malgun Gothic",sans-serif}#gyeot-demo .plush-title{text-align:center;margin-bottom:32px}#gyeot-demo .plush-title h1{font-size:44px;color:#18304e;margin:0 0 10px;letter-spacing:-2px}#gyeot-demo .plush-title p{font-size:15px;color:#687485}#gyeot-demo .plush-gallery{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px 38px}#gyeot-demo .plush-gallery article{text-align:center}#gyeot-demo .plush-gallery .g-diary-illustration{height:280px;max-width:280px;margin:auto;}#gyeot-demo .plush-motion-preview{width:280px;height:280px;margin:auto;}#gyeot-demo .plush-gallery h2{margin:10px 0 0;font-size:22px;color:#18304e}#gyeot-demo .plush-note{margin:36px 0 0;text-align:center;color:#687485;font-size:13px}</style><div id="gyeot-demo"><div class="plush-title"><h1>카이의 개발 일지</h1><p>작은 진척을 함께 쌓아가요.</p></div><div class="plush-gallery">${scenes.map(([phase, label]) => `<article><div class="plush-motion-preview g-diary-art" ${motionAttributes({ surface: "preview", agentId: "dev", character: "otter", phase })}>${diaryIllustration(phase)}${plushEffects()}</div><h2>${label}</h2></article>`).join("")}</div><p class="plush-note">장면 디자인 미리보기 · 실제 업무 상태는 서버 기록에 따라 표시됩니다.</p></div></html>`;
   await gallery.route(`${origin}/__plush-gallery`, (route) =>
     route.fulfill({ contentType: "text/html", body: galleryHtml }),
   );
   await gallery.goto(`${origin}/__plush-gallery`, { waitUntil: "networkidle" });
   await gallery.evaluate(() => document.fonts.ready);
+  const galleryVideo = gallery.video();
+  await gallery.waitForTimeout(6500);
   await gallery.screenshot({
     path: `${directory}/developer-diary.png`,
     fullPage: true,
     animations: "disabled",
   });
+  await galleryContext.close();
   await browser.close();
   browser = null;
-  const child = spawn(
-    encoder,
-    [
-      "-y",
-      "-i",
-      await video.path(),
-      "-vf",
-      "fps=10,scale=1100:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=160[p];[b][p]paletteuse=dither=bayer:bayer_scale=3",
-      "-loop",
-      "0",
-      `${directory}/office.gif`,
-    ],
-    { stdio: ["ignore", "ignore", "pipe"] },
-  );
-  let stderr = "";
-  child.stderr.on("data", (c) => (stderr += c));
-  if ((await once(child, "close"))[0] !== 0) throw Error(stderr.slice(-1200));
+  for (const [source, target, width] of [
+    [await video.path(), "office.gif", 1100],
+    [await galleryVideo.path(), "developer-diary.gif", 780],
+  ]) {
+    const child = spawn(
+      encoder,
+      [
+        "-y",
+        "-i",
+        source,
+        "-vf",
+        `fps=10,scale=${width}:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=160:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=3:diff_mode=rectangle`,
+        "-loop",
+        "0",
+        `${directory}/${target}`,
+      ],
+      { stdio: ["ignore", "ignore", "pipe"] },
+    );
+    let stderr = "";
+    child.stderr.on("data", (c) => (stderr += c));
+    if ((await once(child, "close"))[0] !== 0) throw Error(stderr.slice(-1200));
+  }
   if (errors.length) throw Error(errors.join("\n"));
   const files = await Promise.all(
-    ["office.png", "developer-diary.png", "office.gif"].map(async (name) => {
+    [
+      "office.png",
+      "developer-diary.png",
+      "office.gif",
+      "developer-diary.gif",
+    ].map(async (name) => {
       const bytes = await readFile(`${directory}/${name}`);
       return {
         name,

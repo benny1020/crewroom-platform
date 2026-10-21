@@ -1,3 +1,4 @@
+import { rememberPlushMotion, bindPlushVisibility } from "./plush-motion.js";
 import { requestContract } from "./request-contract.js";
 import { workroomState } from "./workroom-state.js";
 import { officeStation, agentTask, stationMode } from "./office-station.js";
@@ -14,6 +15,7 @@ import "./team.css";
 import "./workflow.css";
 import "./live.css";
 import "./plush.css";
+import "./plush-motion.css";
 import { createIcons } from "lucide";
 import { appIcons } from "./icons.js";
 import {
@@ -27,6 +29,7 @@ const root = document.getElementById("gyeot-demo"),
   frame = root.querySelector("#gyeot-frame"),
   notice = root.querySelector("#gyeot-notice"),
   modal = root.querySelector("#gyeot-modal");
+bindPlushVisibility(root);
 const esc = (v) =>
   String(v ?? "").replace(
     /[&<>"']/g,
@@ -405,6 +408,11 @@ function officeView() {
                   ? "read"
                   : "type",
                 diaryEnabled: developerDiaryEnabled(person),
+                characterId: characterById(
+                  person.character,
+                  defaultPersonas[person.id]?.character,
+                ).id,
+                task: t,
                 diaryPhase: diaryState({ task: t }).phase,
               });
             })
@@ -1050,7 +1058,9 @@ function render() {
   const openHistory = [
     ...frame.querySelectorAll("details[data-history-details][open]"),
   ].map((x) => x.dataset.historyDetails);
+  const restoreMotion = rememberPlushMotion(frame);
   frame.innerHTML = layout(content);
+  restoreMotion();
   for (const kind of openHistory)
     frame
       .querySelector(`details[data-history-details="${kind}"]`)

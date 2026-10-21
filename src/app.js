@@ -1,3 +1,4 @@
+import { rememberPlushMotion, bindPlushVisibility } from "./plush-motion.js";
 import { officeStation as sharedOfficeStation } from "./office-station.js";
 import { workDiary, diaryState, developerDiaryEnabled } from "./work-diary.js";
 import { characterIllustration } from "./plush-sprites.js";
@@ -6,6 +7,7 @@ import "./refinements.css";
 import "./team.css";
 import "./workflow.css";
 import "./plush.css";
+import "./plush-motion.css";
 import {
   WORK_TYPES,
   initializeWorkflows,
@@ -77,6 +79,7 @@ import { renderRolePage } from "./team-views.js";
   "use strict";
   const root = document.getElementById("gyeot-demo");
   const frame = root.querySelector("#gyeot-frame");
+  bindPlushVisibility(root);
   const modalLayer = root.querySelector("#gyeot-modal");
   const notice = root.querySelector("#gyeot-notice");
   const esc = (value) =>
@@ -1154,6 +1157,8 @@ import { renderRolePage } from "./team-views.js";
       selected: state.office.selected === a.id,
       motion: reading ? "read" : "type",
       diaryEnabled: developerDiaryEnabled(a),
+      characterId: characterBy(a.character).id,
+      task: activity.task,
       diaryPhase: diaryState({
         task: activity.task && {
           ...activity.task,
@@ -1228,6 +1233,7 @@ import { renderRolePage } from "./team-views.js";
     if (state.view !== "office" || modal) return;
     const active = document.activeElement;
     if (frame.contains(active) && active.closest("form")) return;
+    const restoreMotion = rememberPlushMotion(frame);
     const previous = new Map(
       [...frame.querySelectorAll(".g-office-station")].map((el) => [
         el.dataset.id,
@@ -1241,6 +1247,8 @@ import { renderRolePage } from "./team-views.js";
       holder.innerHTML = officeStation(a);
       const next = holder.firstElementChild;
       if (
+        old.querySelector("[data-plush-key]")?.dataset.plushKey !==
+          next.querySelector("[data-plush-key]")?.dataset.plushKey ||
         old.className !== next.className ||
         old.getAttribute("aria-pressed") !==
           next.getAttribute("aria-pressed") ||
@@ -1263,6 +1271,7 @@ import { renderRolePage } from "./team-views.js";
       el.hidden = !waiting;
       el.textContent = waiting;
     });
+    restoreMotion();
     icons();
   }
   function rosterPage() {
@@ -1583,7 +1592,9 @@ import { renderRolePage } from "./team-views.js";
       memory: memoryPage,
       agents: rosterPage,
     };
+    const restoreMotion = rememberPlushMotion(frame);
     frame.innerHTML = shell((views[state.view] || views.assistant)());
+    restoreMotion();
     applyRoleControls(frame);
     if (modal) frame.inert = true;
     if (focus) {

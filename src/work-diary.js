@@ -1,5 +1,6 @@
 import { atlasViewport } from "./plush-sprites.js";
-import { characterById } from "./data.js";
+import { characterById, defaultPersonas } from "./data.js";
+import { motionAttributes, plushEffects } from "./plush-motion.js";
 
 const esc = (v) =>
   String(v ?? "").replace(
@@ -175,6 +176,17 @@ export function workDiary({
   if (!agent) return "";
   const state = diaryState({ task, run, artifact, sample }),
     developer = agent.id === "dev",
-    title = `${agent.name}의 ${developer ? "개발" : "업무"} 일지`;
-  return `<section class="g-work-diary ${compact ? "is-compact" : ""}" data-phase="${state.phase}" aria-label="${esc(title)}"><div class="g-diary-heading"><h2>${esc(title)}</h2><span>${sample ? "샘플 상태" : "기록 기준"}</span></div><div class="g-diary-body"><div class="g-diary-art">${developerDiaryEnabled(agent) ? diaryIllustration(state.phase) : portrait}</div><div class="g-diary-copy"><strong>${esc(state.label)}</strong><p>${esc(state.detail)}</p>${task && showTask ? `<div class="g-diary-task">${esc(task.title)}</div>` : ""}</div></div></section>`;
+    title = `${agent.name}의 ${developer ? "개발" : "업무"} 일지`,
+    motion = motionAttributes({
+      surface: "diary",
+      agentId: agent.id,
+      character: characterById(
+        agent.character,
+        defaultPersonas[agent.id]?.character,
+      ).id,
+      task,
+      phase: state.phase,
+      artifactId: artifact?.id,
+    });
+  return `<section class="g-work-diary ${compact ? "is-compact" : ""}" data-phase="${state.phase}" aria-label="${esc(title)}"><div class="g-diary-heading"><h2>${esc(title)}</h2><span>${sample ? "샘플 상태" : "기록 기준"}</span></div><div class="g-diary-body"><div class="g-diary-art" ${motion}>${developerDiaryEnabled(agent) ? diaryIllustration(state.phase) : portrait}${plushEffects()}</div><div class="g-diary-copy"><strong>${esc(state.label)}</strong><p>${esc(state.detail)}</p>${task && showTask ? `<div class="g-diary-task">${esc(task.title)}</div>` : ""}</div></div></section>`;
 }
