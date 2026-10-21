@@ -148,7 +148,7 @@ try {
     JSON.stringify(
       {
         format: 1,
-        release: "0.15.3",
+        release: "0.15.4",
         createdAt: new Date().toISOString(),
         migrations,
         nativeSessions:

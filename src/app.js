@@ -140,12 +140,20 @@ import { renderRolePage } from "./team-views.js";
         search: "",
         memoryQuery: "",
       });
+      const previousDefault = state.agents.find(
+        (agent) =>
+          agent.id === "dev" &&
+          agent.name === "카이" &&
+          characterById(agent.character).id === "pom",
+      );
+      if (previousDefault) previousDefault.name = "미미";
       departments = state.team.departments;
       state.office = { ...initial().office, ...saved.office, playing: false };
       state.tasks.forEach((task) => {
         if (task.status === "running") task.status = "paused";
       });
       state.runs = recoverInterruptedRuns(saved.runs || []);
+      if (previousDefault) persist();
     } catch {
       memorySessionOnly = true;
     }
@@ -671,7 +679,7 @@ import { renderRolePage } from "./team-views.js";
           text: "캐시 정리 아이디어는 아직 개인 초안으로 남겨줘.",
         },
         {
-          author: "카이",
+          author: "미미",
           kind: "agent",
           text: "이 대화는 로프레님만 보는 개인 초안이에요. 팀 대화와 분리해 두었습니다. (샘플 대화)",
         },
@@ -3488,6 +3496,12 @@ import { renderRolePage } from "./team-views.js";
         personality: values.personality,
         catchphrase: values.catchphrase,
       });
+      if (
+        target.id === "dev" &&
+        target.name === "카이" &&
+        values.character === "pom"
+      )
+        target.name = "미미";
       closeModal();
       render();
       persist();

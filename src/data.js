@@ -206,7 +206,7 @@ export const characters = [
   { id: "fox", name: "여우", x: 75, y: 100 },
   { id: "rabbit", name: "토끼", x: 100, y: 100 },
   { id: "rururu", name: "르르르" },
-  { id: "pom", name: "포메 친구" },
+  { id: "pom", name: "미미" },
 ];
 export const defaultPersonas = {
   chief: {
@@ -220,7 +220,7 @@ export const defaultPersonas = {
     catchphrase: "궁금한 건 근거까지 찾아볼게요.",
   },
   dev: {
-    character: "otter",
+    character: "pom",
     personality: "집중력 좋은 해결사",
     catchphrase: "원인을 찾고, 작게 고쳐볼게요.",
   },
@@ -293,7 +293,7 @@ export const defaultAgents = [
   },
   {
     id: "dev",
-    name: "카이",
+    name: "미미",
     department: "development",
     role: "개발",
     color: "blue",
@@ -448,7 +448,7 @@ export const memorySeeds = () =>
       kind: "episode",
       title: "세션 갱신 오류를 수정한 경험",
       text: "로그인 30분 뒤 발생하던 401은 만료된 토큰을 재사용해서 발생했다. 갱신 요청을 하나로 합치고 새 토큰으로 원래 요청을 한 번 재시도했다.",
-      source: "T-094 · 카이의 수정 기록",
+      source: "T-094 · 미미의 수정 기록",
       evidence:
         "원인: 동시 요청이 만료 토큰을 재사용. 변경: refresh 요청 단일화, 원래 요청 1회 재시도. 테스트 기록은 T-094에 첨부.",
       at: "2026-10-08",
@@ -659,7 +659,7 @@ export const initial = () => ({
           text: "재현 조건: 로그인 후 30분이 지난 상태에서 새로고침하면 401이 발생해요.",
         },
         {
-          author: "카이 · 개발",
+          author: "미미 · 개발",
           text: "토큰 갱신 처리를 수정했어요. 로그인과 결제 흐름의 회귀 검증을 린에게 넘겼습니다. (샘플)",
         },
       ],
@@ -667,7 +667,7 @@ export const initial = () => ({
         { time: "10:12", text: "민지가 이슈 재현·수정을 요청했어요." },
         {
           time: "10:14",
-          text: "카이가 오류를 재현하고 수정 사항을 정리했어요.",
+          text: "미미가 오류를 재현하고 수정 사항을 정리했어요.",
         },
         {
           time: "10:16",

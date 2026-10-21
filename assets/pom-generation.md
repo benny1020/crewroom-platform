@@ -14,6 +14,6 @@ Use case: stylized-concept. Asset: transparent twelve-scene developer diary spri
 
 - `pom-portrait-v1.webp`: 1254 × 1254 RGBA, one portrait.
 - `pom-diary-v1.webp`: 1086 × 1448 RGBA, twelve scenes.
-- Stable character ID: `pom`. The character's display name is independent of saved ID and artwork filenames.
+- Stable character ID: `pom`. Display name: 미미, renamed in 0.15.4. The saved ID and artwork are unchanged; captions are live HTML.
 - Measured CSS viewports preserve proportions and isolate scenes without repainting the bitmaps.
 - The testing clipboard has empty boxes; actual Task/Run/artifact records determine status and success, never the illustration.

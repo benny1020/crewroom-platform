@@ -51,8 +51,20 @@ test("four departments, meaningful activity and no page errors", async ({
 test("developer diary follows the selected task and respects both motion controls", async ({
   page,
 }) => {
+  await page.evaluate(() => {
+    const saved = JSON.parse(localStorage.getItem("gyeot-prototype-v1"));
+    Object.assign(
+      saved.agents.find((a) => a.id === "dev"),
+      { name: "카이", character: "pom" },
+    );
+    localStorage.setItem("gyeot-prototype-v1", JSON.stringify(saved));
+  });
+  await page.reload();
+  expect((await snapshot(page)).agents.find((a) => a.id === "dev").name).toBe(
+    "미미",
+  );
   const diary = page.getByRole("region", {
-    name: "카이의 개발 일지",
+    name: "미미의 개발 일지",
     exact: true,
   });
   await expect(diary).toHaveAttribute("data-phase", "paused");
@@ -76,7 +88,7 @@ test("developer diary follows the selected task and respects both motion control
   await expect(diary).toHaveCount(0);
   await page.locator('.g-office-station[data-id="dev"]').click();
   await page
-    .getByRole("button", { name: "카이 캐릭터 바꾸기", exact: true })
+    .getByRole("button", { name: "미미 캐릭터 바꾸기", exact: true })
     .click();
   await page.getByRole("button", { name: "토끼 캐릭터", exact: true }).click();
   await page.getByRole("button", { name: "캐릭터 적용", exact: true }).click();
@@ -88,7 +100,7 @@ test("developer diary follows the selected task and respects both motion control
   await page.reload();
   await expect(diary.locator('[data-character="rabbit"]')).toBeVisible();
   await page
-    .getByRole("button", { name: "카이 캐릭터 바꾸기", exact: true })
+    .getByRole("button", { name: "미미 캐릭터 바꾸기", exact: true })
     .click();
   await page
     .getByRole("button", { name: "르르르 캐릭터", exact: true })
@@ -126,12 +138,10 @@ test("developer diary follows the selected task and respects both motion control
     (await snapshot(page)).agents.find((a) => a.id === "dev").character,
   ).toBe("rururu");
   await page
-    .getByRole("button", { name: "카이 캐릭터 바꾸기", exact: true })
+    .getByRole("button", { name: "미미 캐릭터 바꾸기", exact: true })
     .click();
   await expect(page.locator(".g-character-option")).toHaveCount(12);
-  await page
-    .getByRole("button", { name: "포메 친구 캐릭터", exact: true })
-    .click();
+  await page.getByRole("button", { name: "미미 캐릭터", exact: true }).click();
   await page.getByRole("button", { name: "캐릭터 적용", exact: true }).click();
   const pom = diary.locator('[data-diary-character="pom"]');
   await expect(pom).toBeVisible();
@@ -166,7 +176,7 @@ test("developer diary follows the selected task and respects both motion control
     (await snapshot(page)).agents.find((a) => a.id === "dev").character,
   ).toBe("pom");
   await page
-    .getByRole("button", { name: "카이 캐릭터 바꾸기", exact: true })
+    .getByRole("button", { name: "미미 캐릭터 바꾸기", exact: true })
     .click();
   await page.getByRole("button", { name: "수달 캐릭터", exact: true }).click();
   await page.getByRole("button", { name: "캐릭터 적용", exact: true }).click();
@@ -177,6 +187,18 @@ test("developer diary follows the selected task and respects both motion control
   );
   await expect(
     page.locator('.g-office-station[data-id="dev"] .g-diary-illustration'),
+  ).toBeVisible();
+  await page.evaluate(() => {
+    const saved = JSON.parse(localStorage.getItem("gyeot-prototype-v1"));
+    Object.assign(
+      saved.agents.find((a) => a.id === "dev"),
+      { name: "내 개발 동료", character: "pom" },
+    );
+    localStorage.setItem("gyeot-prototype-v1", JSON.stringify(saved));
+  });
+  await page.reload();
+  await expect(
+    page.getByRole("region", { name: "내 개발 동료의 개발 일지", exact: true }),
   ).toBeVisible();
 });
 

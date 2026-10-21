@@ -15,7 +15,7 @@ test("agent home and task share real documents, paged body and escaped version p
     page.getByRole("heading", { name: "함께 일하는 오피스", exact: true }),
   ).toBeVisible();
   const officeDiary = page.getByRole("region", {
-    name: "카이의 개발 일지",
+    name: "미미의 개발 일지",
     exact: true,
   });
   await expect(officeDiary).toBeVisible();
@@ -72,7 +72,7 @@ test("agent home and task share real documents, paged body and escaped version p
     page.getByText(/작업 문서 본문을 읽지 않은 답변입니다/),
   ).toBeVisible();
   const diary = page.getByRole("region", {
-    name: "카이의 개발 일지",
+    name: "미미의 개발 일지",
     exact: true,
   });
   await expect(diary).toHaveAttribute("data-phase", "review");

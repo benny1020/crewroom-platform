@@ -16,7 +16,7 @@ test("plush skin retains old saved avatar choices and server role presets", () =
     ["red-panda", "fennec"],
     ["cat", "otter"],
     ["chief", "cloud"],
-    ["dev", "otter"],
+    ["dev", "pom"],
     ["qa", "penguin"],
   ])
     assert.equal(characterById(old).id, current);

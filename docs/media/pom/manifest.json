@@ -1,29 +1,29 @@
 {
-  "release": "0.15.3",
-  "capturedAt": "2026-10-21T14:11:49.735Z",
+  "release": "0.15.4",
+  "capturedAt": "2026-10-21T14:52:14.354Z",
   "mode": "Static interactive mock with synthetic tasks; diary sheet is a scene design preview; no model calls",
   "character": "pom",
   "pageErrors": [],
   "files": [
     {
       "name": "office.png",
-      "bytes": 407687,
-      "sha256": "56403e08da745e071ba96a57785702a80f85ddfc52d1ced17cb693dc159f7bb4"
+      "bytes": 406375,
+      "sha256": "9c311786e2055903d47b41c83ab030b4f90159633771882470f9e4e9847325a4"
     },
     {
       "name": "developer-diary.png",
-      "bytes": 1075049,
-      "sha256": "1336749c22af0695d1c7c175e05b9c79505542974b502c06962e022dcb401559"
+      "bytes": 1072837,
+      "sha256": "8b358e010f569c05d33729a31e668f02abad60b2121e6dc21ec3c0e703a31b25"
     },
     {
       "name": "office.gif",
-      "bytes": 5918296,
-      "sha256": "67c56003d10170764328e47dc304a2727f1d27c2948145968029e2218747a3c2"
+      "bytes": 5259496,
+      "sha256": "b7b6a984a7a2e106202e2fda2571367bd4a3d644b303d16f8f0097da230f8724"
     },
     {
       "name": "developer-diary.gif",
-      "bytes": 5211566,
-      "sha256": "82be681e7ac4d7d50205612d2c9651fa9d1ba8023f929311848e57661304dbc1"
+      "bytes": 5376159,
+      "sha256": "464043989dd6b3611bfca197318bc01beb46ac183df4224afa9ec8018698440b"
     }
   ]
 }
