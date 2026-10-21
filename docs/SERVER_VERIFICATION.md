@@ -1,3 +1,25 @@
+# 0.15.0 봉제 캐릭터·개발 일지 검증
+
+2026-10-21. [캐릭터와 개발 일지](CHARACTERS.md)의 10종 초상·12장면·실제 기록 매핑을 확인했다. 아래 0.14.1 이하는 과거 릴리스 기록이다.
+
+| 검사 | 결과 | 범위 |
+| --- | --- | --- |
+| 단위·adapter·빌드 | 72 통과 | 신규 일지 5개: 이전 저장값·현재 Run·검사 근거·실패/대기 우선·escape + 기존 전체 |
+| PostgreSQL + 실제 Docker 개발/QA | 157 통과 | 기존 문서·출처·인계·권한·격리·검사 전체 회귀 |
+| Docker Runner | 6 통과 | 실제 수정·검사·독립 QA·중단·복원 |
+| 정적/서버 브라우저 | 32 + 24 통과 | 일지 장면·동료 선택·두 모션 제어·미검증 결과 표시·1024/1280/1440px·실시간 갱신 후 스킬 버튼 포커스 |
+| Linux 비밀 파일·암호화 복원 | 통과 | 서비스별 비밀 격리와 최신 014 schema 이미지의 복원 14개 확인 |
+
+고유 자동 검사 **291개**이며, 같은 사례의 재실행과 캡처는 중복 합산하지 않는다. [검증 영수증](evidence/0.15.0/verification.json) · [복원 영수증](evidence/0.15.0/restore.json). 정확한 커밋의 Linux CI·Pages 결과는 [GitHub Actions](https://github.com/benny1020/crewroom-platform/actions/workflows/verify-and-deploy.yml)에서 확인한다.
+
+Astra가 발견한 커스텀 캐릭터 P2를 수정하고, 수달·이전 저장값·다른 초상·새로고침·수달 복귀를 확인했다. 동결 소스 44개와 추가 다크 배너 CSS를 승인했고, 집중 단위 7개를 독립 재실행했다. [리뷰·수정·범위](reviews/ASTRA_PLUSH.md) · [최종 파일 목록](evidence/0.15.0/reviewed-files.json). 로컬은 암호화 백업 후 0.15.0으로 갱신했으며 App·schema·Worker·Runner가 정상이다. 모델·GitLab은 미설정이므로 전체 `doctor --code`의 ready는 false를 유지한다. [배포·빈 운영 데이터·스모크 기록](evidence/0.15.0/deployment.json).
+
+초기 화면 검사에서 Run이 없는 실행 상태의 비교 오류를 발견해 수정했고, 생성 atlas의 불균일 간격은 CSS viewport로 분리했다. 기존 스킬 작성 화면에서 실시간 갱신 때 이름 없는 submit 버튼의 포커스가 사라지는 문제도 재현·수정했다. 최종 서버 브라우저의 세 데스크톱 폭에서 갱신 후 포커스를 명시적으로 다시 확인한다.
+
+플랫폼 업무용 생성·embedding 실호출은 **0회**다. 디자인 asset은 별도로 내장 image_gen 4회로 생성·보정했으며 플랫폼의 실모델 품질 검사에 포함하지 않는다. 앱의 모델 URL·ID와 GitLab은 미설정 상태다. [정적 화면·장면 시트 영수증](media/plush/manifest.json)과 [격리된 서버 화면 영수증](media/workspace/manifest.json)을 구분한다. 원본 참고 시트는 공개 저장소에 포함하지 않는다.
+
+---
+
 # 0.14.1 공용 업무·문서 부하 검증
 
 2026-10-21. [협업·장기 부하 개선](TEAM_QUALITY.md)에 발견한 문제와 변경 동작을 정리했다. 아래 0.14.0 이하는 과거 릴리스 기록이다.

@@ -6,7 +6,7 @@
   gap: 24px;
   padding: 16px 20px;
   margin: 4px 0 12px;
-  background: #eeedf8;
+  background: light-dark(#eeedf8, #333047);
   border: 1px solid #dcd9ee;
   border-radius: 12px;
 }

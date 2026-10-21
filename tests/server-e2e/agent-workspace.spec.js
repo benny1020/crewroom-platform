@@ -14,6 +14,15 @@ test("agent home and task share real documents, paged body and escaped version p
   await expect(
     page.getByRole("heading", { name: "함께 일하는 오피스", exact: true }),
   ).toBeVisible();
+  const officeDiary = page.getByRole("region", {
+    name: "카이의 개발 일지",
+    exact: true,
+  });
+  await expect(officeDiary).toBeVisible();
+  await expect(officeDiary).toContainText("기록 기준");
+  await expect(officeDiary).not.toContainText("샘플 상태");
+  if (process.env.CAPTURE_WORKSPACE)
+    await page.screenshot({ path: "docs/media/workspace/office.png" });
   await page.goto("/#/agents/dev");
   const files = page.getByLabel("에이전트 작업공간", { exact: true });
   await expect(files).toContainText("notes/plan.md");
@@ -62,6 +71,13 @@ test("agent home and task share real documents, paged body and escaped version p
   await expect(
     page.getByText(/작업 문서 본문을 읽지 않은 답변입니다/),
   ).toBeVisible();
+  const diary = page.getByRole("region", {
+    name: "카이의 개발 일지",
+    exact: true,
+  });
+  await expect(diary).toHaveAttribute("data-phase", "review");
+  await expect(diary).toContainText("결과를 확인해주세요");
+  await expect(diary).not.toContainText("검사를 통과했어요");
   if (process.env.CAPTURE_WORKSPACE)
     await page.screenshot({ path: "docs/media/workspace/workroom.png" });
   await page.setViewportSize({ width: 1024, height: 900 });

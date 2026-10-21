@@ -1,0 +1,23 @@
+{
+  "release": "0.15.0",
+  "capturedAt": "2026-10-21T12:41:46.401Z",
+  "mode": "Static interactive mock with synthetic tasks; diary sheet is a scene design preview; no model calls",
+  "pageErrors": [],
+  "files": [
+    {
+      "name": "office.png",
+      "bytes": 389401,
+      "sha256": "b5a01d91c11f80e8883bab6ab9d5809d59b1e75cb38f88771cc529e556e387bc"
+    },
+    {
+      "name": "developer-diary.png",
+      "bytes": 883097,
+      "sha256": "3ee097b30ab86f54937f5876f7c22f882d23a5c1df0e2f1a61697848748b83aa"
+    },
+    {
+      "name": "office.gif",
+      "bytes": 5095370,
+      "sha256": "7fd4f47ca1afe1064c8b6874664a16160ef9d74a1fda1f2414c5ca591b78be84"
+    }
+  ]
+}

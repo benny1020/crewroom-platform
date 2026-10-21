@@ -1,6 +1,8 @@
 import { requestContract } from "./request-contract.js";
 import { workroomState } from "./workroom-state.js";
 import { officeStation, agentTask, stationMode } from "./office-station.js";
+import { workDiary, diaryState, developerDiaryEnabled } from "./work-diary.js";
+import { characterIllustration } from "./plush-sprites.js";
 import {
   studioView,
   currentStudioDraft,
@@ -11,10 +13,11 @@ import "./refinements.css";
 import "./team.css";
 import "./workflow.css";
 import "./live.css";
+import "./plush.css";
 import { createIcons } from "lucide";
 import { appIcons } from "./icons.js";
 import {
-  characters,
+  characterById,
   departments,
   defaultAgents,
   defaultPersonas,
@@ -177,22 +180,11 @@ const select = (label, name, rows, value) =>
 const scopes = (value) =>
   select("공개 범위", "visibility", Object.entries(scopeName), value);
 function portrait(a, big = false) {
-  const fallback = defaultAgents.find((x) => x.id === a?.id),
-    personality = defaultPersonas[fallback?.id];
-  const index = [
-    "chief",
-    "research",
-    "dev",
-    "review",
-    "ops",
-    "release-ops",
-    "qa",
-    "test-design",
-  ].indexOf(a?.id);
-  const character =
-    characters.find((c) => c.id === a?.character) ||
-    characters[index < 0 ? 8 : index];
-  return `<span class="g-avatar g-character ${big ? "g-big" : ""}" aria-hidden="true"><span class="g-character-portrait" style="background-position:${character.x}% ${character.y}%"></span></span>`;
+  const character = characterById(
+    a?.character,
+    defaultPersonas[a?.id]?.character,
+  );
+  return `<span class="g-avatar g-character ${big ? "g-big" : ""}" aria-hidden="true" data-character="${character.id}">${characterIllustration(character)}</span>`;
 }
 async function api(path, { method = "GET", body, headers = {} } = {}) {
   const generation = sessionGeneration,
@@ -372,7 +364,10 @@ function officeView() {
         t.responsible_id === workspace.user.id &&
         ["result_ready", "failed", "paused"].includes(t.status),
     ),
-    a = shared.find((a) => a.id === selectedAgent) || shared[0],
+    a =
+      shared.find((a) => a.id === selectedAgent) ||
+      shared.find((a) => a.id === "dev") ||
+      shared[0],
     selected = a && agentTask(tasks, a.id);
   return (
     heading(
@@ -409,12 +404,14 @@ function officeView() {
                 motion: ["chief", "research", "review"].includes(person.id)
                   ? "read"
                   : "type",
+                diaryEnabled: developerDiaryEnabled(person),
+                diaryPhase: diaryState({ task: t }).phase,
               });
             })
             .join("")}</div></section>`,
       )
       .join("")}</div>
-    <aside class="cr-office-side" aria-label="선택한 동료">${a ? `<div class="cr-office-person">${portrait(a, true)}<div><h2>${esc(a.name)}</h2><p>${esc(a.role)}</p></div></div>${selected ? `<div class="cr-selected-work">${pill(selected)}<h3>${esc(selected.title)}</h3><p>${esc(selected.step_name)} · ${esc(person(selected.responsible_id))} 책임</p><a class="g-button g-primary" href="#/tasks/${selected.id}">${["result_ready", "done"].includes(selected.status) ? "결과 확인" : selected.status === "failed" ? "실패 원인 확인" : "업무 이어가기"} ${icon("arrow-up-right")}</a></div>` : '<p class="cr-note">현재 목록에서 이 동료의 업무를 찾지 못했어요. 새 업무를 시작할 수 있습니다.</p>'}<a class="g-button" href="#/agents/${a.id}">${icon("message-circle")} ${esc(a.name)}에게 말 걸기</a><section class="cr-office-skills"><h3>스킬로 바로 요청</h3>${a.skills.map((b) => `<button class="cr-skill-trigger" data-action="use-skill" data-agent="${a.id}" data-skill="${esc(b.skillId)}"><span>${esc(workspace.skills.find((s) => s.id === b.skillId)?.name || b.skillId)}<small>적용 v${b.version}</small></span>${icon("arrow-up-right")}</button>`).join("") || '<p class="g-muted">적용한 스킬이 없습니다.</p>'}</section><p class="cr-note">실제 서버 상태를 표시합니다. 모션을 꺼도 업무 상태와 다음 행동을 확인할 수 있어요.</p>` : ""}</aside></div>`
+    <aside class="cr-office-side" aria-label="선택한 동료">${a ? `<div class="cr-office-person">${portrait(a, true)}<div><h2>${esc(a.name)}</h2><p>${esc(a.role)}</p></div></div>${workDiary({ agent: a, task: selected, portrait: portrait(a, true), showTask: false })}${selected ? `<div class="cr-selected-work">${pill(selected)}<h3>${esc(selected.title)}</h3><p>${esc(selected.step_name)} · ${esc(person(selected.responsible_id))} 책임</p><a class="g-button g-primary" href="#/tasks/${selected.id}">${["result_ready", "done"].includes(selected.status) ? "결과 확인" : selected.status === "failed" ? "실패 원인 확인" : "업무 이어가기"} ${icon("arrow-up-right")}</a></div>` : '<p class="cr-note">현재 목록에서 이 동료의 업무를 찾지 못했어요. 새 업무를 시작할 수 있습니다.</p>'}<a class="g-button" href="#/agents/${a.id}">${icon("message-circle")} ${esc(a.name)}에게 말 걸기</a><section class="cr-office-skills"><h3>스킬로 바로 요청</h3>${a.skills.map((b) => `<button class="cr-skill-trigger" data-action="use-skill" data-agent="${a.id}" data-skill="${esc(b.skillId)}"><span>${esc(workspace.skills.find((s) => s.id === b.skillId)?.name || b.skillId)}<small>적용 v${b.version}</small></span>${icon("arrow-up-right")}</button>`).join("") || '<p class="g-muted">적용한 스킬이 없습니다.</p>'}</section><p class="cr-note">실제 서버 상태를 표시합니다. 모션을 꺼도 업무 상태와 다음 행동을 확인할 수 있어요.</p>` : ""}</aside></div>`
   );
 }
 function beginSkillRequest(agentId, skillId, values = {}) {
@@ -775,7 +772,7 @@ function taskView() {
       .map(resultView)
       .reverse()
       .join("") || '<p class="cr-empty-inline">이전 결과가 없습니다.</p>'
-  }</details>${t.status === "done" && current ? `<div class="cw-reuse"><div><strong>좋은 결과를 다음 업무의 기준으로</strong><p>완료 기준과 형식을 참고하고 새 대상에서 시작해요.</p></div>${button("이 기준으로 다음 업무", "reuse", "", false, "plus")}${button("이 결과를 기억으로", "remember", "", false, "bookmark-plus")}${button("반복 업무 스킬 초안", "skill-from-task", "", false, "notebook-pen")}</div>` : ""}</section></div><aside class="cr-execution"><section class="cw-paper" data-history-region="runs"><h2>실행 기록</h2>${historyNav("runs")}${
+  }</details>${t.status === "done" && current ? `<div class="cw-reuse"><div><strong>좋은 결과를 다음 업무의 기준으로</strong><p>완료 기준과 형식을 참고하고 새 대상에서 시작해요.</p></div>${button("이 기준으로 다음 업무", "reuse", "", false, "plus")}${button("이 결과를 기억으로", "remember", "", false, "bookmark-plus")}${button("반복 업무 스킬 초안", "skill-from-task", "", false, "notebook-pen")}</div>` : ""}</section></div><aside class="cr-execution">${workDiary({ agent: agent(step.agent_id), task: t, run, artifact: state.current, portrait: portrait(agent(step.agent_id), true), compact: true })}<section class="cw-paper" data-history-region="runs"><h2>실행 기록</h2>${historyNav("runs")}${
     historyRows("runs")
       .map(
         (r) =>
@@ -822,7 +819,7 @@ function agentView(id) {
       )
       .map(taskRow)
       .join("") || '<p class="cr-empty-inline">연결된 업무가 없어요.</p>'
-  }</div></section><aside>${workspaceView()}<section class="cw-paper"><h2>공통 업무 기준</h2><p class="cr-instructions">${esc(a.instructions)}</p><div class="cr-bound-skills">${a.skills.map((s) => `<span class="g-pill">${esc(workspace.skills.find((x) => x.id === s.skillId)?.name)} v${s.version}</span>`).join("")}</div><a href="#/skills" class="g-text-button">스킬 버전 보기 ${icon("arrow-up-right")}</a></section>${manage ? `<details class="cw-paper cr-agent-config"><summary>비서·동료 설정</summary><form data-form="agent-config" data-id="${a.id}" data-revision="${a.config_version}">${field("이름", "name", a.name, "text", 'required maxlength="40"')}${area("업무 지침", "instructions", a.instructions, 'required maxlength="6000"')}<p class="g-small g-muted">설정 변경은 다음 실행부터 적용합니다.</p><p class="g-error" data-error></p><button class="g-button" type="submit">설정 저장</button></form></details>` : ""}${
+  }</div></section><aside>${workDiary({ agent: a, task: agentTask(workspace.tasks, a.id), portrait: portrait(a, true) })}${workspaceView()}<section class="cw-paper"><h2>공통 업무 기준</h2><p class="cr-instructions">${esc(a.instructions)}</p><div class="cr-bound-skills">${a.skills.map((s) => `<span class="g-pill">${esc(workspace.skills.find((x) => x.id === s.skillId)?.name)} v${s.version}</span>`).join("")}</div><a href="#/skills" class="g-text-button">스킬 버전 보기 ${icon("arrow-up-right")}</a></section>${manage ? `<details class="cw-paper cr-agent-config"><summary>비서·동료 설정</summary><form data-form="agent-config" data-id="${a.id}" data-revision="${a.config_version}">${field("이름", "name", a.name, "text", 'required maxlength="40"')}${area("업무 지침", "instructions", a.instructions, 'required maxlength="6000"')}<p class="g-small g-muted">설정 변경은 다음 실행부터 적용합니다.</p><p class="g-error" data-error></p><button class="g-button" type="submit">설정 저장</button></form></details>` : ""}${
     !a.owner_id
       ? `<section class="cw-paper"><h2>이 동료의 기억</h2>${
           workspace.memories
@@ -1004,10 +1001,12 @@ function render() {
   const [page = "office", id] = route();
   const active = document.activeElement,
     keepFocus =
-      active?.closest(".cr-studio") && active.name
+      active?.closest(".cr-studio") &&
+      (active.name || active.matches('button[type="submit"]'))
         ? {
             form: active.form?.dataset.form,
             name: active.name,
+            submit: active.matches('button[type="submit"]'),
             start: active.selectionStart,
             end: active.selectionEnd,
           }
@@ -1085,7 +1084,7 @@ function render() {
           : next.scrollHeight;
     if (keepFocus) {
       const input = frame.querySelector(
-        `form[data-form="${CSS.escape(keepFocus.form)}"] [name="${CSS.escape(keepFocus.name)}"]`,
+        `form[data-form="${CSS.escape(keepFocus.form)}"] ${keepFocus.submit ? 'button[type="submit"]' : `[name="${CSS.escape(keepFocus.name)}"]`}`,
       );
       input?.focus({ preventScroll: true });
       if (input?.setSelectionRange && keepFocus.start !== null)

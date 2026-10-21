@@ -1,0 +1,39 @@
+{
+  "release": "0.15.0",
+  "deployedAt": "2026-10-21T12:52:00.199561+00:00",
+  "mode": "existing local Compose deployment; encrypted backup before update",
+  "health": {
+    "mode": "code",
+    "release": "0.15.0",
+    "ready": false,
+    "checks": {
+      "app": true,
+      "schema": true,
+      "worker": true,
+      "modelConfigured": false,
+      "embeddingConfiguration": true,
+      "runner": true,
+      "gitlabConfigured": false
+    },
+    "errors": [],
+    "warnings": [],
+    "memorySearch": "keyword; embeddings disabled",
+    "actualModelInference": "not checked; use evaluate:answers and review a small real task",
+    "repositoryAccess": "not checked; code mode checks configuration and Runner profile only"
+  },
+  "productionDataCounts": {
+    "tasks": 0,
+    "messages": 0,
+    "workspaceDocuments": 0
+  },
+  "backup": {
+    "encrypted": true,
+    "keyPublished": false
+  },
+  "smoke": {
+    "loginVisible": true,
+    "plushPortraits": 4,
+    "pageErrors": 0,
+    "noTaskOrModelRequestSubmitted": true
+  }
+}

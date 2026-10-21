@@ -1,0 +1,177 @@
+/* Plush portraits stay readable in navigation; scenes carry the work diary. */
+#gyeot-demo {
+  --g-diary-atlas: url("../assets/developer-diary-v1.webp");
+  --g-diary-navy: light-dark(#18304e, #c7dcf4);
+  --g-diary-teal: light-dark(#438f8c, #9fd4ca);
+}
+#gyeot-demo .g-diary-illustration {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 1;
+  --g-sprite-atlas: var(--g-diary-atlas);
+}
+#gyeot-demo .g-character-portrait {
+  display: grid;
+  place-items: center;
+  background-image: none;
+  --g-sprite-atlas: var(--g-character-atlas);
+}
+#gyeot-demo .g-atlas-sprite {
+  display: block;
+  background-image: var(--g-sprite-atlas);
+  background-repeat: no-repeat;
+}
+#gyeot-demo .g-plush-station {
+  min-height: 202px;
+  padding: 8px 7px 12px;
+  border-radius: 14px;
+}
+#gyeot-demo .g-plush-station .g-desk-scene {
+  width: 120px;
+  height: 120px;
+  margin-bottom: 5px;
+}
+#gyeot-demo .g-plush-station .g-desk-scene > .g-character,
+#gyeot-demo .cr-office-layout .g-plush-station .g-desk-scene > .g-character {
+  width: 108px;
+  height: 108px;
+  left: 6px;
+  top: 6px;
+  transform: none;
+  border-radius: 0;
+  background: none;
+}
+#gyeot-demo .g-plush-station .g-desk-scene .g-character-portrait {
+  border-radius: 0;
+}
+#gyeot-demo .g-plush-station .g-work-desk,
+#gyeot-demo .g-plush-station .g-office-monitor,
+#gyeot-demo .g-plush-station .g-office-keyboard,
+#gyeot-demo .g-plush-station .g-office-paw,
+#gyeot-demo .g-plush-station .g-desk-floor {
+  display: none;
+}
+#gyeot-demo .g-plush-station .g-station-bubble {
+  z-index: 3;
+  top: 2px;
+  right: -2px;
+  border: 1px solid var(--g-line);
+  box-shadow: none;
+}
+#gyeot-demo .g-plush-station .g-station-task {
+  max-width: 180px;
+}
+#gyeot-demo .g-plush-station.is-working .g-desk-scene > .g-character,
+#gyeot-demo
+  .g-plush-station.is-working[data-motion="read"]
+  .g-desk-scene
+  > .g-character,
+#gyeot-demo .g-plush-station.is-working .g-diary-illustration {
+  animation: crewroom-plush-working 2.8s ease-in-out infinite;
+  transform-origin: 50% 90%;
+}
+#gyeot-demo .g-plush-station.is-done .g-desk-scene > .g-character {
+  animation: none;
+}
+#gyeot-demo .g-work-diary {
+  padding: 18px;
+  margin-bottom: 18px;
+  border: 1px solid var(--g-line);
+  border-radius: 18px;
+  background: light-dark(#f5f9f8, #233332);
+  overflow: hidden;
+}
+#gyeot-demo .g-diary-heading {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  align-items: center;
+}
+#gyeot-demo .g-diary-heading h2 {
+  font-size: 16px;
+  margin: 0;
+  font-weight: 650;
+  color: var(--g-diary-navy);
+}
+#gyeot-demo .g-diary-heading > span {
+  font-size: 10px;
+  color: var(--g-soft);
+  white-space: nowrap;
+}
+#gyeot-demo .g-diary-art {
+  width: min(100%, 212px);
+  min-height: 150px;
+  margin: 8px auto 4px;
+  display: grid;
+  place-items: center;
+}
+#gyeot-demo .g-diary-art > .g-avatar {
+  height: 130px;
+  width: 130px;
+  border-radius: 0;
+  background: none;
+}
+#gyeot-demo .g-office-side .g-diary-art,
+#gyeot-demo .cr-office-side .g-diary-art {
+  width: min(100%, 176px);
+}
+#gyeot-demo .g-diary-copy > strong {
+  display: block;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--g-diary-navy);
+}
+#gyeot-demo .g-diary-copy > p {
+  margin: 7px 0 0;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--g-soft);
+}
+#gyeot-demo .g-diary-task {
+  border-top: 1px solid var(--g-line);
+  margin-top: 14px;
+  padding-top: 12px;
+  color: var(--g-ink);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+#gyeot-demo .g-work-diary.is-compact .g-diary-body {
+  display: block;
+}
+#gyeot-demo .g-work-diary.is-compact .g-diary-art {
+  min-height: 0;
+  width: 128px;
+}
+#gyeot-demo
+  .g-work-diary:is(
+    [data-phase="coding"],
+    [data-phase="testing"],
+    [data-phase="planning"],
+    [data-phase="writing"],
+    [data-phase="investigating"]
+  )
+  .g-diary-illustration {
+  animation: crewroom-plush-working 3.4s ease-in-out infinite;
+  transform-origin: 50% 90%;
+}
+@keyframes crewroom-plush-working {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+  50% {
+    transform: translateY(-3px) rotate(-0.6deg);
+  }
+}
+#gyeot-demo .g-office-still .g-diary-illustration,
+#gyeot-demo.cr-no-motion .g-diary-illustration {
+  animation-play-state: paused !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  #gyeot-demo .g-diary-illustration,
+  #gyeot-demo .g-plush-station * {
+    animation: none !important;
+  }
+}

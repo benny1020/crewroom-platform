@@ -195,9 +195,9 @@ export const departments = [
   },
 ];
 export const characters = [
-  { id: "owl", name: "부엉이", x: 0, y: 0 },
-  { id: "red-panda", name: "레서판다", x: 25, y: 0 },
-  { id: "cat", name: "고양이", x: 50, y: 0 },
+  { id: "cloud", name: "구름 친구", x: 0, y: 0 },
+  { id: "fennec", name: "사막여우", x: 25, y: 0 },
+  { id: "otter", name: "수달", x: 50, y: 0 },
   { id: "turtle", name: "거북이", x: 75, y: 0 },
   { id: "capybara", name: "카피바라", x: 100, y: 0 },
   { id: "corgi", name: "코기", x: 0, y: 100 },
@@ -208,17 +208,17 @@ export const characters = [
 ];
 export const defaultPersonas = {
   chief: {
-    character: "owl",
+    character: "cloud",
     personality: "차분한 조율가",
     catchphrase: "복잡한 일은 제가 먼저 정리할게요.",
   },
   research: {
-    character: "red-panda",
+    character: "fennec",
     personality: "호기심 많은 탐구가",
     catchphrase: "궁금한 건 근거까지 찾아볼게요.",
   },
   dev: {
-    character: "cat",
+    character: "otter",
     personality: "집중력 좋은 해결사",
     catchphrase: "원인을 찾고, 작게 고쳐볼게요.",
   },
@@ -258,6 +258,16 @@ export const defaultPersonas = {
     catchphrase: "하나씩 정리하면 놓치는 게 없어요.",
   },
 };
+// Keep saved avatar choices and server role presets usable across the new skin.
+export function characterById(id, fallback = "fox") {
+  const aliases = { owl: "cloud", "red-panda": "fennec", cat: "otter" },
+    key = aliases[id] || defaultPersonas[id]?.character || id;
+  return (
+    characters.find((c) => c.id === key) ||
+    characters.find((c) => c.id === fallback) ||
+    characters[8]
+  );
+}
 export const defaultAgents = [
   {
     id: "chief",

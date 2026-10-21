@@ -1,8 +1,11 @@
 import { officeStation as sharedOfficeStation } from "./office-station.js";
+import { workDiary, diaryState, developerDiaryEnabled } from "./work-diary.js";
+import { characterIllustration } from "./plush-sprites.js";
 import "./styles.css";
 import "./refinements.css";
 import "./team.css";
 import "./workflow.css";
+import "./plush.css";
 import {
   WORK_TYPES,
   initializeWorkflows,
@@ -33,6 +36,7 @@ import {
 import {
   baseSkills,
   characters,
+  characterById,
   defaultPersonas,
   defaultAgents,
   memoryKinds,
@@ -411,11 +415,10 @@ import { renderRolePage } from "./team-views.js";
     actor.id ||
     Object.keys(state.profiles).find((key) => state.profiles[key] === actor) ||
     state.user;
-  const characterBy = (id) =>
-    characters.find((c) => c.id === id) || characters[8];
+  const characterBy = characterById;
   function characterPortrait(id, color = "blue", big = false, activity = null) {
     const c = characterBy(id);
-    return `<span class="g-avatar g-character g-${color} ${big ? "g-big" : ""}" aria-hidden="true" data-character="${c.id}"><span class="g-character-portrait" style="background-position:${c.x}% ${c.y}%"></span>${activity?.task ? `<span class="g-character-status ${activity.color}"></span>` : ""}</span>`;
+    return `<span class="g-avatar g-character g-${color} ${big ? "g-big" : ""}" aria-hidden="true" data-character="${c.id}">${characterIllustration(c)}${activity?.task ? `<span class="g-character-status ${activity.color}"></span>` : ""}</span>`;
   }
   function avatar(name, color = "blue", big = false, key = null) {
     const a =
@@ -1150,6 +1153,14 @@ import { renderRolePage } from "./team-views.js";
       taskTitle: activity.task?.title || a.personality,
       selected: state.office.selected === a.id,
       motion: reading ? "read" : "type",
+      diaryEnabled: developerDiaryEnabled(a),
+      diaryPhase: diaryState({
+        task: activity.task && {
+          ...activity.task,
+          work_type: a.id === "dev" ? "code-qa" : activity.task.workType,
+        },
+        sample: true,
+      }).phase,
     });
   }
 
@@ -1172,7 +1183,7 @@ import { renderRolePage } from "./team-views.js";
           ? 0
           : Math.min(90, t.stage * 20 + 10)
       : 0;
-    return `<div class="g-rail-heading g-muted">선택한 동료 <span class="g-tiny">${state.office.playing ? "샘플 재생 중" : "상태 보관 중"}</span></div><div class="g-office-person-head">${characterTrigger(a, false)}<div><h2>${esc(a.name)}</h2><p>${departmentOf(a).name} · ${esc(a.role)}</p></div></div><div class="g-office-task">${t ? `${status(t)}<h3>${esc(t.title)}</h3><p>${esc(activity.stage)} · ${esc(t.env)}</p><progress class="g-office-progress" value="${progress}" max="100" aria-label="샘플 업무 단계 진행률"></progress><div class="g-row g-between g-tiny g-muted"><span>${t.id}</span><span>${t.status === "done" ? "모든 단계 완료" : `${Math.min(t.stage + 1, 5)} / 5 단계`}</span></div>${t.status === "needs_input" && canOperateTask(state, t) ? `<form class="g-office-answer" data-form="resume" data-id="${t.id}"><label class="g-field"><span>검증 범위를 골라주세요</span><select class="g-input" name="decision"><option>핵심 흐름 · 로그인 + 결제</option><option>전체 회귀 · 주요 사용자 흐름</option><option>변경 범위 · 로그인과 세션 갱신</option></select></label><button type="button" class="g-button g-primary cursor-interaction" data-action="submit-form">답변하고 재개 ${icon("play")}</button></form>` : `<div style="margin-top:12px">${button(["done", "result_ready"].includes(t.status) ? "결과 확인" : "업무 자세히", "open-task", `data-id="${t.id}"`, false, "arrow-up-right")}</div>`}` : `<span class="g-status-inline"><span class="g-dot"></span>업무 대기</span><h3>새 업무를 맡길 수 있어요</h3><p>${esc(a.catchphrase)}</p>${button("업무 맡기기", "new-request", `data-agent="${a.id}"`, true, "plus")}`}</div>${t ? `<button type="button" class="g-run-link" data-action="open-execution" data-id="${t.id}">${icon("radio")} ${esc(t.runId || "실행 준비")} · 기록 보기 ${icon("arrow-up-right")}</button>` : ""}<div class="g-office-actions">${button("대화", "agent", `data-id="${a.id}"`, false, "message-circle")}${button("기억", "open-memory", `data-key="${a.id}"`, false, "bookmark")}${button("스킬", "agent-area", `data-id="${a.id}" data-value="skills"`, false, "blocks")}</div>${
+    return `<div class="g-rail-heading g-muted">선택한 동료 <span class="g-tiny">${state.office.playing ? "샘플 재생 중" : "상태 보관 중"}</span></div><div class="g-office-person-head">${characterTrigger(a, false)}<div><h2>${esc(a.name)}</h2><p>${departmentOf(a).name} · ${esc(a.role)}</p></div></div>${workDiary({ agent: a, task: t && { ...t, work_type: a.id === "dev" ? "code-qa" : t.workType }, portrait: characterPortrait(a.character, a.color, true), sample: true, showTask: false })}<div class="g-office-task">${t ? `${status(t)}<h3>${esc(t.title)}</h3><p>${esc(activity.stage)} · ${esc(t.env)}</p><progress class="g-office-progress" value="${progress}" max="100" aria-label="샘플 업무 단계 진행률"></progress><div class="g-row g-between g-tiny g-muted"><span>${t.id}</span><span>${t.status === "done" ? "모든 단계 완료" : `${Math.min(t.stage + 1, 5)} / 5 단계`}</span></div>${t.status === "needs_input" && canOperateTask(state, t) ? `<form class="g-office-answer" data-form="resume" data-id="${t.id}"><label class="g-field"><span>검증 범위를 골라주세요</span><select class="g-input" name="decision"><option>핵심 흐름 · 로그인 + 결제</option><option>전체 회귀 · 주요 사용자 흐름</option><option>변경 범위 · 로그인과 세션 갱신</option></select></label><button type="button" class="g-button g-primary cursor-interaction" data-action="submit-form">답변하고 재개 ${icon("play")}</button></form>` : `<div style="margin-top:12px">${button(["done", "result_ready"].includes(t.status) ? "결과 확인" : "업무 자세히", "open-task", `data-id="${t.id}"`, false, "arrow-up-right")}</div>`}` : `<span class="g-status-inline"><span class="g-dot"></span>업무 대기</span><h3>새 업무를 맡길 수 있어요</h3><p>${esc(a.catchphrase)}</p>${button("업무 맡기기", "new-request", `data-agent="${a.id}"`, true, "plus")}`}</div>${t ? `<button type="button" class="g-run-link" data-action="open-execution" data-id="${t.id}">${icon("radio")} ${esc(t.runId || "실행 준비")} · 기록 보기 ${icon("arrow-up-right")}</button>` : ""}<div class="g-office-actions">${button("대화", "agent", `data-id="${a.id}"`, false, "message-circle")}${button("기억", "open-memory", `data-key="${a.id}"`, false, "bookmark")}${button("스킬", "agent-area", `data-id="${a.id}" data-value="skills"`, false, "blocks")}</div>${
       pending.length
         ? `<section class="g-office-attention"><div class="g-rail-heading"><span>다른 확인 요청</span></div>${pending
             .map((x) => {
@@ -1952,7 +1963,7 @@ import { renderRolePage } from "./team-views.js";
       body = `<div class="g-request-person">${avatar(a.name, a.color, false, modal.agent)}<label class="g-field"><span>접수할 동료</span><select class="g-input" id="g-request-agent" name="agent">${actorOptions(modal.agent)}</select></label></div><label class="g-field"><span>무엇을 해주면 되나요?</span><textarea class="g-input" name="target" maxlength="700" required placeholder="예: 로그인 수정 PR #124를 확인하고, QA 검증까지 이어주세요.">${esc(v.target)}</textarea></label><label class="g-field"><span>사용할 스킬</span><select class="g-input" id="g-request-skill" name="skill">${attached.length ? `<optgroup label="${esc(a.name)}에게 장착된 스킬">${opts(attached)}</optgroup>` : ""}${others.length ? `<optgroup label="이번 업무에 사용할 다른 스킬">${opts(others)}</optgroup>` : ""}</select><span class="g-field-help">${esc(s.desc)}</span></label><label class="g-check"><input type="checkbox" name="shared" ${v.shared !== undefined ? (v.shared === "on" ? "checked" : "") : a.id ? "checked" : ""}><span>팀 업무로 공유하기<br><span class="g-field-help">${a.id ? "요청과 결과를 팀원 모두가 이어서 볼 수 있어요." : "기본은 개인 업무예요. 체크하면 요청과 결과를 팀에 공유해요."} 개인 대화와 기억은 포함하지 않아요.</span></span></label><details ${v.details ? "open" : ""}><summary class="cursor-interaction">프로젝트·환경 설정</summary><div class="g-fields-two g-mt">${selectField("프로젝트", "project", ["제품 웹", "팀 운영", "관리자 콘솔"], v.project)}${selectField("대상 환경", "env", ["staging", "개발 환경", "문서 작업"], v.env)}</div></details><div class="g-run-preview g-mt">완료 기준: ${esc(s.done)}<br>${esc(a.name)} · ${RUNTIMES[a.runtime]?.name || a.runtime} 예시 프로필 · ${esc(a.harness)}</div>`;
     } else if (modal.type === "character") {
       const target = actorBy(modal.key) || profile(),
-        selected = modal.character || target.character;
+        selected = characterBy(modal.character || target.character).id;
       title = target.name + "의 캐릭터";
       sub = "모습과 성격, 첫 인사를 정해보세요.";
       form = "character";

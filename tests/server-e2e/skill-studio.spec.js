@@ -157,6 +157,16 @@ for (const width of [1440, 1280, 1024])
     await expect(
       page.getByRole("button", { name: "초안 만들기", exact: true }),
     ).toBeFocused();
+    // A live refresh must also preserve the unnamed submit button after Tab.
+    await Promise.all([
+      page.waitForResponse((r) => r.url().endsWith("/api/workspace") && r.ok()),
+      page.evaluate(() =>
+        window.dispatchEvent(new HashChangeEvent("hashchange")),
+      ),
+    ]);
+    await expect(
+      page.getByRole("button", { name: "초안 만들기", exact: true }),
+    ).toBeFocused();
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,

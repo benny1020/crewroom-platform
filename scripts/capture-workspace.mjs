@@ -56,12 +56,16 @@ await run(encoder, [
 ]);
 const hash = (data) => createHash("sha256").update(data).digest("hex");
 const files = await Promise.all(
-  ["agent-home.png", "document.png", "workroom.png", "workflow.gif"].map(
-    async (name) => {
-      const b = await readFile(`${directory}/${name}`);
-      return { name, bytes: b.length, sha256: hash(b) };
-    },
-  ),
+  [
+    "office.png",
+    "agent-home.png",
+    "document.png",
+    "workroom.png",
+    "workflow.gif",
+  ].map(async (name) => {
+    const b = await readFile(`${directory}/${name}`);
+    return { name, bytes: b.length, sha256: hash(b) };
+  }),
 );
 await writeFile(
   `${directory}/manifest.json`,

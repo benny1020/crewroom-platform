@@ -48,6 +48,56 @@ test("four departments, meaningful activity and no page errors", async ({
   expect(errors).toEqual([]);
 });
 
+test("developer diary follows the selected task and respects both motion controls", async ({
+  page,
+}) => {
+  const diary = page.getByRole("region", {
+    name: "카이의 개발 일지",
+    exact: true,
+  });
+  await expect(diary).toHaveAttribute("data-phase", "paused");
+  await expect(diary).toContainText("샘플 상태");
+  await expect(diary).toContainText("잠깐 멈춰 있어요");
+  await page.locator('[data-action="office-play"]').click();
+  await expect(diary).toHaveAttribute("data-phase", "coding");
+  await page.locator('[data-action="office-motion"]').click();
+  const scene = diary.locator(".g-diary-illustration");
+  expect(
+    await scene.evaluate((el) => getComputedStyle(el).animationPlayState),
+  ).toBe("paused");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  expect(await scene.evaluate((el) => getComputedStyle(el).animationName)).toBe(
+    "none",
+  );
+  await page.locator('.g-office-station[data-id="qa"]').click();
+  await expect(
+    page.getByRole("region", { name: "린의 업무 일지", exact: true }),
+  ).toBeVisible();
+  await expect(diary).toHaveCount(0);
+  await page.locator('.g-office-station[data-id="dev"]').click();
+  await page
+    .getByRole("button", { name: "카이 캐릭터 바꾸기", exact: true })
+    .click();
+  await page.getByRole("button", { name: "토끼 캐릭터", exact: true }).click();
+  await page.getByRole("button", { name: "캐릭터 적용", exact: true }).click();
+  await expect(diary.locator('[data-character="rabbit"]')).toBeVisible();
+  await expect(diary.locator(".g-diary-illustration")).toHaveCount(0);
+  await expect(
+    page.locator('.g-office-station[data-id="dev"] [data-character="rabbit"]'),
+  ).toBeVisible();
+  await page.reload();
+  await expect(diary.locator('[data-character="rabbit"]')).toBeVisible();
+  await page
+    .getByRole("button", { name: "카이 캐릭터 바꾸기", exact: true })
+    .click();
+  await page.getByRole("button", { name: "수달 캐릭터", exact: true }).click();
+  await page.getByRole("button", { name: "캐릭터 적용", exact: true }).click();
+  await expect(diary.locator(".g-diary-illustration")).toBeVisible();
+  await expect(
+    page.locator('.g-office-station[data-id="dev"] .g-diary-illustration'),
+  ).toBeVisible();
+});
+
 test("private conversations and their memories remain private after user switching", async ({
   page,
 }) => {
