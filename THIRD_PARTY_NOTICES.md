@@ -1,5 +1,7 @@
 # 출처와 권리 고지
 
+이 저장소의 자체 코드·문서·자체 제작 리소스는 [0BSD](LICENSE)로 제공한다. 아래 외부 구성요소와 참고 자료는 이 라이선스의 재허가 대상에 포함하지 않는다.
+
 크루룸이 사용하는 외부 구성요소에는 각 권리자의 라이선스가 적용된다.
 
 - **Lucide**: ISC License. 아이콘 패키지의 [라이선스와 고지](public/licenses/lucide.txt)를 소스와 정적 배포에 함께 포함한다. 아키텍처 도식에도 같은 아이콘을 사용하며 standalone SVG의 metadata에 전체 고지를 보존한다. [Lucide source](https://github.com/lucide-icons/lucide).
