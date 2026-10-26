@@ -7,7 +7,6 @@
 [화면 데모](https://benny1020.github.io/crewroom-platform/) · [서버 실행](#서버-실행) · [에이전트 동작 방식](#에이전트는-어떻게-실행되나요) · [구조](#구현-구조) · [연결 설정](docs/CONFIGURATION.md) · [검증·리뷰](docs/SERVER_VERIFICATION.md)
 
 [![Verify and deploy](https://github.com/benny1020/crewroom-platform/actions/workflows/verify-and-deploy.yml/badge.svg)](https://github.com/benny1020/crewroom-platform/actions/workflows/verify-and-deploy.yml)
-[![MIT](https://img.shields.io/badge/license-MIT-20755d)](LICENSE)
 
 </div>
 
