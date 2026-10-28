@@ -37,6 +37,63 @@ REMOTE_CASES = ["preserves remote warm continuity across completed turns: " + sc
 CAUSE_SOURCE_FILES = ['server/src/services/native-runtime/native-runner-restart-recovery.integration.test.ts', 'server/src/services/native-runtime/native-session-executor.ts', 'packages/paperclip-runner/src/live/runnerd-codex-transport.ts']
 CAUSE_ERROR_CODES = ['runner_remote_directory_staging_failed', 'runner_remote_staging_failed', 'runner_remote_artifact_verification_failed', 'runner_remote_artifact_metadata_invalid', 'runner_remote_artifact_contract_incompatible', 'runner_remote_codex_artifact_verification_failed', 'runner_remote_codex_artifact_unavailable', 'runner_remote_codex_install_failed', 'runner_remote_provider_artifact_incompatible', 'runner_remote_session_capability_missing', 'runner_remote_preinstalled_link_failed', 'runner_remote_codex_source_conflict', 'runner_harness_state_mismatch', 'runner_state_identity_mismatch', 'runner_state_directory_unsafe', 'runner_local_connect_failed', 'provider_transport_failed', 'native_provider_terminal_failed', 'native_event_replay_conflict']
 
+PHASES = ['tls', 'asset', 'execution_input', 'prepare_run', 'finalize_run', 'execute_session', 'close_idle', 'tunnel_close', 'docker_execute', 'sync_tar', 'sync_ps']
+
+
+def phase_diagnostics(filename):
+    result = {"status": "unavailable", "diagnosticOnly": True}
+    try:
+        if filename.stat().st_size > 200_000:
+            return result
+        value = json.loads(filename.read_text())
+        if value.get("version") != 1 or value.get("status") != "available" or value.get("diagnosticOnly") is not True:
+            return result
+        def bounded(number):
+            return type(number) is int and 0 <= number <= 9_999_999
+        def item(raw, event=False):
+            if not isinstance(raw, dict) or raw.get("title") not in REMOTE_CASES or raw.get("phase") not in PHASES or not bounded(raw.get("invocation")):
+                raise ValueError()
+            safe = {key: raw[key] for key in ["title", "phase", "invocation"]}
+            if event:
+                if raw.get("edge") not in ["enter", "leave", "throw", "reject"] or not bounded(raw.get("sequence")) or not bounded(raw.get("elapsedMs")):
+                    raise ValueError()
+                safe.update({key: raw[key] for key in ["edge", "sequence", "elapsedMs"]})
+                if raw["phase"] == "docker_execute" and raw["edge"] == "leave":
+                    if type(raw.get("exitCode")) is int and abs(raw["exitCode"]) <= 9999:
+                        safe["exitCode"] = raw["exitCode"]
+                    if type(raw.get("timedOut")) is bool:
+                        safe["timedOut"] = raw["timedOut"]
+            return safe
+        if not bounded(value.get("pulseCount")) or not bounded(value.get("lastPulseMs")) or value.get("workerCwdRelation") not in ["product_root", "server_root", "other"]:
+            return result
+        events, active = value.get("events"), value.get("active")
+        if not isinstance(events, list) or len(events) > 256 or not isinstance(active, list) or len(active) > 256:
+            return result
+        result.update(status="available", pulseCount=value["pulseCount"], lastPulseMs=value["lastPulseMs"], workerCwdRelation=value["workerCwdRelation"], events=[item(raw, True) for raw in events], active=[item(raw) for raw in active])
+    except (OSError, ValueError, TypeError, AttributeError):
+        return {"status": "unavailable", "diagnosticOnly": True}
+    return result
+
+
+def prepare_phase_overlay(source, private):
+    """Keep the product config/cwd intact; add a private diagnostic setup only."""
+    directory = private / "phase-overlay"
+    directory.mkdir(mode=0o700)
+    scripts = Path(__file__).resolve().parent
+    template = (scripts / "crewroom-runtime-phase-setup.mjs").read_text()
+    # JSON escaping keeps the substituted root a literal module identifier.
+    root = json.dumps(str(source))[1:-1]
+    setup = directory / "setup.mjs"
+    setup.write_text(template.replace('__PRODUCT_ROOT__', root))
+    core = directory / "crewroom-runtime-phase-core.mjs"
+    core.write_bytes((scripts / core.name).read_bytes())
+    (directory / "node_modules").symlink_to(source / "node_modules", target_is_directory=True)
+    config = directory / "vitest.config.mjs"
+    config.write_text('import path from "node:path";\nimport original from ' + json.dumps(str(source / 'server/vitest.config.ts')) + ';\n'
+        + 'const serverRoot=' + json.dumps(str(source / 'server')) + ';\n'
+        + 'export default {root:' + json.dumps(str(source)) + ',test:{projects:[{...original,configFile:false,root:serverRoot,test:{...original.test,name:"@paperclipai/server",setupFiles:[...original.test.setupFiles.map(file=>path.resolve(serverRoot,file)),' + json.dumps(str(setup)) + ']}}]}};\n')
+    return config, {"diagnosticOnly": True, "configSha256": digest(config), "setupSha256": digest(setup), "coreSha256": digest(core)}
+
 
 class QualificationFailure(Exception):
     pass
@@ -611,6 +668,10 @@ def run_qualification(source, output):
     reaper_failed = False
     partial_file = None
     partial_expected = []
+    phase_file = None
+    phase_enabled = os.environ.get("CREWROOM_QUALIFICATION_PHASE_DIAGNOSTICS") == "1"
+    if phase_enabled:
+        receipt.update(diagnosticOnly=True, stockQualification=False)
     last_timeout = None
     # Build/test children receive no ambient provider/account credentials.
     allowed = ["PATH", "HOME", "USER", "LOGNAME", "SHELL", "LANG", "LC_ALL", "RUSTUP_HOME", "CARGO_HOME", "PNPM_HOME", "COREPACK_HOME"]
@@ -692,6 +753,11 @@ def run_qualification(source, output):
         run(["node", str(Path(__file__).resolve().with_name("crewroom-runtime-cause-reporter-smoke.mjs"))],
             env={**child_env, "CREWROOM_QUALIFICATION_DEPENDENCY_ROOT": str(source)})
         receipt["stages"][stage] = {"status": "passed"}
+        if phase_enabled:
+            stage = "phase_overlay_smoke"
+            run(["node", str(Path(__file__).resolve().with_name("crewroom-runtime-phase-smoke.mjs"))],
+                timeout=60, env={**child_env, "CREWROOM_QUALIFICATION_DEPENDENCY_ROOT": str(source)})
+            receipt["stages"][stage] = {"status": "passed", "diagnosticOnly": True}
         stage = "debug_binaries"
         run(["cargo", "build", "--manifest-path", "packages/paperclip-runner/runner/Cargo.toml", "--locked", "-j", "2",
              "-p", "paperclip-runner-core", "--bin", "paperclip-runnerd", "--bin", "fake-codex-app-server"], timeout=2400)
@@ -803,11 +869,18 @@ def run_qualification(source, output):
         stage = "remote_continuity"
         remote_report = private / "remote-report.json"
         remote_causes = private / "remote-causes.json"
+        phase_file = private / "remote-phases.json" if phase_enabled else None
         partial_file, partial_expected = remote_causes, REMOTE_CASES
         remote_env = {**child_env, "CREWROOM_QUALIFICATION_SOURCE_ROOT": str(source), "CREWROOM_QUALIFICATION_CAUSE_OUTPUT": str(remote_causes), "NODE_EXTRA_CA_CERTS": str(cert), "PAPERCLIP_TEST_RUNNER_TLS_KEY": str(key),
                       "PAPERCLIP_TEST_RUNNER_CONTAINER": name, "PAPERCLIP_TEST_RUNNER_PORT": port.rsplit(":", 1)[1],
                       "PAPERCLIP_TEST_LINUX_RUNNER_BINARY": str(runner), "PAPERCLIP_TEST_FAKE_CODEX_WRAPPER": str(wrapper)}
-        code = run(["pnpm", "exec", "vitest", "run", "--project", "@paperclipai/server", RECOVERY_FILE,
+        phase_args = []
+        if phase_enabled:
+            phase_config, overlay_receipt = prepare_phase_overlay(source, private)
+            receipt["stages"]["phase_overlay"] = {**overlay_receipt, "helperRevision": helper_revision}
+            remote_env["CREWROOM_QUALIFICATION_PHASE_OUTPUT"] = str(phase_file)
+            phase_args = ["--config", str(phase_config)]
+        code = run(["pnpm", "exec", "vitest", "run", *phase_args, "--project", "@paperclipai/server", RECOVERY_FILE,
                     "-t", "preserves remote warm continuity across completed turns:", "--maxWorkers=1", "--includeTaskLocation", "--reporter=json", "--reporter=" + cause_reporter, "--outputFile=" + str(remote_report)],
                    timeout=1200, env=remote_env, allow_failure=True)
         report = read_stock_report(remote_report)
@@ -815,6 +888,8 @@ def run_qualification(source, output):
         counts["cases"] = report_diagnostics(report, REMOTE_CASES, source)
         attach_cause_diagnostics(counts, remote_causes, REMOTE_CASES)
         counts["exitCode"] = code
+        if phase_file:
+            counts["phaseDiagnostics"] = phase_diagnostics(phase_file)
         if code != 0:
             counts["status"] = "failed"
         receipt["stages"][stage] = counts
@@ -822,7 +897,7 @@ def run_qualification(source, output):
         stage = "source_integrity"
         run(["git", "diff", "--exit-code", "HEAD", "--"])
         receipt["stages"][stage] = {"status": "passed"}
-        receipt["status"] = "passed" if qualification_passed else "failed"
+        receipt["status"] = "diagnostic_only" if qualification_passed and phase_enabled else "passed" if qualification_passed else "failed"
     except BaseException as error:
         failure = receipt["stages"].setdefault(stage, {})
         failure["status"] = "failed"
@@ -832,6 +907,8 @@ def run_qualification(source, output):
         if stage in ["local_real_processes", "remote_continuity"]:
             failure["stockGate"] = "incomplete"
             failure["partialDiagnostics"] = partial_diagnostics(partial_file, partial_expected)
+            if stage == "remote_continuity" and phase_file:
+                failure["phaseDiagnostics"] = phase_diagnostics(phase_file)
         receipt["status"] = "failed"
     finally:
         for event in [signal.SIGINT, signal.SIGTERM]:

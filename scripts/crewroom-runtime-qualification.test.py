@@ -55,6 +55,50 @@ class ReceiptGateTests(unittest.TestCase):
                 qualification.revision(value)
 
 
+class PassivePhaseTests(unittest.TestCase):
+    def snapshot(self):
+        return {"version": 1, "status": "available", "diagnosticOnly": True, "workerCwdRelation": "product_root", "pulseCount": 9,
+                "lastPulseMs": 9000, "active": [{"title": qualification.REMOTE_CASES[0], "phase": "execute_session", "invocation": 1}],
+                "events": [{"title": qualification.REMOTE_CASES[0], "phase": "docker_execute", "invocation": 2, "edge": "leave", "sequence": 3,
+                            "elapsedMs": 10, "exitCode": 0, "timedOut": False, "private": "SYNTHETIC_PRIVATE_PHASE"}], "private": "SYNTHETIC_PRIVATE_PHASE"}
+
+    def test_phase_snapshot_reconstructs_only_bounded_enums_and_numbers(self):
+        with tempfile.TemporaryDirectory() as directory:
+            filename = Path(directory) / "phases.json"
+            filename.write_text(json.dumps(self.snapshot()))
+            result = qualification.phase_diagnostics(filename)
+            self.assertEqual(result["status"], "available")
+            self.assertEqual(result["workerCwdRelation"], "product_root")
+            self.assertEqual(result["active"][0]["phase"], "execute_session")
+            self.assertNotIn("SYNTHETIC_PRIVATE_PHASE", json.dumps(result))
+
+    def test_invalid_phase_title_type_and_bounds_fail_closed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            filename = Path(directory) / "phases.json"
+            for key, value in [("title", "private"), ("phase", "private"), ("invocation", True), ("sequence", 10000000), ("edge", "private")]:
+                report = self.snapshot()
+                report["events"][0][key] = value
+                filename.write_text(json.dumps(report))
+                self.assertEqual(qualification.phase_diagnostics(filename)["status"], "unavailable")
+
+    def test_generated_overlay_leaves_original_sources_and_cwd_contract_intact(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source, private = Path(directory) / "product", Path(directory) / "private"
+            (source / "server").mkdir(parents=True)
+            private.mkdir()
+            original = source / "server/vitest.config.ts"
+            original.write_text("export default {test:{setupFiles:['./original.ts']}};")
+            before = original.read_bytes()
+            config, receipt = qualification.prepare_phase_overlay(source, private)
+            self.assertEqual(original.read_bytes(), before)
+            text = config.read_text()
+            for contract in ["...original", "configFile:false", "...original.test", "...original.test.setupFiles", 'name:"@paperclipai/server"']:
+                self.assertIn(contract, text)
+            self.assertNotIn("chdir", text)
+            self.assertTrue(receipt["diagnosticOnly"])
+            self.assertEqual(receipt["configSha256"], qualification.digest(config))
+
+
 class SafeDiagnosticsTests(unittest.TestCase):
     source = Path("/synthetic/product")
 
