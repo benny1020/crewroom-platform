@@ -71,15 +71,18 @@ docker compose --env-file deploy/crewroom/.env -f deploy/crewroom/compose.yaml u
 # 바뀐 대화·권한 경계: disposable PostgreSQL 사용
 pnpm --dir server exec vitest run src/__tests__/agent-conversations.test.ts src/__tests__/crewroom-capabilities.test.ts
 
-# 전체 저장소의 PR 준비 검사
+# workspace 타입 검사·빌드와 root config에 등록된 회귀 검사
 pnpm -r typecheck
 pnpm test:run
 pnpm build
+
+# root project 목록과 별도로 실행하는 runner 연결 모듈 회귀
+pnpm --dir packages/paperclip-runner exec vitest run src/control-plane/durable-prp-control-plane.test.ts --maxWorkers=1
 ```
 
 최신 통과 수·실패 이력·미검증 범위는 [리뷰 기록](doc/crewroom/REVIEW.ko.md)과 [foundation receipt](doc/plans/2026-10-28-crewroom-paperclip-foundation.md)에 구분해 남깁니다. fixture와 로컬 DB 검사는 실제 Claude custom endpoint의 추론·도구·중단·재개 품질 증거가 아닙니다. [Claude endpoint 안내](crewroom/CLAUDE-ENDPOINT.md)를 따라 실제 연결을 별도로 확인합니다.
 
-현재 제품 소스 [`0fcae122`](https://github.com/benny1020/crewroom-platform/commit/0fcae1225dc5709e865db6d5504368da23d1e39d)는 버퍼 메시지가 연결 초기화 전에 도착할 때 종료가 반복되는 문제를 수정합니다. 관련 전체 171개·타입 검사와 관측 도구 없는 원 warm 한 사례가 통과했습니다. 새 SHA의 [기본 CI](https://github.com/benny1020/crewroom-platform/actions/runs/40777148891)·[전체 회귀](https://github.com/benny1020/crewroom-platform/actions/runs/40777148731)·[이미지](https://github.com/benny1020/crewroom-platform/actions/runs/40777148718)·[원본 실행 복구 13개](https://github.com/benny1020/crewroom-platform/actions/runs/40777149218)는 진행 중이며, 아래 이전 검증 수를 새 소스의 통과 수로 승계하지 않습니다.
+현재 제품 소스 [`0fcae122`](https://github.com/benny1020/crewroom-platform/commit/0fcae1225dc5709e865db6d5504368da23d1e39d)는 버퍼 메시지가 연결 초기화 전에 도착할 때 종료가 반복되는 문제를 수정합니다. 관련 전체 171개·타입 검사와 관측 도구 없는 원 warm 한 사례가 통과했습니다. 새 SHA의 [기본 CI](https://github.com/benny1020/crewroom-platform/actions/runs/40777148891)·[등록된 project의 전체 회귀](https://github.com/benny1020/crewroom-platform/actions/runs/40777148731)·[이미지](https://github.com/benny1020/crewroom-platform/actions/runs/40777148718)는 진행 중입니다. [원본 실행 복구 13개](https://github.com/benny1020/crewroom-platform/actions/runs/40777149218)는 11개 통과, legacy·changed 복구 2개 실패로 추가 확인 중입니다. 아래 이전 검증 수를 새 소스의 통과 수로 승계하지 않으며, root project에 없는 runner 모듈 검사는 [별도 workflow](.github/workflows/crewroom-runner-control-plane.yml)로 구분합니다.
 
 아래는 2026-10-29 기준 이전 제품 소스 [`5d2b242`](https://github.com/benny1020/crewroom-platform/commit/5d2b242658efe63c10c495bf526b329db2f2f064)의 검증 결과입니다. 문서·검증 helper commit과 제품 revision은 구분합니다.
 

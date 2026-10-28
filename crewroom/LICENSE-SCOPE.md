@@ -3,11 +3,12 @@
 The [BSD Zero Clause license](LICENSE) applies to original Crewroom contributions at the following paths. References below are relative to the repository root. This scope does not replace the licenses of copied or derived third-party material.
 
 - `README.md`, `PRODUCT.md`, `THIRD_PARTY_NOTICES.md`
-- `.github/workflows/crewroom-image.yml`, `.github/workflows/crewroom-runtime-qualification.yml`
+- `.github/workflows/crewroom-image.yml`, `.github/workflows/crewroom-runtime-qualification.yml`, `.github/workflows/crewroom-runner-control-plane.yml`
 - `doc/crewroom/**`
 - `doc/plans/2026-10-28-crewroom-paperclip-foundation.md`
 - `deploy/crewroom/**`, excluding credentials, environment files, runtime state and private snapshots
 - `scripts/crewroom-bootstrap.mjs`, `scripts/crewroom-dev.mjs`, `scripts/crewroom-capture.mjs`, `scripts/setup-impeccable.py`, `scripts/crewroom-runtime-qualification.py`, `scripts/crewroom-runtime-qualification.test.py`, `scripts/crewroom-runtime-reaper-proof.py`, `scripts/crewroom-runtime-cause-reporter.mjs`, `scripts/crewroom-runtime-cause-reporter.test.mjs`, `scripts/crewroom-runtime-cause-reporter-smoke.mjs`
+- `scripts/crewroom-runner-control-plane.py`, `scripts/crewroom-runner-control-plane.test.py`
 - `ui/src/pages/Crewroom.tsx`
 - `scripts/crewroom-runtime-phase-core.mjs`, `scripts/crewroom-runtime-phase-core.test.mjs`, `scripts/crewroom-runtime-phase-setup.mjs`, `scripts/crewroom-runtime-phase-smoke.mjs`
 - `scripts/crewroom-runtime-stack-worker.mjs`, `scripts/crewroom-runtime-stack-worker.test.mjs`, `scripts/crewroom-runtime-stack-smoke.mjs`, `scripts/crewroom-runtime-export-binaries.py`, `scripts/crewroom-runtime-export-binaries.test.py`

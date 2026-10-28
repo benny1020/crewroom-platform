@@ -2,7 +2,7 @@
 
 2026-10-28 · Astra 설계·코드 리뷰 · Sol 제품 구현
 
-**2026-10-29 현재 판정: R10 제품 `0fcae1225dc5709e865db6d5504368da23d1e39d`의 연결 초기화 순서 수리, 해당 owner 전체 171개·타입 검사와 관측 도구 없는 Mac 원 warm 1개를 수용한다. 새 제품의 기본·전체·이미지·원본 Linux 13개 CI는 진행 중이다.** 이전 제품 `5d2b242658efe63c10c495bf526b329db2f2f064`의 기본 CI 3개 job·전체 CI 21개 job·production 이미지 인증/ACL/재시작/복원은 해당 소스의 통과 이력으로 보존한다. 그 소스의 remote warm 종료 정지는 아래 R10의 실제 재현과 수리로 연결했으며 새 SHA의 원격 수용은 별도 결과가 필요하다. [이전 집계 영수증](regression-receipt-5d2b242.json)의 실제 고유 사례 45,761개·실패 0·retry 0·조건부 skip 100개나 더 오래된 `13e79d1`의 45,760개를 새 소스로 승계하지 않는다. 전체 Crewroom 확장 요구의 완료, 실제 모델·GitLab 연결이나 EC2 운영 배포 승인을 뜻하지 않는다. 아래에는 수정 전 실패와 수정 후 증거를 함께 보존한다.
+**2026-10-29 현재 판정: R10 제품 `0fcae1225dc5709e865db6d5504368da23d1e39d`의 연결 초기화 순서 수리、해당 owner 전체 171개·타입 검사와 관측 도구 없는 Mac 원 warm 1개를 수용한다. 원본 Linux 13개는 11개 통과·legacy/changed 2개 실패이며 기본·전체·이미지 CI는 진행 중이다.** 이전 제품 `5d2b242658efe63c10c495bf526b329db2f2f064`의 기본 CI 3개 job·전체 CI 21개 job·production 이미지 인증/ACL/재시작/복원은 해당 소스의 통과 이력으로 보존한다. 그 소스의 remote warm 종료 정지는 아래 R10의 실제 재현과 수리로 연결했으며 새 SHA의 나머지 원격 복구는 별도 수리가 필요하다. [이전 집계 영수증](regression-receipt-5d2b242.json)의 실제 고유 사례 45,761개·실패 0·retry 0·조건부 skip 100개나 더 오래된 `13e79d1`의 45,760개를 새 소스로 승계하지 않는다. 전체 Crewroom 확장 요구의 완료, 실제 모델·GitLab 연결이나 EC2 운영 배포 승인을 뜻하지 않는다. 아래에는 수정 전 실패와 수정 후 증거를 함께 보존한다.
 
 ## 검토 대상과 유지한 경계
 
@@ -196,6 +196,10 @@ Mac의 원본 stock warm 사례를 별도로 재현해 90초 관측 제한에 �
 수리는 객체 생성, 소유 Set 등록, wire listener 활성화의 순서로 한정했다. drain의 Map을 강제로 비우거나 반복문에 yield를 넣지 않았으며 기존 정지·인증·lease·checkpoint·처리 완료 검사를 유지한다. 실제 export와 동기 buffered wire를 사용한 독립 child 재현은 수정 전 5초 상한에서 중단됐고, 같은 재현이 수정 후 약 0.12초에 drain·retirement·정상 종료를 완료했다. 한 연결·두 연결의 buffered frame과 이미 닫힌 wire 세 회귀를 추가했다. held commit/rejection·auth revocation·ingress gate를 포함한 집중 8개, 해당 owner 파일 전체 171개(skip 0), runner 전체 타입 검사가 통과했다. 새 제품 SHA의 실제 warm 및 원본 Linux 8+5·기본/전체/이미지 수용은 후속 결과로 별도 기록한다.
 
 제품 `0fcae1225dc5709e865db6d5504368da23d1e39d`의 후속 Mac 원 stock warm 사례는 overlay·inspector·profiler·sample 없이 실제 1/1 통과·실패 0·선택 skip 0으로 정상 종료했다. 다른 50개 필터 제외는 통과 수가 아니다. 원 fixture 180초와 로컬 관측 90초는 유지했고, test 프로세스/그룹·PG·컨테이너·private 자료 정리 네 항목을 모두 확인했다. 재사용한 두 ELF는 Rust 소스가 바뀌지 않은 5d 빌드 산출물이며 JS 제품 revision과 구분했다. [기본](https://github.com/benny1020/crewroom-platform/actions/runs/40777148891)·[전체](https://github.com/benny1020/crewroom-platform/actions/runs/40777148731)·[이미지](https://github.com/benny1020/crewroom-platform/actions/runs/40777148718)·[원본 Linux 13개](https://github.com/benny1020/crewroom-platform/actions/runs/40777149218)는 이 새 제품의 별도 수용 실행이다.
+
+이후 원본 Linux 실행 `40777149218`은 실제 프로세스 8/8과 remote warm·hard·same-server 3개를 통과했다. 첫 warm의 종료 무한 반복은 관측 도구 없는 Linux 원 사례에서도 해소됐다. remote legacy·changed 두 사례는 실패했고 5개 모두 실행·선택 skip 0·stock exit 1이었다. cause는 실행 호출 경계의 executor 9137/9129/7930으로만 정제되어 실제 세부 오류 확인이 필요하다. 소스 무변경, 최초/복구 프로세스·컨테이너·private 정리는 모두 통과했다. 공식 artifact ZIP digest `55b7345b3ef00f6674e9284c76817406538bc2af1ea77dc742d94e699130ea96`를 대조했다. 11/13을 전체 수용으로 바꾸지 않는다.
+
+또한 root config와 기존 21개 matrix에는 runner package project가 없어 신규 owner 회귀 3개가 그 합계에 포함되지 않는 점을 확인했다. 별도 source-pinned control-plane workflow가 해당 원 파일 전체를 검사하도록 추가했으며, 실제 결과는 root configured-project 집계와 분리한다. 로컬 171개를 원격 full 합계에 더하지 않는다.
 
 ## 공개 소스 점검 범위
 

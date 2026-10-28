@@ -73,3 +73,12 @@ Python helper는 1,000줄을 넘지만 단일 Popen·command-scoped subreaper·o
 `export_diagnostic_binaries`는 기본 false이고 `diagnostic_phases=true`일 때만 허용한다. 선택하면 Cargo locked build 직후, runtime 사용 전에 공개 소스에서 생성된 runnerd/fake-codex 두 파일만 새 staging directory로 복사한다. 원본 mode는 유지하고 copy를 읽기/실행 가능한 mode로 지정한다. 고정 manifest에는 product/helper SHA, toolchain/target, Cargo.lock SHA, 빌드 직후 SHA와 copy SHA, upstream MIT notice와 해당 commit의 third-party notices 링크·SHA를 기록한다. 최종 업로드 직전에 원본·copy hash와 최초 manifest의 receipt SHA를 다시 검사하며 unknown entry/field와 symlink를 거부한다.
 
 이 선택적 artifact는 정확한 두 실행파일과 manifest만 별도 이름으로 최대 3일 보존한다. DB·session·TLS·환경·원문 로그·snapshot·추가 glob 파일은 포함하지 않는다. 기본 artifact는 계속 receipt만이다. 실행파일은 Paperclip MIT와 의존성 라이선스 범위이며 Crewroom 0BSD로 재지정하지 않는다. 내려받은 파일은 manifest의 product/source·toolchain·SHA를 대조한 뒤 격리된 로컬 재현에 사용할 수 있고, artifact 보존 자체는 runtime 통과 증거가 아니다.
+
+
+## Runner control-plane 파일 전체 회귀
+
+root Vitest와 21개 전체 회귀 작업은 root config에 등록된 **configured projects** 범위를 검사한다. `packages/paperclip-runner`는 이 project 목록에 없으므로 runner package 내부의 검사 수를 root 회귀 합계에 자동으로 더하지 않는다.
+
+별도 `Crewroom runner control-plane regression` workflow는 owner 소스·검사·설정 또는 자체 CI helper가 main에 바뀔 때 실행하며, 수동 실행은 40자리 제품 SHA를 필수로 받는다. infrastructure와 제품을 별도 checkout하고 제품 package의 원래 Vitest config에서 `durable-prp-control-plane.test.ts` 전체를 worker 하나로 실행한다. Rust build·필터·제외·관측 overlay는 사용하지 않는다. 현재 `0fcae122`의 로컬 전체 수는 171개이며 Linux 통과 증거는 별도 workflow receipt가 필요하다.
+
+공개 artifact는 제품/helper SHA, owner 소스·검사 파일 SHA-256, 실행 시도·시작·완결 여부, 원 exit code, 전체 실제 pass/fail/skip 수, 고정 신규 회귀 3개의 각 1회 passed 여부와 준비 전·후 및 검사 후 제품 git clean 확인을 담은 receipt 하나뿐이다. 원 JSON·실패 메시지·로그는 private `0700`/`0600`에 두고 업로드하지 않는다. 전체 skip·실패가 없고, 정확한 단일 파일 실행이 완결되며, 신규 3개가 중복 없이 모두 통과하고, exit 0과 제품 무변경이 함께 확인돼야 이 workflow를 통과한다. 이후 검사 추가를 막지 않도록 171을 성공 상수로 하드코딩하지 않는다.

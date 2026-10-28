@@ -1,0 +1,100 @@
+name: Crewroom runner control-plane regression
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - packages/paperclip-runner/src/control-plane/durable-prp-control-plane.ts
+      - packages/paperclip-runner/src/control-plane/durable-prp-control-plane.test.ts
+      - packages/paperclip-runner/vitest.config.ts
+      - .github/workflows/crewroom-runner-control-plane.yml
+      - scripts/crewroom-runner-control-plane.py
+      - scripts/crewroom-runner-control-plane.test.py
+  workflow_dispatch:
+    inputs:
+      source_revision:
+        description: Exact product commit (40 lowercase hexadecimal characters)
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crewroom-runner-core-${{ inputs.source_revision || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  owner-regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      PRODUCT_REVISION: ${{ github.event_name == 'workflow_dispatch' && inputs.source_revision || github.sha }}
+      HELPER_REVISION: ${{ github.sha }}
+      PAPERCLIP_TELEMETRY_DISABLED: '1'
+      PAPERCLIP_ANNOUNCEMENTS_ENABLED: 'false'
+      HEARTBEAT_SCHEDULER_ENABLED: 'false'
+      NODE_OPTIONS: --max-old-space-size=2048
+      GOMAXPROCS: '2'
+      GOMEMLIMIT: 2GiB
+    steps:
+      - name: Set this run's private evidence location
+        run: echo "PRIVATE_EVIDENCE=$RUNNER_TEMP/crewroom-runner-core-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_ENV"
+      - name: Checkout regression infrastructure
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          path: runner-infra
+          persist-credentials: false
+      - name: Validate immutable revisions and receipt gates offline
+        run: |
+          python3 runner-infra/scripts/crewroom-runner-control-plane.py validate
+          PYTHONDONTWRITEBYTECODE=1 python3 runner-infra/scripts/crewroom-runner-control-plane.test.py
+      - name: Checkout the exact product separately
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ env.PRODUCT_REVISION }}
+          path: runner-product
+          persist-credentials: false
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        with:
+          version: 9.15.4
+          package_json_file: runner-product/package.json
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.14.0
+      - name: Bind clean product files before dependency preparation
+        run: python3 runner-infra/scripts/crewroom-runner-control-plane.py prepare --private "$PRIVATE_EVIDENCE"
+      - name: Install frozen dependencies and prepare workspace links
+        working-directory: runner-product
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          pnpm install --frozen-lockfile > "$PRIVATE_EVIDENCE/install.log" 2>&1
+          pnpm preflight:workspace-links > "$PRIVATE_EVIDENCE/prepare.log" 2>&1
+          pnpm --filter @paperclipai/plugin-sdk ensure-build-deps >> "$PRIVATE_EVIDENCE/prepare.log" 2>&1
+      - name: Execute the entire owner file using its original package configuration
+        working-directory: runner-product/packages/paperclip-runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          python3 "$GITHUB_WORKSPACE/runner-infra/scripts/crewroom-runner-control-plane.py" start --source "$GITHUB_WORKSPACE/runner-product" --private "$PRIVATE_EVIDENCE"
+          set +e
+          pnpm exec vitest run src/control-plane/durable-prp-control-plane.test.ts --maxWorkers=1 --reporter=json --outputFile="$PRIVATE_EVIDENCE/report.json" > "$PRIVATE_EVIDENCE/test.log" 2>&1
+          code=$?
+          printf '%s\n' "$code" > "$PRIVATE_EVIDENCE/exit.txt"
+          exit "$code"
+      - name: Validate and publish only the sanitized stock receipt
+        if: always()
+        run: python3 runner-infra/scripts/crewroom-runner-control-plane.py finalize --private "$PRIVATE_EVIDENCE"
+      - name: Preserve the safe receipt only
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: crewroom-runner-control-plane-${{ env.PRODUCT_REVISION }}-${{ github.run_attempt }}
+          path: runner-public/receipt.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Remove only this run's private raw evidence
+        if: always()
+        run: python3 runner-infra/scripts/crewroom-runner-control-plane.py clean --private "$PRIVATE_EVIDENCE"
