@@ -2,7 +2,7 @@
 
 2026-10-28 · Astra 설계·코드 리뷰 · Sol 제품 구현
 
-**2026-10-29 현재 판정: 새 제품 5d2b242의 기본 CI 3개 job·전체 CI 21개 job·production 이미지 인증/ACL/재시작/복원을 수용한다. 추가 runtime qualification의 remote 단계는 실패 원인 미확정으로 남는다.** 제품 SHA는 `5d2b242658efe63c10c495bf526b329db2f2f064`다. 이전 기준선 `13e79d1a419ce1930b641edb8d587a23555dc535`의 45,760개 통과 수는 별도 역사적 증거이며 새 SHA로 승계하지 않는다. [새 집계 영수증](regression-receipt-5d2b242.json)은 실제 고유 사례 45,761개 통과·실패 0·retry 0, 조건부 skip 100개를 확인한다. 전체 Crewroom 확장 요구의 완료, 실제 모델·GitLab 연결이나 EC2 운영 배포 승인을 뜻하지 않는다. 아래에는 수정 전 실패와 수정 후 증거를 함께 보존한다.
+**2026-10-29 현재 판정: 새 제품 5d2b242의 기본 CI 3개 job·전체 CI 21개 job·production 이미지 인증/ACL/재시작/복원을 수용한다. 추가 runtime qualification은 첫 remote warm 사례 실행 중 host의 1,200초 제한에 도달했으며, 내부 정지 원인은 미확정이다.** 제품 SHA는 `5d2b242658efe63c10c495bf526b329db2f2f064`다. 이전 기준선 `13e79d1a419ce1930b641edb8d587a23555dc535`의 45,760개 통과 수는 별도 역사적 증거이며 새 SHA로 승계하지 않는다. [새 집계 영수증](regression-receipt-5d2b242.json)은 실제 고유 사례 45,761개 통과·실패 0·retry 0, 조건부 skip 100개를 확인한다. 전체 Crewroom 확장 요구의 완료, 실제 모델·GitLab 연결이나 EC2 운영 배포 승인을 뜻하지 않는다. 아래에는 수정 전 실패와 수정 후 증거를 함께 보존한다.
 
 ## 검토 대상과 유지한 경계
 
@@ -100,7 +100,7 @@ private source 보호는 기존 `issueService.create`의 run provenance 상속�
 | 현재 UI visual review | 원본 캐릭터·대화 CTA·실제 paused 상태·명시적 scene preview를 확인. 최신 `media/team-1440x900.png`, `private-chat.png`, `task-opinion.png`, `task-revision.png`와 receipt가 실제 로컬 화면을 기록. 오류·빈 데이터·read-only 대체 응답은 `*.fixture.png`로 구분. [최종 시각 리뷰](UI-REVIEW.ko.md) 참조 |
 | Docker build/auth/restart/data persistence | 13e image CI 전체 통과: 실제 admin/viewer 인증·private 대화/첨부 ACL·재시작·DB/파일/환경 snapshot·새 프로젝트 복원·원본/복원 재검사. 첫 health 및 초대 202 harness 실패 이력은 보존 |
 | 새 5d2b242 전체 CI·이미지 | 기본 3/3·전체 21/21 job 및 이미지 인증·ACL·재시작·복원 통과. [새 영수증](regression-receipt-5d2b242.json): 실제 고유 사례 45,761개 통과·실패 0·retry 0, 조건부 skip 100개, 43/43 Vitest 호출 완료. 13e 수치를 승계하지 않음 |
-| 추가 runtime qualification | 최신 5d2b242 local 8/8·remote 준비 통과 후 remote 단계 실패. 사례별 완료 JSON이 없어 timeout·사례별 실패 수 미확정. 최초 프로세스·컨테이너 정리 통과, private fixture 삭제는 미확인. 실제 모델 검사가 아님 |
+| 추가 runtime qualification | 5d2b242 재실행 `40752013695`: local 8/8·remote 준비 통과, 첫 warm 사례 실행 중 host 1,200초 timeout 확인·나머지 4개 미시작. 내부 원인 미확정·stock report 미완결. 프로세스·컨테이너·private·always cleanup 통과. 현재 `40759000007`은 진단 전용이며 최종 stock 13개 통과를 대신하지 않음 |
 | 실제 model/tool/resume/stop, GitLab, EC2 | 미검증 |
 
 이전 실패도 유지한다. 잘못된 cwd의 최초 Vitest 호출은 tests를 찾지 못했다. 처음 privacy 회귀 assertion은 기존 403과 404 계약을 혼동했고 수정됐다. 초기 optional Copilot materialization은 실패 후 공식 installer로 회복됐지만 중단 원인은 확정되지 않았다. 최종 통과 일부만으로 이 이력을 지우지 않는다.
@@ -173,7 +173,13 @@ GNU tar를 capability 없는 UID 0으로 실행할 때 중첩 read-only director
 
 독립적인 non-root read-only fixture에서는 기존 `shutil.rmtree`의 PermissionError를 재현했다. 후속 CI-only helper는 프로세스·컨테이너 종료 확인 후에만 정확한 임시 경로를 FD/O_NOFOLLOW로 열고, root와 부모 및 하위 디렉터리의 소유 UID·device·mount identity를 확인한다. 소유한 디렉터리만 owner 권한을 보완하며 symlink는 대상에 접근하지 않고 link만 제거한다. owner marker는 마지막에 정리하고 `privateCleanup` 성공/실패를 receipt에 남긴다. 이 재현은 별도 helper 결함의 증거이며 원래 remote 단계 실패의 원인이라는 뜻은 아니다.
 
-같은 helper는 공식 Vitest start/end·case·hook 이벤트마다 private 0600 atomic snapshot을 저장한다. 실행 중 중단한 작은 실제 Vitest에서 첫 사례 완료·둘째 실행 중·셋째 미시작을 보존했고 stock JSON의 실패 수는 바꾸지 않았다. Python이 필드를 다시 제한하며 부분 결과는 진단 전용으로만 사용한다. 누락된 stock report를 통과 사례 수로 대신하지 않으며 13개 gate·1200초 제한·제품 fixture는 유지한다. 다음 실행은 고정된 stage failure enum으로 host timeout·누락/잘못된 report·그 밖의 실패를 구분한다. Python 43개·Node 8개·실제 cause/partial API smoke·YAML·diff 검사를 통과해 helper 소스를 수용했다. helper `4dceaa4432b3c9802befb20e8a0818c688f50626`로 정확히 같은 제품 5d2b242를 검사하는 재실행 `40752013695`는 진행 중이다. 완료 결과가 필요하며, 이 CI-only 수정 때문에 제품 소스가 바뀐 것은 아니다.
+같은 helper는 공식 Vitest start/end·case·hook 이벤트마다 private 0600 atomic snapshot을 저장한다. 실행 중 중단한 작은 실제 Vitest에서 첫 사례 완료·둘째 실행 중·셋째 미시작을 보존했고 stock JSON의 실패 수는 바꾸지 않았다. Python이 필드를 다시 제한하며 부분 결과는 진단 전용으로만 사용한다. 누락된 stock report를 통과 사례 수로 대신하지 않으며 13개 gate·1,200초 제한·제품 fixture는 유지한다. 고정된 stage failure enum으로 host timeout·누락/잘못된 report·그 밖의 실패를 구분한다. Python 43개·Node 8개·실제 cause/partial API smoke·YAML·diff 검사를 통과해 helper 소스를 수용했다.
+
+helper `4dceaa4432b3c9802befb20e8a0818c688f50626`로 같은 제품 5d2b242를 검사한 `40752013695`는 `host_command_timeout`으로 종료됐다. 이번에는 1,200초 host timeout이 확인됐다. 부분 snapshot에서 beforeAll은 약 14.4초, beforeEach는 약 14.5초에 끝났고 첫 warm 사례만 약 14.5초부터 실행 중이었다. 나머지 4개는 미시작이며 후속 hook·case 종료·cause frame은 없다. 따라서 다섯 사례가 각각 실패했다고 세거나 event loop 정지·checkpoint 결함 중 하나를 확정하지 않는다. 최초 프로세스·컨테이너·private fixture 정리와 always 단계의 이미 부재 확인은 모두 통과했다. 이 결과를 앞선 `40744500551`의 미관측 예외에 소급 적용하지 않는다.
+
+CI 전용 helper `cf0b624`의 opt-in phase overlay를 소스 검토했다. Python 46개·Node 11개와 작은 실제 Vitest의 stock 2/2·overlay 2/2 비교에서 설정·기존 setup·canonical cwd·원 Promise와 예외 보존을 확인했다. 고정 함수 단계·Docker 호출 순번·sync tar/ps·실제 timer pulse만 private 0600 sidecar에 기록하며 제품·fixture·시간 제한·13개 gate는 바꾸지 않는다. 같은 제품의 `40759000007`은 이 overlay를 켠 **진단 전용 실행으로 진행 중**이다. 모든 사례가 통과해도 `diagnosticOnly:true`, `stockQualification:false`, `diagnostic_only` 및 비성공 종료로 남으며 최종 수용에는 overlay를 끈 원래 8+5 검사가 필요하다.
+
+공식 upstream `25f1070fbdabd96b26cdf199e624a77905f3ca37`의 canonical checkpoint bootstrap 수정은 조사 후보이며 적용하지 않았다. `820c458465fa40137c81fe510f3e6dc573b4f895`의 remote per-turn 복원과 `a2fbce9305c48f5242e6bafb19d049d29edc1d72`의 plugin task/directory 재사용도 채택하지 않았다. 기본 Claude `runner:auto`는 지원 호스트에서 ACPX Claude·per-turn으로 정규화되지만 환경 미설정 시 local이므로 두 수정의 원격/plugin 조건과 다르다. 새 실행 증거 없이 이 커밋들을 현재 정지의 원인이나 해결책으로 단정하지 않는다.
 
 ## 공개 소스 점검 범위
 
