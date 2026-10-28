@@ -187,6 +187,14 @@ helper `0e2b7311aafbc45a33a04648ac3367e6aa86d5e2`의 [진단 실행 `40768558880
 
 공식 upstream `25f1070fbdabd96b26cdf199e624a77905f3ca37`의 canonical checkpoint bootstrap 수정은 조사 후보이며 적용하지 않았다. `820c458465fa40137c81fe510f3e6dc573b4f895`의 remote per-turn 복원과 `a2fbce9305c48f5242e6bafb19d049d29edc1d72`의 plugin task/directory 재사용도 채택하지 않았다. 기본 Claude `runner:auto`는 지원 호스트에서 ACPX Claude·per-turn으로 정규화되지만 환경 미설정 시 local이므로 두 수정의 원격/plugin 조건과 다르다. 새 실행 증거 없이 이 커밋들을 현재 정지의 원인이나 해결책으로 단정하지 않는다.
 
+### R10 · P1 · 버퍼 메시지의 동기 전달과 연결 소유권 초기화 순서
+
+Mac의 원본 stock warm 사례를 별도로 재현해 90초 관측 제한에 도달한 뒤 소유 프로세스를 정리했다. 정확한 Vitest worker의 native sample은 main thread의 Promise microtask 반복을 관측했다. 이어 같은 Node 24.14.0의 V8 profiler로 원본 warm 한 사례를 진단했다. 동일 worker의 두 isolate 로그를 개별 분석한 결과 `durable-prp-control-plane.ts`의 `drainPendingConnectionProcessing`이 가장 많은 JavaScript sample을 차지했다. 원문 profile·native sample·처리문은 비공개 자료이며 이 수치를 테스트 통과 수나 성능 보장으로 사용하지 않는다.
+
+`WsJsonWireConnection.onJson`은 이미 받은 버퍼를 listener 등록 시 동기로 전달할 수 있다. 기존 `AuthorityConnection` constructor가 이 구독을 시작하면 `attachWireConnection`의 `connection` 대입 전에 processing Map이 `undefined` 키로 기록된다. 나중에 처리 완료 callback은 실제 connection 키를 조회하므로 해당 항목을 지우지 못하고, drain이 이미 완료한 Promise를 계속 기다리며 timer를 굶길 수 있다. 이미 닫힌 wire의 동기 close 전달도 삭제 후 stale connection 재등록을 만들 수 있었다.
+
+수리는 객체 생성, 소유 Set 등록, wire listener 활성화의 순서로 한정했다. drain의 Map을 강제로 비우거나 반복문에 yield를 넣지 않았으며 기존 정지·인증·lease·checkpoint·처리 완료 검사를 유지한다. 실제 export와 동기 buffered wire를 사용한 독립 child 재현은 수정 전 5초 상한에서 중단됐고, 같은 재현이 수정 후 약 0.12초에 drain·retirement·정상 종료를 완료했다. 한 연결·두 연결의 buffered frame과 이미 닫힌 wire 세 회귀를 추가했다. held commit/rejection·auth revocation·ingress gate를 포함한 집중 8개, 해당 owner 파일 전체 171개(skip 0), runner 전체 타입 검사가 통과했다. 새 제품 SHA의 실제 warm 및 원본 Linux 8+5·기본/전체/이미지 수용은 후속 결과로 별도 기록한다.
+
 ## 공개 소스 점검 범위
 
 원본 import commit의 tree는 기준 upstream tree `0433c5e7cebb9f2cfe20435a472bb72c49568cef`와 동일함을 별도 확인했다. 이는 source provenance 증거이며 자격증명이 없다는 증거는 아니다. Gitleaks 8.30.1의 redacted import scan 201개 finding을 원문 값 노출 없이 파일·행·문맥으로 분류했다.

@@ -4,6 +4,7 @@ import {
   createHash,
   createHmac,
 } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import {
   chmodSync,
   existsSync,
@@ -16,7 +17,7 @@ import { connect, type Socket } from "node:net";
 import nodeFs from "node:fs";
 import fsPromises from "node:fs/promises";
 import { createServer } from "node:http";
-import { syncBuiltinESMExports } from "node:module";
+import { createRequire, syncBuiltinESMExports } from "node:module";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 
@@ -2432,6 +2433,69 @@ it.each([false, true])(
     }
   },
 );
+
+it.each([1, 2])(
+  "drains synchronously buffered wire frames without starving timers (%s connections)",
+  (connectionCount) => {
+    const root = mkdtempSync(resolve(tmpdir(), "runner-buffered-wire-drain-"));
+    try {
+      // Keep a regression's microtask spin outside the Vitest worker: its own
+      // test timeout cannot fire while the broken drain starves that event loop.
+      const output = execFileSync(
+        process.execPath,
+        [
+          "--import",
+          createRequire(import.meta.url).resolve("tsx"),
+          "--input-type=module",
+          "--eval",
+          `import { DurablePrpControlPlane } from ${JSON.stringify(new URL("./durable-prp-control-plane.ts", import.meta.url).href)};
+          const core = new DurablePrpControlPlane(${JSON.stringify({ stateDirectory: root, identity, expectedRunnerVersion, expectedRunnerDigest })});
+          let closed = 0;
+          for (let index = 0; index < ${connectionCount}; index++) {
+            let onClose = () => {};
+            core.attachWireConnection({
+              onJson(listener) { listener({ protocol: "invalid-buffered-frame" }); },
+              onClose(listener) { onClose = () => listener({ message: "closed" }); },
+              close() { closed++; onClose(); },
+              sendJson() {},
+            });
+          }
+          await new Promise(resolveTurn => setImmediate(resolveTurn));
+          await core.stop();
+          await core.drainPendingConnectionProcessing();
+          core.retireSemanticToolCallbacks();
+          await new Promise(resolveTurn => setTimeout(resolveTurn, 0));
+          process.stdout.write(JSON.stringify({ closed, drained: true, timerFired: true }));`,
+        ],
+        { encoding: "utf8", timeout: 5000, stdio: ["ignore", "pipe", "pipe"] },
+      );
+      expect(JSON.parse(output)).toEqual({ closed: connectionCount, drained: true, timerFired: true });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  },
+  10000,
+);
+
+it("does not retain a ghost connection when a wire replays close during activation", async () => {
+  const root = mkdtempSync(resolve(tmpdir(), "runner-already-closed-wire-"));
+  const core = new DurablePrpControlPlane({ stateDirectory: root, identity, expectedRunnerVersion, expectedRunnerDigest });
+  try {
+    core.attachWireConnection({
+      onJson() {},
+      onClose(listener) { listener({ message: "already_closed" }); },
+      close() {},
+      sendJson() {},
+    });
+    // No stop() before this assertion: clearing the connection set would mask
+    // a constructor-time close followed by a stale connection being added.
+    await expect(core.drainPendingConnectionProcessing()).resolves.toBeUndefined();
+    expect(() => core.retireSemanticToolCallbacks()).not.toThrow();
+  } finally {
+    await core.stop();
+    rmSync(root, { recursive: true, force: true });
+  }
+});
 
 it("refuses a processing-drain absence claim while local or remote ingress remains admitted", async () => {
   const root = mkdtempSync(

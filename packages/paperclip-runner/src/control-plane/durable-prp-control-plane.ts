@@ -1693,6 +1693,7 @@ class AuthorityConnection {
   activationReceipt: DurableWarmRunTransition | null = null;
   readonly wire: PrpWireConnection;
   #closed = false;
+  #onJson: (value: unknown) => void;
   #onClose: () => void;
 
   constructor(input: {
@@ -1701,8 +1702,12 @@ class AuthorityConnection {
     onClose: () => void;
   }) {
     this.wire = input.wire;
+    this.#onJson = input.onJson;
     this.#onClose = input.onClose;
-    this.wire.onJson(input.onJson);
+  }
+
+  activate(): void {
+    this.wire.onJson(this.#onJson);
     this.wire.onClose(() => this.#markClosed());
   }
 
@@ -2537,6 +2542,9 @@ export class DurablePrpControlPlane {
       },
     });
     this.#connections.add(connection);
+    // A wire may synchronously replay buffered JSON or a close notification
+    // when subscribed. Publish its stable identity before either callback runs.
+    connection.activate();
     return {
       isAuthenticated: () => connection.secureChannel !== null,
     };
