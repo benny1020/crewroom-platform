@@ -269,6 +269,7 @@ class PipelineControlTests(unittest.TestCase):
                         raise AssertionError("next spawn raced a command reaper")
                     self.pid = 12345
                     commands.append(command)
+                    self.simulate_timeout = False
                     self.returncode = 0
                     self.stdout = b""
                     if command[:3] == ["git", "rev-parse", "HEAD"]:
@@ -314,8 +315,23 @@ class PipelineControlTests(unittest.TestCase):
                                 self.returncode = 1
                         destination = next(value for value in command if value.startswith("--outputFile="))
                         Path(destination.split("=", 1)[1]).write_text(json.dumps(value))
+                        if remote and mode in ["host_timeout", "missing_report", "invalid_report"]:
+                            destination_path = Path(destination.split("=", 1)[1])
+                            if mode == "invalid_report": destination_path.write_text("{")
+                            else: destination_path.unlink()
+                            if mode == "host_timeout":
+                                self.simulate_timeout = True
+                                cause_path = Path(_kwargs["env"]["CREWROOM_QUALIFICATION_CAUSE_OUTPUT"])
+                                cause_path.write_text(json.dumps({"version":2,"status":"available","complete":False,"cases":[
+                                    {"title":qualification.REMOTE_CASES[0],"status":"failed","chains":[]},
+                                    {"title":qualification.REMOTE_CASES[1],"status":"running","chains":[]}],"events":[
+                                    {"sequence":1,"type":"case_start","title":qualification.REMOTE_CASES[0],"elapsedMs":1},
+                                    {"sequence":2,"type":"case_end","title":qualification.REMOTE_CASES[0],"status":"failed","elapsedMs":2},
+                                    {"sequence":3,"type":"case_start","title":qualification.REMOTE_CASES[1],"elapsedMs":3}]}))
 
                 def communicate(self, timeout=None):
+                    if self.simulate_timeout:
+                        raise qualification.subprocess.TimeoutExpired(["synthetic"], timeout)
                     return self.stdout, None
 
                 def poll(self):
@@ -327,6 +343,7 @@ class PipelineControlTests(unittest.TestCase):
                      patch.object(qualification, "state_directory", return_value=root / "private"), \
                      patch.object(qualification.platform, "machine", return_value="x86_64"), \
                      patch.object(qualification.sys, "platform", "linux"), \
+                     patch.object(qualification, "private_mount_identity", return_value=1), \
                      patch.object(qualification.ctypes, "CDLL", return_value=SimpleNamespace(prctl=lambda *_args: 0)), \
                      patch.object(qualification.subprocess, "Popen", FakeProcess), \
                      patch.object(qualification, "AdoptedZombieReaper", FakeReaper), \
@@ -387,6 +404,22 @@ class PipelineControlTests(unittest.TestCase):
             self.assertEqual(receipt["stages"]["adopted_child_reaping"]["status"], "failed")
             self.assertEqual(receipt["stages"]["cleanup"]["status"], "failed" if mode == "reaper_join_failure" else "passed")
             self.assertEqual(len(commands), 1)
+
+    def test_outer_failure_classes_and_partial_results_never_pass_stock_gate(self):
+        for mode, expected in [("host_timeout","host_command_timeout"),("missing_report","missing_report"),("invalid_report","invalid_report_json")]:
+            code, receipt, _commands = self.run_mock_pipeline(mode)
+            self.assertEqual(code,1)
+            stage=receipt["stages"]["remote_continuity"]
+            self.assertEqual(stage["stageFailureClass"],expected)
+            self.assertEqual(stage["stockGate"],"incomplete")
+            self.assertNotIn("passed",stage)
+            if mode=="host_timeout":
+                self.assertEqual(stage["timeoutSeconds"],1200)
+                partial=stage["partialDiagnostics"]
+                self.assertEqual(partial["snapshotState"],"partial")
+                self.assertEqual([case["status"] for case in partial["cases"]], ["finished","running","not_started","not_started","not_started"])
+                self.assertEqual(partial["cases"][0]["observedResult"],"failed")
+                self.assertEqual(len(partial["events"]),3)
 
     def test_preparation_or_unconfirmed_cleanup_never_starts_remote(self):
         for mode in ["preparation_failure", "cleanup_failure"]:
@@ -467,6 +500,87 @@ class CleanupDiagnosticsTests(unittest.TestCase):
                 self.assertEqual(receipt["stages"]["initialCleanup"], initial)
                 self.assertEqual(receipt["status"], "failed")
                 self.assertEqual(private.exists(), not children_confirmed)
+
+
+class PrivateFixtureCleanupTests(unittest.TestCase):
+    def test_owned_readonly_tree_and_external_symlink_target_are_handled_without_file_chmod(self):
+        with tempfile.TemporaryDirectory(prefix="private-cleanup-offline-") as directory:
+            root=Path(directory);private=root/"private";private.mkdir();(private/"owner.json").write_text("{}")
+            asset=private/"asset";asset.mkdir();(asset/"file").write_text("inert");(asset/"file").chmod(0o444);asset.chmod(0o555)
+            outside=root/"outside";outside.mkdir();(outside/"sentinel").write_text("preserved");(outside/"sentinel").chmod(0o444);outside.chmod(0o555)
+            (private/"link").symlink_to(outside,target_is_directory=True)
+            detail={}
+            with patch.object(qualification,"state_directory",return_value=private):
+                self.assertTrue(qualification.cleanup_private_fixture(private,True,detail))
+            self.assertEqual(detail["reason"],"removed")
+            self.assertFalse(private.exists());self.assertEqual((outside/"sentinel").read_text(),"preserved")
+            self.assertEqual(outside.stat().st_mode&0o777,0o555);self.assertEqual((outside/"sentinel").stat().st_mode&0o777,0o444)
+            outside.chmod(0o700)
+
+    def test_unconfirmed_processes_and_symlink_root_are_not_followed(self):
+        with tempfile.TemporaryDirectory(prefix="private-cleanup-offline-") as directory:
+            root=Path(directory);private=root/"private";outside=root/"outside";outside.mkdir();(outside/"sentinel").write_text("preserved");private.symlink_to(outside,target_is_directory=True)
+            detail={}
+            with patch.object(qualification,"state_directory",return_value=private),patch.object(qualification.os,"fchmod") as chmod:
+                self.assertFalse(qualification.cleanup_private_fixture(private,False,detail));chmod.assert_not_called()
+                self.assertFalse(qualification.cleanup_private_fixture(private,True,detail));chmod.assert_not_called()
+            self.assertTrue(private.is_symlink());self.assertEqual((outside/"sentinel").read_text(),"preserved")
+
+    def test_foreign_entry_or_mount_fails_closed_and_preserves_owner_marker(self):
+        for mode in ["owner","mount"]:
+            with tempfile.TemporaryDirectory(prefix="private-cleanup-offline-") as directory:
+                root=Path(directory);private=root/"private";private.mkdir();(private/"owner.json").write_text("{}")
+                asset=private/"asset";asset.mkdir();(asset/"foreign").write_text("inert")
+                original_stat=qualification.os.stat
+                def changed_stat(name,*args,**kwargs):
+                    result=original_stat(name,*args,**kwargs)
+                    if name=="foreign":
+                        fields=list(result);fields[4]+=1;return os.stat_result(fields)
+                    return result
+                detail={}
+                with patch.object(qualification,"state_directory",return_value=private):
+                    if mode=="owner":
+                        with patch.object(qualification.os,"stat",side_effect=changed_stat):self.assertFalse(qualification.cleanup_private_fixture(private,True,detail))
+                        self.assertEqual(detail["reason"],"unsafe_owner")
+                    else:
+                        with patch.object(qualification,"private_mount_identity",side_effect=[1,1,1,2]):self.assertFalse(qualification.cleanup_private_fixture(private,True,detail))
+                        self.assertEqual(detail["reason"],"external_mount")
+                    self.assertTrue((private/"owner.json").exists())
+                    self.assertTrue(qualification.cleanup_private_fixture(private,True,{}))
+
+    def test_missing_owner_after_old_readonly_failure_is_recovered_only_from_trusted_settlement(self):
+        with tempfile.TemporaryDirectory(prefix="cleanup-old-shape-") as directory:
+            root=Path(directory);private=root/"private";private.mkdir();asset=private/"asset";asset.mkdir();(asset/"file").write_text("inert");asset.chmod(0o555)
+            output=root/"public";output.mkdir();initial={"status":"passed","childrenCleanup":True,"reaperJoined":True,"containerCleanup":True}
+            (output/"receipt.json").write_text(json.dumps({"status":"failed","stages":{"initialCleanup":initial,"cleanup":{"status":"passed"},"remote_continuity":{"status":"failed"}}}))
+            with patch.object(qualification,"state_directory",return_value=private):self.assertEqual(qualification.cleanup_only(output),0)
+            receipt=json.loads((output/"receipt.json").read_text());self.assertFalse(private.exists());self.assertEqual(receipt["status"],"failed");self.assertEqual(receipt["stages"]["initialCleanup"],initial)
+            self.assertEqual(receipt["stages"]["recoveryCleanup"]["privateCleanup"]["reason"],"removed")
+
+    def test_owner_marker_symlink_is_never_followed(self):
+        with tempfile.TemporaryDirectory(prefix="cleanup-owner-link-") as directory:
+            root=Path(directory);private=root/"private";private.mkdir();outside=root/"outside.json";outside.write_text('{"synthetic":"private"}');(private/"owner.json").symlink_to(outside)
+            output=root/"public";output.mkdir();(output/"receipt.json").write_text(json.dumps({"status":"failed","stages":{"initialCleanup":{"status":"passed","childrenCleanup":True,"reaperJoined":True,"containerCleanup":True}}}))
+            with patch.object(qualification,"state_directory",return_value=private):self.assertEqual(qualification.cleanup_only(output),1)
+            self.assertEqual(outside.read_text(),'{"synthetic":"private"}');self.assertTrue((private/"owner.json").is_symlink())
+
+    def test_private_root_mount_replacement_is_rejected_before_any_mutation(self):
+        with tempfile.TemporaryDirectory(prefix="cleanup-root-mount-") as directory:
+            root=Path(directory);private=root/"private";private.mkdir();(private/"owner.json").write_text("{}");(private/"sentinel").write_text("preserved")
+            detail={}
+            with patch.object(qualification,"state_directory",return_value=private),patch.object(qualification,"private_mount_identity",side_effect=[1,2]),patch.object(qualification.os,"fchmod") as chmod,patch.object(qualification.os,"unlink") as unlink:
+                self.assertFalse(qualification.cleanup_private_fixture(private,True,detail));chmod.assert_not_called();unlink.assert_not_called()
+            self.assertEqual(detail["reason"],"external_mount");self.assertEqual((private/"sentinel").read_text(),"preserved");self.assertTrue((private/"owner.json").exists())
+
+    def test_absent_private_state_is_success_only_with_trusted_initial_settlement(self):
+        for trusted in [True,False]:
+            with tempfile.TemporaryDirectory(prefix="cleanup-absent-offline-") as directory:
+                root=Path(directory);private=root/"absent";output=root/"public";output.mkdir()
+                stages={"initialCleanup":{"status":"passed","childrenCleanup":True,"reaperJoined":True,"containerCleanup":True}} if trusted else {}
+                (output/"receipt.json").write_text(json.dumps({"status":"failed","stages":stages}))
+                with patch.object(qualification,"state_directory",return_value=private):self.assertEqual(qualification.cleanup_only(output),0 if trusted else 1)
+                value=json.loads((output/"receipt.json").read_text());self.assertEqual(value["status"],"failed")
+                self.assertEqual(value["stages"]["recoveryCleanup"]["status"],"passed" if trusted else "failed")
 
 
 if __name__ == "__main__":

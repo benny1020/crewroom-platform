@@ -102,22 +102,57 @@ export function sanitizeChain(error, root) {
 
 export default class QualificationCauseReporter {
   cases = [];
+  events = [];
   unavailable = false;
+  sequence = 0;
+  startedAt = performance.now();
+  root() { return path.resolve(process.env.CREWROOM_QUALIFICATION_SOURCE_ROOT ?? process.cwd()); }
+  accepted(test) { return EXPECTED_CASES.includes(test.name) && safeLocation(test.module.moduleId, 1, 1, this.root())?.file === RECOVERY_FILE; }
+  event(type, fields = {}) {
+    this.events.push({ sequence: ++this.sequence, type, elapsedMs: Math.min(9999999, Math.max(0, Math.round(performance.now()-this.startedAt))), ...fields });
+    this.events = this.events.slice(-256);
+    this.snapshot(false);
+  }
+  record(test) {
+    let record=this.cases.find(item=>item.title===test.name);
+    if(!record){record={title:test.name,status:"not_started",chains:[]};this.cases.push(record);}
+    return record;
+  }
+  onTestRunStart() { this.event("run_start"); }
+  onTestModuleStart(module) { try{if(safeLocation(module.moduleId,1,1,this.root())?.file===RECOVERY_FILE)this.event("module_start");}catch{this.unavailable=true;} }
+  onTestModuleEnd(module) { try{if(safeLocation(module.moduleId,1,1,this.root())?.file===RECOVERY_FILE)this.event("module_end");}catch{this.unavailable=true;} }
+  onHookStart(hook) { this.hook("hook_start",hook); }
+  onHookEnd(hook) { this.hook("hook_end",hook); }
+  hook(type,hook) {
+    try{
+      if(!["beforeAll","afterAll","beforeEach","afterEach"].includes(hook.name))return;
+      const moduleId=hook.entity.module?.moduleId??hook.entity.moduleId;
+      if(safeLocation(moduleId,1,1,this.root())?.file!==RECOVERY_FILE)return;
+      const fields={hook:hook.name};
+      if(["beforeEach","afterEach"].includes(hook.name)){if(!EXPECTED_CASES.includes(hook.entity.name))return;fields.title=hook.entity.name;}
+      this.event(type,fields);
+    }catch{this.unavailable=true;}
+  }
+  onTestCaseReady(test) {
+    try{if(!this.accepted(test))return;this.record(test).status="running";this.event("case_start",{title:test.name});}catch{this.unavailable=true;}
+  }
   onTestCaseResult(test) {
     try {
-      const root = path.resolve(process.env.CREWROOM_QUALIFICATION_SOURCE_ROOT ?? process.cwd());
-      if (!EXPECTED_CASES.includes(test.name) || safeLocation(test.module.moduleId, 1, 1, root)?.file !== RECOVERY_FILE) return;
-      const errors = test.result().errors;
-      this.cases.push({ title: test.name, chains: Array.isArray(errors) ? errors.slice(0, 3).map(error => sanitizeChain(error, root)) : [] });
-    } catch { this.unavailable = true; }
+      if(!this.accepted(test))return;
+      const result=test.result(), record=this.record(test);
+      record.status=["passed","failed","skipped"].includes(result.state)?result.state:"unknown";
+      record.chains=Array.isArray(result.errors)?result.errors.slice(0,3).map(error=>sanitizeChain(error,this.root())):[];
+      this.event("case_end",{title:test.name,status:record.status});
+    } catch { this.unavailable = true; this.snapshot(false); }
   }
-  onTestRunEnd() {
+  onTestRunEnd() { this.event("run_end");this.snapshot(true); }
+  snapshot(complete) {
     try {
       const output = process.env.CREWROOM_QUALIFICATION_CAUSE_OUTPUT;
       if (!output) return;
       const temporary = `${output}.partial`;
-      fs.writeFileSync(temporary, JSON.stringify({ version: 1, status: this.unavailable ? "unavailable" : "available", cases: this.cases }), { mode: 0o600, flag: "wx" });
+      fs.writeFileSync(temporary, JSON.stringify({ version: 2, status: this.unavailable ? "unavailable" : "available", complete, events:this.events, cases: this.cases }), { mode: 0o600, flag: "wx" });
       fs.renameSync(temporary, output);
-    } catch { /* Missing output is explicitly diagnostics_unavailable, never a test pass. */ }
+    } catch { this.unavailable=true; /* A previous atomic snapshot remains private and readable. */ }
   }
 }

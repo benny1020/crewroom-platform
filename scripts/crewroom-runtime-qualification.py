@@ -2,6 +2,7 @@
 """CI-only qualification of an immutable product checkout; publish counts, never raw state."""
 import argparse
 import ctypes
+import stat
 import hashlib
 import json
 import os
@@ -39,6 +40,26 @@ CAUSE_ERROR_CODES = ['runner_remote_directory_staging_failed', 'runner_remote_st
 
 class QualificationFailure(Exception):
     pass
+
+
+class ReportFailure(QualificationFailure):
+    def __init__(self, classification):
+        self.classification = classification
+        super().__init__(classification)
+
+
+def read_stock_report(filename):
+    try:
+        content = filename.read_bytes()
+    except FileNotFoundError:
+        raise ReportFailure("missing_report") from None
+    try:
+        value = json.loads(content)
+    except (ValueError, UnicodeError):
+        raise ReportFailure("invalid_report_json") from None
+    if not isinstance(value, dict) or not isinstance(value.get("testResults"), list):
+        raise ReportFailure("invalid_report_shape")
+    return value
 
 
 def revision(value):
@@ -202,7 +223,7 @@ def attach_cause_diagnostics(counts, filename, expected):
         if filename.stat().st_size > 1_000_000:
             return
         report = json.loads(filename.read_text())
-        if report.get("version") != 1 or report.get("status") != "available" or not isinstance(report.get("cases"), list):
+        if report.get("version") not in [1, 2] or report.get("status") != "available" or not isinstance(report.get("cases"), list):
             return
         by_title = {}
         for case in report["cases"]:
@@ -247,6 +268,63 @@ def attach_cause_diagnostics(counts, filename, expected):
         counts["causeDiagnosticsStatus"] = "available"
     except (OSError, ValueError, TypeError, AttributeError):
         return
+
+
+def partial_diagnostics(filename, expected):
+    value = {"status": "unavailable", "snapshotState": "unknown", "cases": [{"title": title, "status": "unknown"} for title in expected], "events": []}
+    try:
+        if filename is None or filename.stat().st_size > 1_000_000:
+            return value
+        report = json.loads(filename.read_text())
+        if report.get("version") != 2 or not isinstance(report.get("cases"), list):
+            return value
+        value["snapshotState"] = "final" if report.get("complete") is True else "partial"
+        if report.get("status") == "available":
+            for case in value["cases"]:
+                case["status"] = "not_started"
+        # Reuse the existing double whitelist for error chains.
+        counts = {"cases": [{"title": title, "status": "failed"} for title in expected]}
+        attach_cause_diagnostics(counts, filename, expected)
+        value["status"] = counts.get("causeDiagnosticsStatus", "unavailable")
+        seen = set()
+        for raw in report["cases"]:
+            title = raw.get("title")
+            if title not in expected or title in seen:
+                continue
+            seen.add(title)
+            case = next(item for item in value["cases"] if item["title"] == title)
+            state = raw.get("status")
+            if state in ["running", "not_started"]:
+                case["status"] = state
+            elif state in ["passed", "failed", "skipped"]:
+                case.update(status="finished", observedResult=state)
+            else:
+                case["status"] = "unknown"
+            safe = next(item for item in counts["cases"] if item["title"] == title)
+            if "causeChains" in safe:
+                case["causeChains"] = safe["causeChains"]
+        for event in report.get("events", [])[-256:]:
+            kind = event.get("type")
+            sequence, elapsed = event.get("sequence"), event.get("elapsedMs")
+            if kind not in ["run_start", "run_end", "module_start", "module_end", "case_start", "case_end", "hook_start", "hook_end"] or type(sequence) is not int or not 0 < sequence <= 1_000_000 or type(elapsed) is not int or not 0 <= elapsed <= 9_999_999:
+                continue
+            safe = {"type": kind, "sequence": sequence, "elapsedMs": elapsed}
+            if kind in ["case_start", "case_end"]:
+                if event.get("title") not in expected:
+                    continue
+                safe["title"] = event["title"]
+                if kind == "case_end":
+                    safe["status"] = event.get("status") if event.get("status") in ["passed", "failed", "skipped", "unknown"] else "unknown"
+            if kind in ["hook_start", "hook_end"]:
+                if event.get("hook") not in ["beforeAll", "afterAll", "beforeEach", "afterEach"]:
+                    continue
+                safe["hook"] = event["hook"]
+                if event.get("title") in expected:
+                    safe["title"] = event["title"]
+            value["events"].append(safe)
+    except (OSError, ValueError, TypeError, AttributeError):
+        pass
+    return value
 
 
 class AdoptedZombieReaper:
@@ -418,6 +496,98 @@ def container_cleanup(state, diagnostic=None):
     return finish(detail["confirmedAbsent"])
 
 
+def private_mount_identity(fd):
+    if sys.platform != "linux":
+        return None
+    info = Path(f"/proc/self/fdinfo/{fd}").read_text()
+    match = re.search(r"^mnt_id:\s*(\d+)$", info, re.MULTILINE)
+    if not match:
+        raise PermissionError("mount_unverified")
+    return int(match[1])
+
+
+def cleanup_private_fixture(private, processes_confirmed, diagnostic):
+    diagnostic.update(status="failed", reason="processes_unconfirmed", directories=0, entries=0)
+    if not processes_confirmed:
+        return False
+    parent_fd = root_fd = None
+    try:
+        if os.path.abspath(private) != os.path.abspath(state_directory()):
+            diagnostic["reason"] = "unsafe_path"
+            return False
+        flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+        parent_fd = os.open(private.parent, flags)
+        parent_stat = os.fstat(parent_fd)
+        if parent_stat.st_uid != os.getuid():
+            diagnostic["reason"] = "unsafe_owner"
+            return False
+        try:
+            root_fd = os.open(private.name, flags, dir_fd=parent_fd)
+        except FileNotFoundError:
+            diagnostic.update(status="passed", reason="already_absent")
+            return True
+        root_stat = os.fstat(root_fd)
+        root_mount = private_mount_identity(root_fd)
+        if root_stat.st_dev != parent_stat.st_dev or root_mount != private_mount_identity(parent_fd):
+            diagnostic["reason"] = "external_mount"
+            return False
+        if root_stat.st_uid != os.getuid():
+            diagnostic["reason"] = "unsafe_owner"
+            return False
+
+        def sweep(directory_fd, keep_owner=False):
+            current = os.fstat(directory_fd)
+            if current.st_uid != os.getuid() or not stat.S_ISDIR(current.st_mode):
+                raise PermissionError("unsafe_owner")
+            if current.st_dev != root_stat.st_dev or private_mount_identity(directory_fd) != root_mount:
+                raise PermissionError("external_mount")
+            # Only owned directories gain owner access; never chmod a file or
+            # follow a symlink. The directory FD pins the verified inode.
+            os.fchmod(directory_fd, stat.S_IMODE(current.st_mode) | stat.S_IRWXU)
+            diagnostic["directories"] = min(diagnostic["directories"] + 1, 1_000_000)
+            names = os.listdir(directory_fd)
+            names.sort(key=lambda name: name == "owner.json" if keep_owner else False)
+            for name in names:
+                before = os.stat(name, dir_fd=directory_fd, follow_symlinks=False)
+                if before.st_uid != os.getuid():
+                    raise PermissionError("unsafe_owner")
+                if before.st_dev != root_stat.st_dev:
+                    raise PermissionError("external_mount")
+                if stat.S_ISDIR(before.st_mode):
+                    child_fd = os.open(name, flags, dir_fd=directory_fd)
+                    try:
+                        opened = os.fstat(child_fd)
+                        if (opened.st_dev, opened.st_ino) != (before.st_dev, before.st_ino):
+                            raise PermissionError("entry_changed")
+                        sweep(child_fd)
+                    finally:
+                        os.close(child_fd)
+                    after = os.stat(name, dir_fd=directory_fd, follow_symlinks=False)
+                    if (after.st_dev, after.st_ino) != (before.st_dev, before.st_ino):
+                        raise PermissionError("entry_changed")
+                    os.rmdir(name, dir_fd=directory_fd)
+                else:
+                    # A link is unlinked as a link; its target is never opened.
+                    os.unlink(name, dir_fd=directory_fd)
+                diagnostic["entries"] = min(diagnostic["entries"] + 1, 1_000_000)
+        sweep(root_fd, keep_owner=True)
+        after = os.stat(private.name, dir_fd=parent_fd, follow_symlinks=False)
+        if (after.st_dev, after.st_ino) != (root_stat.st_dev, root_stat.st_ino):
+            diagnostic["reason"] = "entry_changed"
+            return False
+        os.rmdir(private.name, dir_fd=parent_fd)
+        diagnostic.update(status="passed", reason="removed")
+        return True
+    except (OSError, QualificationFailure) as error:
+        diagnostic["reason"] = str(error) if isinstance(error, PermissionError) and str(error) in ["unsafe_owner", "external_mount", "entry_changed", "mount_unverified"] else "unsafe_path" if isinstance(error, QualificationFailure) else "os_error"
+        return False
+    finally:
+        if root_fd is not None:
+            os.close(root_fd)
+        if parent_fd is not None:
+            os.close(parent_fd)
+
+
 def write_receipt(output, receipt):
     output.mkdir(parents=True, exist_ok=True)
     (output / "receipt.json").write_text(json.dumps(receipt, indent=2) + "\n")
@@ -439,6 +609,9 @@ def run_qualification(source, output):
     active_reaper = None
     reaped_children = 0
     reaper_failed = False
+    partial_file = None
+    partial_expected = []
+    last_timeout = None
     # Build/test children receive no ambient provider/account credentials.
     allowed = ["PATH", "HOME", "USER", "LOGNAME", "SHELL", "LANG", "LC_ALL", "RUSTUP_HOME", "CARGO_HOME", "PNPM_HOME", "COREPACK_HOME"]
     child_env = {name: os.environ[name] for name in allowed if name in os.environ}
@@ -448,7 +621,8 @@ def run_qualification(source, output):
                      PAPERCLIP_TEST_CONTROLLER_OUTAGE_MS="1000", TMPDIR=str(private))
 
     def run(command, timeout=600, capture=False, env=None, allow_failure=False, diagnostic=None):
-        nonlocal current, active_reaper, reaped_children, reaper_failed
+        nonlocal current, active_reaper, reaped_children, reaper_failed, last_timeout
+        last_timeout = timeout
         log = private / (stage + ".log")
         with log.open("ab") as stream:
             current = subprocess.Popen(command, cwd=source, env=env or child_env, start_new_session=True,
@@ -534,11 +708,12 @@ def run_qualification(source, output):
         stage = "local_real_processes"
         local_report = private / "local-report.json"
         local_causes = private / "local-causes.json"
+        partial_file, partial_expected = local_causes, LOCAL_CASES
         cause_reporter = str(Path(__file__).resolve().with_name("crewroom-runtime-cause-reporter.mjs"))
         local_env = {**child_env, "CREWROOM_QUALIFICATION_SOURCE_ROOT": str(source), "CREWROOM_QUALIFICATION_CAUSE_OUTPUT": str(local_causes)}
         code = run(["pnpm", "exec", "vitest", "run", "--project", "@paperclipai/server", RECOVERY_FILE,
                     "--maxWorkers=1", "--includeTaskLocation", "--reporter=json", "--reporter=" + cause_reporter, "--outputFile=" + str(local_report)], timeout=1200, allow_failure=True, env=local_env)
-        report = json.loads(local_report.read_text())
+        report = read_stock_report(local_report)
         counts = report_counts(report, LOCAL_CASES)
         counts["cases"] = report_diagnostics(report, LOCAL_CASES, source)
         attach_cause_diagnostics(counts, local_causes, LOCAL_CASES)
@@ -628,13 +803,14 @@ def run_qualification(source, output):
         stage = "remote_continuity"
         remote_report = private / "remote-report.json"
         remote_causes = private / "remote-causes.json"
+        partial_file, partial_expected = remote_causes, REMOTE_CASES
         remote_env = {**child_env, "CREWROOM_QUALIFICATION_SOURCE_ROOT": str(source), "CREWROOM_QUALIFICATION_CAUSE_OUTPUT": str(remote_causes), "NODE_EXTRA_CA_CERTS": str(cert), "PAPERCLIP_TEST_RUNNER_TLS_KEY": str(key),
                       "PAPERCLIP_TEST_RUNNER_CONTAINER": name, "PAPERCLIP_TEST_RUNNER_PORT": port.rsplit(":", 1)[1],
                       "PAPERCLIP_TEST_LINUX_RUNNER_BINARY": str(runner), "PAPERCLIP_TEST_FAKE_CODEX_WRAPPER": str(wrapper)}
         code = run(["pnpm", "exec", "vitest", "run", "--project", "@paperclipai/server", RECOVERY_FILE,
                     "-t", "preserves remote warm continuity across completed turns:", "--maxWorkers=1", "--includeTaskLocation", "--reporter=json", "--reporter=" + cause_reporter, "--outputFile=" + str(remote_report)],
                    timeout=1200, env=remote_env, allow_failure=True)
-        report = json.loads(remote_report.read_text())
+        report = read_stock_report(remote_report)
         counts = report_counts(report, REMOTE_CASES, only_selected=True)
         counts["cases"] = report_diagnostics(report, REMOTE_CASES, source)
         attach_cause_diagnostics(counts, remote_causes, REMOTE_CASES)
@@ -647,8 +823,15 @@ def run_qualification(source, output):
         run(["git", "diff", "--exit-code", "HEAD", "--"])
         receipt["stages"][stage] = {"status": "passed"}
         receipt["status"] = "passed" if qualification_passed else "failed"
-    except BaseException:
-        receipt["stages"].setdefault(stage, {})["status"] = "failed"
+    except BaseException as error:
+        failure = receipt["stages"].setdefault(stage, {})
+        failure["status"] = "failed"
+        failure["stageFailureClass"] = "host_command_timeout" if isinstance(error, subprocess.TimeoutExpired) else error.classification if isinstance(error, ReportFailure) and error.classification in ["missing_report", "invalid_report_json", "invalid_report_shape"] else "other_stage_failure"
+        if isinstance(error, subprocess.TimeoutExpired) and type(last_timeout) is int:
+            failure["timeoutSeconds"] = last_timeout
+        if stage in ["local_real_processes", "remote_continuity"]:
+            failure["stockGate"] = "incomplete"
+            failure["partialDiagnostics"] = partial_diagnostics(partial_file, partial_expected)
         receipt["status"] = "failed"
     finally:
         for event in [signal.SIGINT, signal.SIGTERM]:
@@ -673,38 +856,71 @@ def run_qualification(source, output):
         receipt["stages"]["cleanup"] = {"status": "passed" if cleanup_ok else "failed"}
         if not cleanup_ok:
             receipt["status"] = "failed"
+        private_detail = {}
+        private_ok = cleanup_private_fixture(private, cleanup_ok, private_detail)
+        receipt["stages"]["privateCleanup"] = private_detail
+        if not private_ok:
+            receipt["status"] = "failed"
         write_receipt(output, receipt)
-        if cleanup_ok:
-            shutil.rmtree(private)
     print("Runtime qualification: " + receipt["status"])
     return 0 if receipt["status"] == "passed" else 1
 
 
+def read_private_owner_state(private):
+    root_fd = owner_fd = None
+    try:
+        root_fd = os.open(private, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        if os.fstat(root_fd).st_uid != os.getuid():
+            raise PermissionError()
+        owner_fd = os.open("owner.json", os.O_RDONLY | os.O_NOFOLLOW, dir_fd=root_fd)
+        info = os.fstat(owner_fd)
+        if info.st_uid != os.getuid() or not stat.S_ISREG(info.st_mode) or info.st_size > 8192:
+            raise PermissionError()
+        value = json.loads(os.read(owner_fd, 8193))
+        if not isinstance(value, dict):
+            raise ValueError()
+        return value
+    finally:
+        if owner_fd is not None: os.close(owner_fd)
+        if root_fd is not None: os.close(root_fd)
+
+
 def cleanup_only(output):
     private = state_directory()
-    if not private.exists():
-        return 0
-    state = json.loads((private / "owner.json").read_text())
     path = output / "receipt.json"
-    receipt = json.loads(path.read_text()) if path.exists() else {"status": "failed", "stages": {}}
-    container_detail = {}
     try:
-        ok = container_cleanup(state, container_detail)
-    except Exception:
-        ok = False
-        container_detail.update(status="failed", errorClass="unexpected_error")
-    # A new process cannot prove the old helper's children settled. Retain
-    # private fixtures if that part of initial cleanup was unconfirmed.
-    initial = receipt["stages"].get("initialCleanup", {})
+        receipt = json.loads(path.read_text())
+    except (OSError, ValueError):
+        receipt = {"status": "failed", "stages": {}}
+    initial = receipt.get("stages", {}).get("initialCleanup", {})
     children_confirmed = initial.get("childrenCleanup") is True and initial.get("reaperJoined") is True
-    recovered = ok and children_confirmed
-    receipt["stages"]["recoveryCleanup"] = {"status": "passed" if recovered else "failed", "containerCleanup": ok,
-        "initialChildrenConfirmed": children_confirmed, "container": container_detail}
-    if recovered:
-        shutil.rmtree(private)
-    else:
+    initial_container = initial.get("containerCleanup") is True
+    private_detail = {}
+    container_detail = {}
+    ok = False
+    try:
+        if not private.exists():
+            ok = children_confirmed and initial_container and initial.get("status") == "passed"
+            container_detail.update(status="passed" if ok else "failed", reason="initial_settlement_verified" if ok else "unconfirmed_absence")
+        else:
+            try:
+                state = read_private_owner_state(private)
+            except FileNotFoundError:
+                # The former rmtree could remove owner.json before failing on
+                # a readonly child. Only trusted initial settlement permits
+                # cleaning this still-owned private tree without that marker.
+                ok = children_confirmed and initial_container and initial.get("status") == "passed"
+                container_detail.update(status="passed" if ok else "failed", reason="initial_settlement_verified" if ok else "missing_state")
+            else:
+                ok = container_cleanup(state, container_detail)
+    except (OSError, ValueError, TypeError):
+        container_detail.update(status="failed", reason="state_unavailable")
+    recovered = cleanup_private_fixture(private, ok and children_confirmed, private_detail)
+    receipt.setdefault("stages", {})["recoveryCleanup"] = {"status": "passed" if recovered else "failed", "containerCleanup": ok,
+        "initialChildrenConfirmed": children_confirmed, "container": container_detail, "privateCleanup": private_detail}
+    if not recovered:
         receipt["status"] = "failed"
-    # Initial failure/test failure is historical evidence and is never erased.
+    # Always persist recovery diagnostics, never erase initial failure/history.
     write_receipt(output, receipt)
     return 0 if recovered else 1
 

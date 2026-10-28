@@ -48,3 +48,12 @@ Rust 재실행은 기존 SHA로 고정된 rust-cache action으로 공개 depende
 GNU tar를 UID 0으로 capability 없이 실행할 때 중첩된 읽기 전용 archive directory 안의 파일 생성은 여전히 실패할 수 있다. 이 범위는 명시적 음성 회귀로 남기고 실패를 완료로 처리하지 않는다. 기존 BSD/non-root nested 회귀와 보조 GNU UID 1000 nested cold·dedup 실검증은 통과했다. 보조 사용자는 inert owner proof에만 적용하며 실제 recovery 13개 fixture의 root UID·cap-drop·timeout·gate는 바꾸지 않는다. 이 변경에 새 extractor, recursive chmod/chown, `-p`, `--no-same-permissions`, capability 추가는 포함하지 않는다.
 
 일반 privileged root가 기존 읽기 전용 target을 덮어써 복구할 수 있는 기존 동작은 이 변경으로 강화하거나 막지 않는다. 새 회귀의 변조 거부 기대는 증명한 capless root와 non-root 맥락에 적용하며, 쓰기 권한이 실제로 있는 맥락에는 기존 repair 성공·내용 복원을 기대한다. 회귀는 UID만으로 권한을 추정하지 않고, 내용 변경 없는 `open(r+)`/close의 성공 또는 EACCES·EPERM을 먼저 측정해 기대 결과를 정한다.
+
+
+관측이 없는 stage 실패를 시간만으로 timeout이라고 분류하지 않는다. Helper는 실제 `TimeoutExpired`에만 `host_command_timeout`과 기존 command 제한을 기록하며, stock 보고서 누락·JSON 오류·shape 오류·기타 실패를 별도 고정 enum으로 기록한다. Recovery fixture와 1,200초 제한은 바꾸지 않는다.
+
+공식 reporter의 case ready/result·module·hook start/end마다 atomic `0600` sidecar를 갱신한다. 부분 snapshot과 최종 snapshot을 구분하며, 관측된 사례를 미시작·실행 중·종료로 나눈다. Host 제한이나 보고서 오류 때 이 부분 진단을 공개 receipt의 `partialDiagnostics`로 정제해 넣는다. 이것은 마지막 snapshot의 관측이며 OS 프로세스의 현재 상태나 작업 완료 증명이 아니다. Stock JSON이 불완전하면 부분 snapshot에 passed가 있어도 qualification PASS로 세지 않는다. 실제 tiny Vitest의 실행 종료 전 중단으로 failed/running/미시작 보존과 비밀 sentinel 미포함을 확인했다.
+
+읽기 전용 asset directory가 있는 non-root private fixture에서 기존 `shutil.rmtree`의 PermissionError를 독립 재현했다. 이는 5d의 cleanup 관측 형태와 일치하는 메커니즘이며, 원본 CI의 예외 이름이 기록되지 않아 당시 원격 stage의 정확한 원인까지 확정하지 않는다. 새 private 정리는 reaper join·ECHILD·container 부재가 모두 확인된 뒤에만 수행한다. 예상 경로와 own UID, `O_DIRECTORY|O_NOFOLLOW` dirfd, root-parent/child device 및 Linux mount ID를 검증하고, 실제 소유 directory에만 owner 접근권을 추가한다. 파일은 chmod하지 않고 symlink는 link만 제거하며 외부 target을 따라가지 않는다. 미확인 owner·mount·경로·OS 오류는 고정 실패로 남긴다.
+
+`privateCleanup` 결과를 기록한 뒤 receipt를 쓰므로 정리 실패도 관측된다. 가능한 한 root `owner.json`은 마지막에 제거한다. 예전 실패가 marker를 먼저 지웠거나 private 경로가 이미 없으면, 신뢰할 수 있는 최초 process/container settlement가 있을 때만 멱등 복구를 허용한다. 미확인 상태를 성공으로 바꾸지 않으며, `recoveryCleanup`은 최초 실패와 원격 실패 이력을 덮어쓰지 않는다.

@@ -77,3 +77,18 @@ test("fixed typed terminal codes survive without arbitrary provider code data",(
  const result=sanitizeError({name:"NativeProviderTerminalFailure",code:"native_provider_terminal_failed",providerCode:"SYNTHETIC_SECRET",message:"SYNTHETIC_SECRET"},root);
  assert.equal(result.errorCode,"native_provider_terminal_failed");assert.ok(!JSON.stringify(result).includes("SYNTHETIC_SECRET"));
 });
+test("official lifecycle hooks atomically persist start/end and distinguish partial from final",()=>{
+ const directory=fs.mkdtempSync(path.join(os.tmpdir(),"cause-progress-offline-"));const oldRoot=process.env.CREWROOM_QUALIFICATION_SOURCE_ROOT,oldOutput=process.env.CREWROOM_QUALIFICATION_CAUSE_OUTPUT;
+ try{
+  process.env.CREWROOM_QUALIFICATION_SOURCE_ROOT=root;process.env.CREWROOM_QUALIFICATION_CAUSE_OUTPUT=path.join(directory,"causes.json");
+  const reporter=new Reporter(),module={moduleId:`${root}/${RECOVERY_FILE}`},item={name:EXPECTED_CASES[0],module,result(){return{state:"failed",errors:[{name:"Error",message:"SYNTHETIC_SECRET"}]};}};
+  reporter.onTestRunStart();reporter.onTestModuleStart(module);reporter.onHookStart({name:"beforeAll",entity:module});reporter.onHookEnd({name:"beforeAll",entity:module});reporter.onTestCaseReady(item);
+  let value=JSON.parse(fs.readFileSync(process.env.CREWROOM_QUALIFICATION_CAUSE_OUTPUT,"utf8"));assert.equal(value.complete,false);assert.equal(value.cases[0].status,"running");assert.equal(value.events.at(-1).type,"case_start");
+  reporter.onTestCaseResult(item);value=JSON.parse(fs.readFileSync(process.env.CREWROOM_QUALIFICATION_CAUSE_OUTPUT,"utf8"));assert.equal(value.complete,false);assert.equal(value.cases[0].status,"failed");assert.equal(value.events.at(-1).type,"case_end");
+  reporter.onTestRunEnd();value=JSON.parse(fs.readFileSync(process.env.CREWROOM_QUALIFICATION_CAUSE_OUTPUT,"utf8"));assert.equal(value.complete,true);assert.ok(!JSON.stringify(value).includes("SYNTHETIC_SECRET"));assert.equal(fs.statSync(process.env.CREWROOM_QUALIFICATION_CAUSE_OUTPUT).mode&0o777,0o600);
+ }finally{
+  if(oldRoot===undefined)delete process.env.CREWROOM_QUALIFICATION_SOURCE_ROOT;else process.env.CREWROOM_QUALIFICATION_SOURCE_ROOT=oldRoot;
+  if(oldOutput===undefined)delete process.env.CREWROOM_QUALIFICATION_CAUSE_OUTPUT;else process.env.CREWROOM_QUALIFICATION_CAUSE_OUTPUT=oldOutput;
+  fs.rmSync(directory,{recursive:true});
+ }
+});
