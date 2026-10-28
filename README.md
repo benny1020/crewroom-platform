@@ -42,6 +42,14 @@ node scripts/crewroom-dev.mjs
 
 `http://127.0.0.1:3117`에서 엽니다. wrapper는 checkout 안의 무시된 `.paperclip/crewroom-home`에 설정과 embedded PostgreSQL을 만들고 전용 DB 포트 `55447`을 사용합니다. 이전 앱의 데이터·환경·secret을 복사하지 않으며 외부 DB 환경 상속과 telemetry, announcement fetching을 끕니다. `node scripts/crewroom-dev.mjs --prepare`는 설정만 준비합니다. foreground 프로세스의 Ctrl+C로 종료합니다.
 
+서버가 준비되면 별도 터미널에서 로컬용 초기 명부를 만들 수 있습니다.
+
+```sh
+node scripts/crewroom-bootstrap.mjs
+```
+
+미미를 포함한 8명, 부서와 회의 정리 스킬을 준비하고 팀 화면 URL을 출력합니다. 재실행해도 같은 초기 동료를 유지합니다. 모델 자격증명은 넣지 않으며 동료는 연결 준비 상태로 남습니다. 이 도구는 loopback 개발 인스턴스에서만 동작합니다.
+
 로컬 trusted 모드는 한 명의 운영자를 위한 개발 구성입니다. 여러 사용자는 authenticated 배포와 서버의 membership·grant 정책을 사용해야 합니다. 모델 자격증명을 넣지 않은 설치에서는 대화 화면이 열려도 모델 응답이나 실제 업무 실행이 검증된 상태가 아닙니다.
 
 ## EC2 한 대와 Docker PostgreSQL

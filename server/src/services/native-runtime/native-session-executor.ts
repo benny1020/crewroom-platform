@@ -10844,7 +10844,7 @@ export async function stageRemoteRunnerDirectory(input: {
       `tar "$@" -xzf "$staging/archive" -C '${escapedTarget}'`
     : `base64 -d | tar "$@" -xzf - -C '${escapedTarget}'`;
   const script =
-    `case "$(tar --version 2>/dev/null)" in *"GNU tar"*) set -- --delay-directory-restore ;; *) set -- ;; esac; ` +
+    `case "$(tar --version 2>/dev/null)" in *"GNU tar"*) set -- --delay-directory-restore --no-same-owner ;; *) set -- --no-same-owner ;; esac; ` +
     `umask 077; test ! -L '${escapedTarget}' && mkdir -p '${escapedTarget}' && ` +
     `{ ${immutableStage}; } && chmod ${input.mode.toString(8)} '${escapedTarget}'`;
   const result = await input.runner.execute({

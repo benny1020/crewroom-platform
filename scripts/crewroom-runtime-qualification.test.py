@@ -130,6 +130,10 @@ class CauseBoundaryTests(unittest.TestCase):
         match = qualification.re.search(r"export const EXPECTED_CASES = (\[.*?\]);", source, qualification.re.S)
         self.assertIsNotNone(match)
         self.assertEqual(json.loads(match[1]), qualification.LOCAL_CASES + qualification.REMOTE_CASES)
+        for name, expected in [("ALLOWED_SOURCE_FILES", qualification.CAUSE_SOURCE_FILES), ("ERROR_CODES", qualification.CAUSE_ERROR_CODES)]:
+            match = qualification.re.search(r"export const " + name + r" = (\[.*?\]);", source, qualification.re.S)
+            self.assertIsNotNone(match)
+            self.assertEqual(json.loads(match[1]), expected)
 
     def test_double_sanitization_preserves_nested_classes_only_and_does_not_change_gate(self):
         with tempfile.TemporaryDirectory(prefix="cause-boundary-offline-") as directory:
@@ -362,6 +366,8 @@ class PipelineControlTests(unittest.TestCase):
         self.assertTrue(receipt["stages"]["remote_container"]["providerHashMatches"])
         self.assertFalse(any(command[:2] == ["docker", "exec"] and "chmod" in command for command in commands))
         self.assertFalse(any("--cap-add" in command or "--privileged" in command for command in commands))
+        container_start = next(command for command in commands if command[:2] == ["docker", "run"])
+        self.assertNotIn("--rm", container_start)  # One explicit cleanup owner; no auto-remove race.
         copied = next(command for command in commands if command[:2] == ["docker", "cp"])
         self.assertTrue(copied[2].endswith("/private/remote-fake-codex-app-server"))
 

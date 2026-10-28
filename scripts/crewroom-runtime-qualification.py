@@ -33,6 +33,9 @@ LOCAL_CASES = [
 REMOTE_CASES = ["preserves remote warm continuity across completed turns: " + scenario
                 for scenario in ["warm", "hard", "legacy", "changed", "same-server"]]
 
+CAUSE_SOURCE_FILES = ['server/src/services/native-runtime/native-runner-restart-recovery.integration.test.ts', 'server/src/services/native-runtime/native-session-executor.ts', 'packages/paperclip-runner/src/live/runnerd-codex-transport.ts']
+CAUSE_ERROR_CODES = ['runner_remote_directory_staging_failed', 'runner_remote_staging_failed', 'runner_remote_artifact_verification_failed', 'runner_remote_artifact_metadata_invalid', 'runner_remote_artifact_contract_incompatible', 'runner_remote_codex_artifact_verification_failed', 'runner_remote_codex_artifact_unavailable', 'runner_remote_codex_install_failed', 'runner_remote_provider_artifact_incompatible', 'runner_remote_session_capability_missing', 'runner_remote_preinstalled_link_failed', 'runner_remote_codex_source_conflict', 'runner_harness_state_mismatch', 'runner_state_identity_mismatch', 'runner_state_directory_unsafe', 'runner_local_connect_failed', 'provider_transport_failed', 'native_provider_terminal_failed', 'native_event_replay_conflict']
+
 
 class QualificationFailure(Exception):
     pass
@@ -219,11 +222,13 @@ def attach_cause_diagnostics(counts, filename, expected):
                     if entry.get("depth") != depth or entry.get("relation") != ("root" if depth == 0 else "cause") or entry.get("errorClass") not in error_classes:
                         return
                     safe = {"depth": depth, "relation": "root" if depth == 0 else "cause", "errorClass": entry["errorClass"]}
+                    if entry.get("errorCode") in CAUSE_ERROR_CODES:
+                        safe["errorCode"] = entry["errorCode"]
                     locations = []
                     for location in entry.get("locations", [])[:3]:
                         line, column = location.get("line"), location.get("column")
-                        if location.get("file") == RECOVERY_FILE and type(line) is int and type(column) is int and 0 < line <= 1_000_000 and 0 < column <= 100_000:
-                            locations.append({"file": RECOVERY_FILE, "line": line, "column": column})
+                        if location.get("file") in CAUSE_SOURCE_FILES and type(line) is int and type(column) is int and 0 < line <= 1_000_000 and 0 < column <= 100_000:
+                            locations.append({"file": location["file"], "line": line, "column": column})
                     if locations:
                         safe["locations"] = locations
                     comparison = entry.get("comparison")
@@ -578,7 +583,7 @@ def run_qualification(source, output):
         state["container"] = name
         state_path.write_text(json.dumps(state))
         prepare("image_pull", ["docker", "pull", IMAGE], timeout=300)
-        container_id = prepare("container_start", ["docker", "run", "-d", "--rm", "--init", "--name", name, "--label", OWNER_LABEL + "=" + state["owner"],
+        container_id = prepare("container_start", ["docker", "run", "-d", "--init", "--name", name, "--label", OWNER_LABEL + "=" + state["owner"],
                             "--memory", "2g", "--cpus", "2", "--pids-limit", "256", "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
                             "--publish", "127.0.0.1::43127", "--entrypoint", "/bin/sh", IMAGE, "-c", "exec sleep infinity"], capture=True)
         state["containerId"] = container_id

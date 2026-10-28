@@ -3307,6 +3307,123 @@ describe("remote provider checkpoint restores", () => {
     }
   });
 
+  it("stages foreign-owned archives with execution-user ownership while preserving immutable checks", async () => {
+    const root = await mkdtemp(join(tmpdir(), "paperclip-foreign-owner-restore-"));
+    const sourcePath = join(root, "source"), nestedSource = join(root, "nested-source");
+    const container = process.env.CREWROOM_STAGING_PROOF_CONTAINER;
+    const owner = process.env.CREWROOM_STAGING_PROOF_OWNER;
+    let containerVerified = !container, executionUser = "root";
+    const remoteRoot = container ? `/tmp/crewroom-owner-${randomUUID()}` : join(root, "remote");
+    const nonrootTarget = `/tmp/crewroom-node-owner-${randomUUID()}`;
+    const invoke = (command: string, args: string[], stdin?: string) => {
+      const result = spawnSync(container ? "docker" : command,
+        container ? ["exec", "-i", "-u", executionUser, container, command, ...args] : args,
+        { input: stdin, encoding: "utf8", timeout: 10_000 });
+      return { exitCode: result.status, timedOut: (result.error as NodeJS.ErrnoException | undefined)?.code === "ETIMEDOUT", stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
+    };
+    try {
+      if (container) {
+        // Only the explicitly labelled owned proof container may be mutated.
+        expect(container.startsWith("crewroom-staging-owner-")).toBe(true);
+        expect(owner).toMatch(/^[a-f0-9]{32}$/);
+        const inspection = JSON.parse(execFileSync("docker", ["inspect", container], { encoding: "utf8" }))[0];
+        expect(inspection.Config.Labels["com.crewroom.staging-proof.owner"]).toBe(owner);
+        expect(inspection.HostConfig.Privileged).toBe(false);
+        expect(inspection.HostConfig.Binds ?? []).toHaveLength(0);
+        expect(inspection.HostConfig.CapDrop).toContain("ALL");
+        containerVerified = true;
+      }
+      await mkdir(sourcePath);
+      await writeFile(join(sourcePath, "payload.txt"), "inert ownership fixture");
+      await chmod(join(sourcePath, "payload.txt"), 0o444);
+      await chmod(sourcePath, 0o555);
+      await mkdir(join(nestedSource, "nested"), { recursive: true });
+      await writeFile(join(nestedSource, "nested", "payload.txt"), "nested inert fixture");
+      await chmod(join(nestedSource, "nested", "payload.txt"), 0o444);
+      await chmod(join(nestedSource, "nested"), 0o555);
+      await chmod(nestedSource, 0o555);
+      const sourceHash = createHash("sha256").update(await readFile(join(sourcePath, "payload.txt"))).digest("hex");
+      const archiveUid = process.getuid?.() === 1001 ? 2001 : 1001;
+      const archiveGid = process.getgid?.() === 1002 ? 2002 : 1002;
+      const reownArchive = `import io,sys,tarfile
+src=tarfile.open(fileobj=io.BytesIO(sys.stdin.buffer.read()),mode="r:gz")
+with tarfile.open(fileobj=sys.stdout.buffer,mode="w|gz") as dst:
+ for member in src.getmembers():
+  member.uid=${archiveUid};member.gid=${archiveGid};member.uname="";member.gname=""
+  for key in ["uid","gid","uname","gname"]:member.pax_headers.pop(key,None)
+  dst.addfile(member,src.extractfile(member) if member.isfile() else None)
+`;
+      const execute = async (command: { command: string; args: string[]; stdin?: string }) => {
+        const archive = execFileSync("python3", ["-c", reownArchive], { input: Buffer.from(command.stdin!, "base64") });
+        return invoke(command.command, command.args, archive.toString("base64"));
+      };
+      const stage = (targetPath: string, mode: number, source = sourcePath) => stageRemoteRunnerDirectory({
+        target: { kind: "remote", transport: "sandbox", remoteCwd: remoteRoot } as never,
+        runner: { execute } as never, sourcePath: source, targetPath, mode,
+      });
+      for (const mode of [0o700, 0o555]) {
+        const targetPath = `${remoteRoot}/target-${mode}`;
+        await expect(stage(targetPath, mode), mode === 0o700 ? "mutable_cold" : "immutable_cold").resolves.toBeUndefined();
+        if (mode === 0o555) await expect(stage(targetPath, mode), "immutable_dedup").resolves.toBeUndefined();
+        const verification = invoke("node", ["-e", `const fs=require("node:fs"),p=process.argv[1],s=fs.statSync(p),f=fs.statSync(p+"/payload.txt");console.log(JSON.stringify({uid:process.getuid(),dirUid:s.uid,fileUid:f.uid,rootMode:s.mode&511,fileMode:f.mode&511,content:fs.readFileSync(p+"/payload.txt","utf8")}));`, targetPath]);
+        expect(verification.exitCode).toBe(0);
+        const actual = JSON.parse(verification.stdout);
+        expect(actual.dirUid).toBe(actual.uid);
+        expect(actual.fileUid).toBe(actual.uid);
+        expect(actual.rootMode).toBe(mode);
+        // Preserve root's archive modes and non-root's existing umask 077.
+        expect(actual.fileMode).toBe(actual.uid === 0 ? 0o444 : 0o400);
+        expect(actual.content).toBe("inert ownership fixture");
+        if (mode === 0o555) {
+          expect(invoke("sh", ["-c", 'chmod u+w "$1/payload.txt" && printf tampered > "$1/payload.txt" && chmod 400 "$1/payload.txt"', "proof", targetPath]).exitCode).toBe(0);
+          // An independent non-mutating open predicts actual DAC ability;
+          // UID 0 alone does not imply privilege in a capability-free process.
+          const writable = invoke("node", ["-e", 'const fs=require("node:fs");try{const fd=fs.openSync(process.argv[1],"r+");fs.closeSync(fd);process.exit(0);}catch(error){process.exit(error.code==="EACCES"||error.code==="EPERM"?77:78);}', `${targetPath}/payload.txt`]);
+          expect([0, 77]).toContain(writable.exitCode);
+          if (writable.exitCode === 77) {
+            await expect(stage(targetPath, mode), "immutable_tamper_rejected").rejects.toThrow("runner_remote_directory_staging_failed");
+            expect(invoke("cat", [`${targetPath}/payload.txt`]).stdout).toBe("tampered");
+          } else {
+            // Existing privileged writers may repair the readonly target.
+            await expect(stage(targetPath, mode), "privileged_root_repair").resolves.toBeUndefined();
+            expect(invoke("cat", [`${targetPath}/payload.txt`]).stdout).toBe("inert ownership fixture");
+          }
+        }
+      }
+      const preserved = `${remoteRoot}/preserved`, link = `${remoteRoot}/symlink-target`;
+      expect(invoke("sh", ["-c", 'mkdir -p "$1" && printf preserved > "$1/sentinel" && ln -s "$1" "$2"', "proof", preserved, link]).exitCode).toBe(0);
+      await expect(stage(link, 0o555), "symlink_target_rejected").rejects.toThrow("runner_remote_directory_staging_failed");
+      expect(invoke("cat", [`${preserved}/sentinel`]).stdout).toBe("preserved");
+      if (container) {
+        // This slice does not promise GNU tar can extract nested readonly dirs
+        // as UID 0 without DAC override. Preserve that known fail-closed bound.
+        const nestedTarget = `${remoteRoot}/unsupported-nested`;
+        await expect(stage(nestedTarget, 0o555, nestedSource), "capless_root_nested_rejected").rejects.toThrow("runner_remote_directory_staging_failed");
+        expect(invoke("test", ["!", "-e", `${nestedTarget}/nested/payload.txt`]).exitCode).toBe(0);
+        executionUser = "1000";
+        await expect(stage(nonrootTarget, 0o555, nestedSource), "nonroot_nested_cold").resolves.toBeUndefined();
+        await expect(stage(nonrootTarget, 0o555, nestedSource), "nonroot_nested_dedup").resolves.toBeUndefined();
+        const nested = invoke("node", ["-e", 'const fs=require("node:fs"),p=process.argv[1];console.log(JSON.stringify({uid:process.getuid(),dirUid:fs.statSync(p+"/nested").uid,dirMode:fs.statSync(p+"/nested").mode&511,fileMode:fs.statSync(p+"/nested/payload.txt").mode&511,content:fs.readFileSync(p+"/nested/payload.txt","utf8")}));', nonrootTarget]);
+        expect(nested.exitCode).toBe(0);
+        expect(JSON.parse(nested.stdout)).toEqual({ uid: 1000, dirUid: 1000, dirMode: 0o500, fileMode: 0o400, content: "nested inert fixture" });
+      }
+      expect(createHash("sha256").update(await readFile(join(sourcePath, "payload.txt"))).digest("hex")).toBe(sourceHash);
+      expect((await lstat(join(sourcePath, "payload.txt"))).mode & 0o777).toBe(0o444);
+      expect((await lstat(sourcePath)).mode & 0o777).toBe(0o555);
+    } finally {
+      if (containerVerified) {
+        if (container) {
+          executionUser = "1000";
+          invoke("sh", ["-c", 'if [ -d "$1" ]; then find "$1" -type d -exec chmod u+w {} +; rm -rf -- "$1"; fi', "proof", nonrootTarget]);
+          executionUser = "root";
+        }
+        invoke("sh", ["-c", 'if [ -d "$1" ]; then find "$1" -type d -exec chmod u+w {} +; rm -rf -- "$1"; fi', "proof", remoteRoot]);
+      }
+      for (const directory of [sourcePath, nestedSource, join(nestedSource, "nested")]) await chmod(directory, 0o700).catch(() => undefined);
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("rejects context staging through a symlink", async () => {
     const root = await mkdtemp(join(tmpdir(), "paperclip-context-symlink-"));
     const sourcePath = join(root, "source");

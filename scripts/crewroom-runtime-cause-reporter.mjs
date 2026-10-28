@@ -19,6 +19,33 @@ export const EXPECTED_CASES = [
   "preserves remote warm continuity across completed turns: changed",
   "preserves remote warm continuity across completed turns: same-server"
 ];
+export const ALLOWED_SOURCE_FILES = [
+  "server/src/services/native-runtime/native-runner-restart-recovery.integration.test.ts",
+  "server/src/services/native-runtime/native-session-executor.ts",
+  "packages/paperclip-runner/src/live/runnerd-codex-transport.ts"
+];
+export const ERROR_CODES = [
+  "runner_remote_directory_staging_failed",
+  "runner_remote_staging_failed",
+  "runner_remote_artifact_verification_failed",
+  "runner_remote_artifact_metadata_invalid",
+  "runner_remote_artifact_contract_incompatible",
+  "runner_remote_codex_artifact_verification_failed",
+  "runner_remote_codex_artifact_unavailable",
+  "runner_remote_codex_install_failed",
+  "runner_remote_provider_artifact_incompatible",
+  "runner_remote_session_capability_missing",
+  "runner_remote_preinstalled_link_failed",
+  "runner_remote_codex_source_conflict",
+  "runner_harness_state_mismatch",
+  "runner_state_identity_mismatch",
+  "runner_state_directory_unsafe",
+  "runner_local_connect_failed",
+  "provider_transport_failed",
+  "native_provider_terminal_failed",
+  "native_event_replay_conflict"
+];
+
 const classes = Object.freeze({ AssertionError: "assertion", TypeError: "type_error", RangeError: "range_error", ReferenceError: "reference_error", SyntaxError: "syntax_error", TimeoutError: "timeout", Error: "error" });
 const operators = Object.freeze({ be: "equal", equal: "equal", "deeply equal": "equal", "be greater than": "greater_than", "be less than": "less_than", "be greater than or equal to": "greater_or_equal", "be less than or equal to": "less_or_equal" });
 
@@ -27,8 +54,9 @@ export function safeLocation(file, line, column, root) {
   try {
     const candidate = file.startsWith("file://") ? fileURLToPath(file) : path.resolve(root, file);
     const canonical = filename => { try { return fs.realpathSync.native(filename); } catch { return path.resolve(filename); } };
-    if (path.relative(canonical(root), canonical(candidate)).split(path.sep).join("/") !== RECOVERY_FILE) return null;
-    return { file: RECOVERY_FILE, line, column };
+    const relative=path.relative(canonical(root), canonical(candidate)).split(path.sep).join("/");
+    if (!ALLOWED_SOURCE_FILES.includes(relative)) return null;
+    return { file: relative, line, column };
   } catch { return null; }
 }
 
@@ -37,6 +65,9 @@ export function sanitizeError(error, root) {
   const result = { errorClass: Object.hasOwn(classes, kind) ? classes[kind] : "unknown" };
   const message = typeof error?.message === "string" ? error.message.slice(0, 200000).replace(/\x1b\[[0-9;]*m/g, "").split(/\r?\n/)[0] : "";
   const first = message.startsWith(`${kind}: `) ? message : `${kind}: ${message}`;
+  const prefix=first.replace(/^(?:Error|AssertionError|TypeError|RangeError|ReferenceError|SyntaxError|TimeoutError):\s*/, "");
+  const code=typeof error?.code === "string" && ERROR_CODES.includes(error.code) ? error.code : ERROR_CODES.find(candidate=>prefix===candidate||prefix.startsWith(`${candidate}:`)||prefix.startsWith(`${candidate} `));
+  if(code)result.errorCode=code;
   if (/^Error: (?:(?:Test|Hook) timed out|Timed out)(?: in| after| waiting|\.)/.test(first)) result.errorClass = "timeout";
   const primitive = "(true|false|[+-]?(?:0|[1-9]\\d{0,6}))";
   const comparison = first.match(new RegExp(`^AssertionError: expected ${primitive} to (be|equal|deeply equal|be greater than|be less than|be greater than or equal to|be less than or equal to) ${primitive}(?: // Object\\.is equality)?$`));
@@ -75,7 +106,7 @@ export default class QualificationCauseReporter {
   onTestCaseResult(test) {
     try {
       const root = path.resolve(process.env.CREWROOM_QUALIFICATION_SOURCE_ROOT ?? process.cwd());
-      if (!EXPECTED_CASES.includes(test.name) || !safeLocation(test.module.moduleId, 1, 1, root)) return;
+      if (!EXPECTED_CASES.includes(test.name) || safeLocation(test.module.moduleId, 1, 1, root)?.file !== RECOVERY_FILE) return;
       const errors = test.result().errors;
       this.cases.push({ title: test.name, chains: Array.isArray(errors) ? errors.slice(0, 3).map(error => sanitizeChain(error, root)) : [] });
     } catch { this.unavailable = true; }

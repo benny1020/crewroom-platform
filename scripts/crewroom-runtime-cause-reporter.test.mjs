@@ -66,3 +66,14 @@ test("reporter hook errors mark diagnostics unavailable without throwing or leak
     fs.rmSync(directory,{recursive:true});
   }
 });
+test("known owner codes and two fixed owner source files are retained without suffixes", () => {
+  const file="server/src/services/native-runtime/native-session-executor.ts";
+  const result=sanitizeError({name:"Error",message:"runner_remote_directory_staging_failed: SYNTHETIC_SECRET",stacks:[{file:`${root}/${file}`,line:10857,column:11},{file:`${root}/server/src/private/SYNTHETIC_SECRET.ts`,line:1,column:1}]},root);
+  assert.equal(result.errorCode,"runner_remote_directory_staging_failed");
+  assert.deepEqual(result.locations,[{file,line:10857,column:11}]);assert.ok(!JSON.stringify(result).includes("SYNTHETIC_SECRET"));
+  assert.equal(sanitizeError({name:"Error",message:"runner_remote_directory_staging_failed_SECRET"},root).errorCode,undefined);
+});
+test("fixed typed terminal codes survive without arbitrary provider code data",()=>{
+ const result=sanitizeError({name:"NativeProviderTerminalFailure",code:"native_provider_terminal_failed",providerCode:"SYNTHETIC_SECRET",message:"SYNTHETIC_SECRET"},root);
+ assert.equal(result.errorCode,"native_provider_terminal_failed");assert.ok(!JSON.stringify(result).includes("SYNTHETIC_SECRET"));
+});

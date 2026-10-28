@@ -14,7 +14,7 @@ Ubuntu 24.04 x64에서 Node 24.14.0, pnpm 9.15.4, Rust 1.97.1을 사용한다. F
 
 컨테이너는 2 GiB/2 CPU/256 PID 제한, `--init`, capability 전체 제거와 `no-new-privileges`를 사용한다. 호스트 디렉터리나 Docker socket을 mount하지 않고 privileged 실행이나 호스트 sysctl 변경도 하지 않는다. Docker 제어는 호스트의 기존 테스트 helper가 수행한다. 임시 fake provider, TLS 키, PostgreSQL, 세션 상태와 원문 Vitest JSON은 공개 artifact에 넣지 않는다.
 
-종료·실패 시 helper가 추적한 프로세스와 고유 owner label/ID를 가진 컨테이너만 정리한다. `always()` 단계가 컨테이너 정리를 다시 확인한다. 정리 실패도 실패 receipt가 되며, 확인되지 않은 정리를 성공으로 기록하지 않는다. 볼륨·캐시·다른 서비스는 삭제하지 않는다. 공개 artifact는 `receipt.json` 하나다. SHA, toolchain, binary hash, 단계 상태·exit code·테스트 수 외에 고정된 13개 사례의 이름·상태를 기록한다. 실패 진단은 고정 error-class enum, 허용된 회귀 파일 하나의 소스 상대 경로·줄·열, 형식이 확인된 boolean 또는 짧은 정수 비교값으로 제한한다. 원문 오류 메시지·stack 전체·임의 파일 경로·문자열/객체 비교값·환경 변수·인증 정보는 복사하지 않는다. Vitest의 선언 위치도 허용된 동일 파일로만 기록한다.
+종료·실패 시 helper가 추적한 프로세스와 고유 owner label/ID를 가진 컨테이너만 정리한다. `always()` 단계가 컨테이너 정리를 다시 확인한다. 정리 실패도 실패 receipt가 되며, 확인되지 않은 정리를 성공으로 기록하지 않는다. 볼륨·캐시·다른 서비스는 삭제하지 않는다. 공개 artifact는 `receipt.json` 하나다. SHA, toolchain, binary hash, 단계 상태·exit code·테스트 수 외에 고정된 13개 사례의 이름·상태를 기록한다. 실패 진단은 고정 error-class enum, 명시적으로 허용된 공개 소스 파일의 상대 경로·줄·열, 형식이 확인된 boolean 또는 짧은 정수 비교값으로 제한한다. 원문 오류 메시지·stack 전체·임의 파일 경로·문자열/객체 비교값·환경 변수·인증 정보는 복사하지 않는다. Vitest의 선언 위치도 허용된 동일 파일로만 기록한다.
 
 Rust 재실행은 기존 SHA로 고정된 rust-cache action으로 공개 dependency cache를 재사용한다. Workspace crate·제품 실행 binary·테스트 상태·TLS/DB/session fixture는 캐시 대상에서 제외한다. 테스트 실패 뒤에도 dependency cache만 저장할 수 있으며 테스트 통과 판정에는 영향을 주지 않는다.
 
@@ -31,8 +31,20 @@ Rust 재실행은 기존 SHA로 고정된 rust-cache action으로 공개 depende
 원격 fake provider는 제품의 build artifact 자체를 chmod하지 않고 helper의 private staging copy만 `0555`로 만든 뒤 복사한다. Docker copy가 호스트 UID를 유지하면 capability 없는 컨테이너 root는 다른 UID의 `0700` 파일을 chmod할 수 없다. 동일한 고정 이미지·1 CPU·256 MiB·network none의 dummy artifact probe에서 이 상태를 재현했다(호스트/복사 파일 UID 501, 실행 UID 0, CapEff 0, 기존 chmod exit 1). 정규화한 staging copy는 UID가 달라도 directory/file read+execute, 원본·staged·컨테이너 SHA-256 일치와 dummy 실행 exit 0을 확인했다. 원본 artifact의 mode·hash는 바꾸지 않았으며, 컨테이너 capability 추가·privileged 실행도 사용하지 않았다. 실제 remote 5개는 다음 qualification receipt가 필요하다.
 
 
-원문을 보존하지 않는 infrastructure cause reporter를 stock JSON reporter와 병용한다. 공식 `onTestCaseResult` API의 `result().errors[].cause`를 최대 8단계·cycle guard로 읽어 root wrapper와 nested cause를 구분한다. 수집 파일도 private `0600`이며 고정 13개 title, enum class, 정확한 회귀 fixture의 상대 경로·줄·열과 제한된 primitive 비교만 저장한다. Python helper가 공개 receipt에 넣기 전에 이 필드를 다시 검증한다. 임의 message·stack·diff·객체·문자열 값·환경 변수는 저장하거나 공개하지 않는다. 파일이 없거나 reporter 수집이 실패하면 `causeDiagnosticsStatus: unavailable`로 표시하며, 기존 stock JSON의 검사 수·결과·성공 gate를 바꾸지 않는다.
+원문을 보존하지 않는 infrastructure cause reporter를 stock JSON reporter와 병용한다. 공식 `onTestCaseResult` API의 `result().errors[].cause`를 최대 8단계·cycle guard로 읽어 root wrapper와 nested cause를 구분한다. 수집 파일도 private `0600`이며 고정 13개 title, enum class, 정확한 회귀 fixture 및 명시한 owner 파일의 상대 경로·줄·열과 제한된 primitive 비교만 저장한다. Python helper가 공개 receipt에 넣기 전에 이 필드를 다시 검증한다. 임의 message·stack·diff·객체·문자열 값·환경 변수는 저장하거나 공개하지 않는다. 파일이 없거나 reporter 수집이 실패하면 `causeDiagnosticsStatus: unavailable`로 표시하며, 기존 stock JSON의 검사 수·결과·성공 gate를 바꾸지 않는다.
 
 별도의 작은 synthetic fixture로 실제 Vitest 5에서 stock JSON 단독/병용 모두 2개 실패를 유지하면서 두 단계 cause·소스 frame·boolean/정수 비교가 정제되는지 확인했다. 실제 제품 recovery fixture·timeout·8+5 gate는 이 smoke에서 실행하거나 수정하지 않는다.
 
 정리 진단은 `initialCleanup`의 `reaperJoined`·`childrenCleanup`·`containerCleanup`을 구분한다. 컨테이너는 inventory·inspect·owner/ID 확인·stop·후속 inventory·remove·최종 inventory의 고정 operation, exit code, 상태 enum과 boolean만 기록한다. 자식 정리는 ECHILD·deadline·read/wait/signal error의 고정 이유와 제한된 수만 기록한다. `always()` 재시도는 `recoveryCleanup`으로 별도 기록해 최초 실패를 덮어쓰지 않는다. 이전 helper의 자식 종료가 확인되지 않았다면 새 정리 프로세스는 그 사실을 성공으로 바꾸거나 private fixture를 삭제하지 않는다.
+
+
+추가 진단은 정확한 두 공개 owner source 파일(`native-session-executor.ts`, `runnerd-codex-transport.ts`)의 상대 stack 위치와 소스에서 확인한 고정 runner error-code enum만 허용한다. 알려진 code 뒤의 설명·경로·값은 버리고, 알 수 없는 code는 공개하지 않는다. 검사 사례 자체의 수집 대상은 기존 정확한 recovery fixture와 13개 title을 유지한다.
+
+컨테이너는 자동 `--rm`과 명시적 정리를 중복 사용하지 않는다. 명시적 owner label/full ID 확인 뒤 `stop`·`rm` exit 0과 최종 부재 확인을 끝까지 수행한다. 관측된 자동 삭제 경합 때문에 실제 remove 실패를 일반 retry나 무조건 성공으로 바꾸지 않는다.
+
+
+원격 command fallback의 tar 추출은 `--no-same-owner`로 archive UID/GID를 복원하지 않고 실행 사용자 소유로 staging한다. GNU의 `--delay-directory-restore`, 원래 archive 내용·mode 및 non-root `umask 077` 정책은 유지한다. 실제 exported owner 함수의 같은 inert flat payload 회귀에서 cap-drop ALL root의 수정 전 실패→수정 후 성공을 확인했으며 mutable/immutable cold, dedup, capless root/non-root의 변조된 immutable target·target 심볼릭 링크 거부, 원본 hash·mode 보존을 검사했다. 이는 remote 5개 완료 증거가 아니며 새 제품 SHA의 qualification이 필요하다.
+
+GNU tar를 UID 0으로 capability 없이 실행할 때 중첩된 읽기 전용 archive directory 안의 파일 생성은 여전히 실패할 수 있다. 이 범위는 명시적 음성 회귀로 남기고 실패를 완료로 처리하지 않는다. 기존 BSD/non-root nested 회귀와 보조 GNU UID 1000 nested cold·dedup 실검증은 통과했다. 보조 사용자는 inert owner proof에만 적용하며 실제 recovery 13개 fixture의 root UID·cap-drop·timeout·gate는 바꾸지 않는다. 이 변경에 새 extractor, recursive chmod/chown, `-p`, `--no-same-permissions`, capability 추가는 포함하지 않는다.
+
+일반 privileged root가 기존 읽기 전용 target을 덮어써 복구할 수 있는 기존 동작은 이 변경으로 강화하거나 막지 않는다. 새 회귀의 변조 거부 기대는 증명한 capless root와 non-root 맥락에 적용하며, 쓰기 권한이 실제로 있는 맥락에는 기존 repair 성공·내용 복원을 기대한다. 회귀는 UID만으로 권한을 추정하지 않고, 내용 변경 없는 `open(r+)`/close의 성공 또는 EACCES·EPERM을 먼저 측정해 기대 결과를 정한다.
