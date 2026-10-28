@@ -209,5 +209,18 @@
     "cloud-image-sentry.test.ts: missing .github/workflows/release.yml",
     "container-init-reaping.test.ts: missing .github/workflows/docker.yml"
   ],
-  "limits": "Only the stated focused/static checks were run locally; this receipt does not claim the complete GitHub regression matrix passed."
+  "limits": "Only the stated focused/static checks were run locally; this receipt does not claim the complete GitHub regression matrix passed.",
+  "preservedConfigurationCount": 1,
+  "preservedConfigurations": [
+    {
+      "original": ".github/dependabot.yml",
+      "retained": "crewroom/upstream-workflows/dependabot.yml",
+      "kind": "dependabot_configuration",
+      "referenceCommit": "723bdeb",
+      "sha256": "b3172202350fc9955e2a3b138c3fc0530b2729b56cc5870f1e2b4827e7fee99a",
+      "byteIdentical": true,
+      "active": false,
+      "securityAlertSettingsChanged": false
+    }
+  ]
 }

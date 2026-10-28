@@ -90,5 +90,10 @@
   {
     "original": ".github/workflows/storybook-visual.yml",
     "retained": "crewroom/upstream-workflows/storybook-visual.yml"
+  },
+  {
+    "original": ".github/dependabot.yml",
+    "retained": "crewroom/upstream-workflows/dependabot.yml",
+    "kind": "dependabot_configuration"
   }
 ]
