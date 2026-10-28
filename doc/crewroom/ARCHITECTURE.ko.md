@@ -2,6 +2,8 @@
 
 2026-10-28 · Astra 설계 및 리뷰 · GPT-6.1 Sol 제품 구현
 
+검증 기준은 2026-10-29, 제품 소스 `5d2b242658efe63c10c495bf526b329db2f2f064`다. 기본 CI 3개 작업, 전체 회귀 21개 작업·실제 사례 45,761개와 production 이미지의 인증·개인 대화/파일 ACL·재시작·snapshot·새 프로젝트 복원이 통과했다. 추가 원격 warm 종료 검사는 미해결이며, [최신 리뷰](REVIEW.ko.md)·[전체 회귀 영수증](regression-receipt-5d2b242.json)·[이미지 영수증](image-receipt-5d2b242.json)을 기준으로 한다.
+
 Crewroom은 **Paperclip의 전체 소스를 기반으로 한 팀 에이전트 제품**이다. 한국어 작업 화면에서 공용 전문 에이전트와 개인비서를 사용하고, 대화가 문서·코드·테스트·검토 가능한 결과물로 이어지게 한다. Paperclip이 모든 작업과 실행의 유일한 권한 주체이며 Crewroom은 제품 경험과 필요한 정책을 같은 시스템 안에 확장한다.
 
 **전체 소스를 가져왔다는 사실은 Crewroom의 모든 요구가 완료되었다는 뜻이 아니다.** 아래 그림과 계약에는 첫 구현 범위와 아직 구현·검증해야 할 목표가 함께 포함되어 있다. 최신 검증 상태는 [리뷰 기록](REVIEW.ko.md)을 따른다. 실제 Claude endpoint 추론과 GitLab 발행은 검증되지 않았다.
@@ -130,19 +132,19 @@ prepared proposal에는 repository identity, base/head SHA, exact tree/patch has
 
 ## 9. 완료 판정: 네 종류의 증거
 
-이 표는 기능 보유와 실제 검증을 분리한다. 구현 중인 항목은 검증 완료로 승격하지 않으며 실제 기록은 [foundation 작업 기록](../plans/2026-10-28-crewroom-paperclip-foundation.md)과 후속 review evidence에 남긴다.
+이 표는 현재 구현과 검증 증거를 목표 설계와 구분한다. 45,761개는 해당 제품 SHA 전체 회귀의 합계이며 각 기능의 실제 모델 실행 증명이 아니다. 수정 전 실패와 후속 검증은 [리뷰 기록](REVIEW.ko.md), 초기 과정은 [foundation 작업 기록](../plans/2026-10-28-crewroom-paperclip-foundation.md)에 보존한다.
 
 | 범위 | upstream 재사용 | Crewroom 확인 증거 | live 미검증 | 최종 완료 blocker |
 |---|---|---|---|---|
-| core task/wake/session/workspace | pinned source와 관련 test 구조 확인 | 전체 source import, frozen install 기록 | 실운영 load/장기 recovery | 장애·stale writer·복원 검증 |
-| 한국어 홈/부서/캐릭터 | UI/router/agents/live events | 구현 중; test/render evidence 필요 | 실제 팀 운영 | 정확한 상태·권한·접근 UX |
-| 개인 대화 | conversation+issue privacy+개인 project | privacy 수정/통합 검증 진행 | 실제 다중 사용자 운영 | 두 사용자 직접 API·artifact/event 차단 |
+| core task/wake/session/workspace | 전체 pinned source와 기존 단일 실행 체계 | 기본/전체 CI 통과, 실제 프로세스 복구 8개 통과, Linux 자식 종료 회귀 | 실운영 load/장기 recovery | 추가 remote warm 종료 검사가 미해결; 장기 장애·격리 검증 |
+| 한국어 홈/부서/캐릭터 | UI/router/agents/live events | 구현·집중 회귀와 실제 로컬 API 화면 확인, 미미 포함 12종·상태 모션·동작 감소 | 실제 팀 운영 | 실제 모델 연결 후 작업 상태·사용성 검증 |
+| 개인 대화 | conversation+issue privacy+개인 project | private 기본 생성·권한 통합 회귀, 이미지에서 서로 다른 두 사용자 대화/첨부 ACL·복원 후 재검사 | 실제 다중 사용자 운영·전체 artifact/event 경로 | 검색·산출물·run log·event stream의 비허용 접근 전체 행렬과 누적 source 철회 검증 |
 | 독립 개인비서 memory/home | agent/file/session 기반 존재 | 목표 설계 | 격리·재개·철회 | binding과 전 경로 ownership enforcement |
 | 부서 ACL/provenance | 회사/issue/project 권한 재사용 | grouping은 ACL 아님 | historical source revocation | department policy와 누적 dependency fencing |
 | Claude custom endpoint | existing claude_local adapter | 설정 연결/fixture는 별도 기록 | 실제 endpoint inference/tool/resume/stop | credential과 실제 compatibility proof |
 | 스킬 작업 | catalog/versions/assignments/snapshot | UI 요청과 실제 version 적용 구별 | 원하는 실제 업무 품질 | immutable 적용 증거와 tool 실행 |
 | GitLab Draft MR | 일반 approval/action 기초 재사용 | 목표 설계 | push/MR/retry reconciliation | exact proposal publisher 구현·실계정 proof |
-| backup/restore | snapshot/recovery 기반 존재 | 목표 일관성 계약 | 완전 복원/revocation/remote reconcile | 재해복구 시나리오 통과 |
+| backup/restore | snapshot/recovery 기반과 Crewroom 배포 도구 | 이미지에서 쓰기를 멈춘 DB·앱 파일·환경 snapshot, 빈 volume의 새 프로젝트 복원 및 인증/ACL/파일 재검사 통과 | EC2 손실·장기 운영·revocation·외부 부작용 reconcile | 실제 배포의 외부 백업·재해복구 훈련과 정책 재검증 |
 
 단계는 (1) 실제 제품 진입과 비공개 대화, (2) 독립 identity·scope·provenance, (3) 격리 실행과 exact GitLab publication, (4) 일관된 복구·장기 운영 proof 순서다. 첫 단면 완료를 최종 전체 제품 완료로 발표하지 않는다.
 

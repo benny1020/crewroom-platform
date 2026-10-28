@@ -15,6 +15,9 @@ from unittest.mock import Mock, call, patch
 spec = importlib.util.spec_from_file_location("qualification", Path(__file__).with_name("crewroom-runtime-qualification.py"))
 qualification = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(qualification)
+export_spec = importlib.util.spec_from_file_location("qualification_export", Path(__file__).with_name("crewroom-runtime-export-binaries.py"))
+qualification_export = importlib.util.module_from_spec(export_spec)
+export_spec.loader.exec_module(qualification_export)
 
 
 def report(titles):
@@ -322,7 +325,7 @@ class AdoptedReaperTests(unittest.TestCase):
 
 
 class PipelineControlTests(unittest.TestCase):
-    def run_mock_pipeline(self, mode="assertion_failure"):
+    def run_mock_pipeline(self, mode="assertion_failure", diagnostic=False, export=False):
         # Exercise the actual helper orchestration without starting commands,
         # containers, Rust, PostgreSQL or test processes.
         with tempfile.TemporaryDirectory(prefix="qualification-offline-") as directory:
@@ -334,6 +337,7 @@ class PipelineControlTests(unittest.TestCase):
                 path.write_bytes(b"synthetic offline binary")
                 path.chmod(0o700)
             (source / "packages/paperclip-runner/rust-toolchain.toml").write_text('[toolchain]\nchannel = "1.97.1"\n')
+            (source / "packages/paperclip-runner/runner/Cargo.lock").write_text("public synthetic offline Cargo lock")
             output = root / "public"
             commands = []
             cleanup_calls = []
@@ -380,9 +384,17 @@ class PipelineControlTests(unittest.TestCase):
                     elif command == ["pnpm", "--version"]:
                         self.stdout = b"9.15.4"
                     elif command == ["rustc", "--version"]:
-                        self.stdout = b"rustc 1.97.1 (synthetic)"
+                        self.stdout = b"rustc 1.97.1 (abcdef01 2026-10-01)"
                     elif command == ["cargo", "--version"]:
-                        self.stdout = b"cargo 1.97.1 (synthetic)"
+                        self.stdout = b"cargo 1.97.1 (abcdef01 2026-10-01)"
+                    elif command[0] == "python3" and command[1].endswith("crewroom-runtime-export-binaries.py"):
+                        # Exercise the real export owner using only inert files;
+                        # no executable or command is started by this fixture.
+                        binding = json.loads(Path(command[command.index("--binding") + 1]).read_text())
+                        with patch.object(qualification_export, "checkout_revision", return_value="a" * 40), \
+                             patch.object(qualification_export, "mit_notice", return_value="PUBLIC_SYNTHETIC_MIT_NOTICE"), \
+                             patch.object(qualification_export, "notice_sha256", return_value="c" * 64):
+                            qualification_export.stage(source, Path(command[command.index("--output") + 1]), binding)
                     elif command[0] == "node" and "--input-type=module" in command:
                         self.stdout = str(source / qualification.RUNNER).encode()
                     elif command[:2] == ["docker", "run"]:
@@ -409,7 +421,7 @@ class PipelineControlTests(unittest.TestCase):
                         if not remote:
                             if mode == "preparation_failure":
                                 value["testResults"][0]["assertionResults"][0]["status"] = "pending"
-                            else:
+                            elif mode != "all_pass":
                                 for case in value["testResults"][0]["assertionResults"][:3]:
                                     case.update(status="failed", failureMessages=["AssertionError: expected 0 to be 1"])
                                 value.update(success=False, numFailedTests=3, numPassedTests=5)
@@ -440,7 +452,10 @@ class PipelineControlTests(unittest.TestCase):
 
             original_signals = {event: signal.getsignal(event) for event in [signal.SIGINT, signal.SIGTERM]}
             try:
-                with patch.dict(os.environ, {"PRODUCT_REVISION": "a" * 40, "HELPER_REVISION": "b" * 40, "GITHUB_RUN_ID": "1", "GITHUB_RUN_ATTEMPT": "1"}), \
+                with patch.dict(os.environ, {"PRODUCT_REVISION": "a" * 40, "HELPER_REVISION": "b" * 40, "GITHUB_RUN_ID": "1", "GITHUB_RUN_ATTEMPT": "1",
+                         "GITHUB_ACTIONS": "true", "RUNNER_OS": "Linux", "RUNNER_TEMP": str(root), "HOME": str(root),
+                         "CREWROOM_QUALIFICATION_PHASE_DIAGNOSTICS": "1" if diagnostic else "0",
+                         "CREWROOM_QUALIFICATION_EXPORT_BINARIES": "1" if export else "0"}, clear=True), \
                      patch.object(qualification, "state_directory", return_value=root / "private"), \
                      patch.object(qualification.platform, "machine", return_value="x86_64"), \
                      patch.object(qualification.sys, "platform", "linux"), \
@@ -456,7 +471,48 @@ class PipelineControlTests(unittest.TestCase):
             finally:
                 for event, handler in original_signals.items():
                     signal.signal(event, handler)
-            return code, json.loads((output / "receipt.json").read_text()), commands
+            receipt = json.loads((output / "receipt.json").read_text())
+            if export:
+                manifest = root / "qualification-binaries/manifest.json"
+                self.assertEqual(receipt["stages"]["diagnostic_binary_export"]["manifestSha256"], qualification.digest(manifest))
+                self.assertEqual(set(os.listdir(manifest.parent)), {"manifest.json", "paperclip-runnerd", "fake-codex-app-server"})
+                self.assertEqual(receipt["stages"]["cleanup"]["status"], "passed")
+                self.assertFalse((root / "private").exists())
+            return code, receipt, commands
+
+    def test_ambient_diagnostic_export_inputs_do_not_change_the_default_mock_fixture(self):
+        with patch.dict(os.environ, {"CREWROOM_QUALIFICATION_PHASE_DIAGNOSTICS": "1", "CREWROOM_QUALIFICATION_EXPORT_BINARIES": "1"}):
+            code, receipt, commands = self.run_mock_pipeline()
+            self.assertEqual(os.environ["CREWROOM_QUALIFICATION_EXPORT_BINARIES"], "1")
+        self.assertEqual(code, 1)
+        self.assertEqual(receipt["stages"]["local_real_processes"]["failed"], 3)
+        self.assertEqual(receipt["stages"]["remote_continuity"]["passed"], 5)
+        self.assertNotIn("diagnostic_binary_export", receipt["stages"])
+        self.assertFalse(any(command[0] == "python3" for command in commands))
+
+    def test_explicit_diagnostic_export_stages_public_binaries_before_runtime_and_preserves_failure(self):
+        code, receipt, commands = self.run_mock_pipeline(diagnostic=True, export=True)
+        build = next(index for index, command in enumerate(commands) if command[:2] == ["cargo", "build"])
+        exported = next(index for index, command in enumerate(commands) if command[0] == "python3")
+        local = next(index for index, command in enumerate(commands) if "vitest" in command)
+        self.assertLess(build, exported)
+        self.assertLess(exported, local)
+        remote = next(command for command in commands if "vitest" in command and "-t" in command)
+        self.assertIn("--config", remote)
+        self.assertEqual(receipt["stages"]["phase_overlay_smoke"]["status"], "passed")
+        self.assertEqual(receipt["stages"]["local_real_processes"]["failed"], 3)
+        self.assertEqual(receipt["stages"]["remote_continuity"]["passed"], 5)
+        self.assertEqual(receipt["status"], "failed")
+        self.assertEqual(code, 1)
+
+    def test_all_passed_instrumented_pipeline_is_diagnostic_only_and_nonzero(self):
+        code, receipt, _commands = self.run_mock_pipeline("all_pass", diagnostic=True, export=True)
+        self.assertEqual(receipt["stages"]["local_real_processes"]["passed"], 8)
+        self.assertEqual(receipt["stages"]["remote_continuity"]["passed"], 5)
+        self.assertTrue(receipt["diagnosticOnly"])
+        self.assertFalse(receipt["stockQualification"])
+        self.assertEqual(receipt["status"], "diagnostic_only")
+        self.assertEqual(code, 1)
 
     def test_local_assertion_failures_collect_remote_evidence_but_job_stays_failed(self):
         code, receipt, commands = self.run_mock_pipeline()
