@@ -13,6 +13,7 @@
  * happens.
  */
 
+import fs from "node:fs";
 import express from "express";
 import request from "supertest";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -27,11 +28,6 @@ import type { Config } from "../config.js";
 const ORIGIN = "http://127.0.0.1:41999";
 const EMAIL = "founder@example.com";
 const PASSWORD = "correct-horse-battery-staple";
-
-// The issuer Better Auth stamps on an email/password account:
-// `createLocalAccountIssuer("credential")`. Sign-in matches on it, so a row
-// written with anything else is a row nobody can sign in as.
-const CREDENTIAL_ISSUER = "local:credential";
 
 const embeddedPostgresSupport = await getEmbeddedPostgresTestSupport();
 const describeEmbeddedPostgres = embeddedPostgresSupport.supported ? describe : describe.skip;
@@ -107,7 +103,7 @@ describeEmbeddedPostgres("Better Auth credential sign-up against the real schema
     expect(accounts).toHaveLength(1);
     expect(accounts[0]).toMatchObject({
       providerId: "credential",
-      issuer: CREDENTIAL_ISSUER,
+      issuer: null,
     });
     expect(accounts[0]?.password).toBeTruthy();
 
@@ -120,4 +116,40 @@ describeEmbeddedPostgres("Better Auth credential sign-up against the real schema
     expect(signIn.body?.user?.email).toBe(EMAIL);
     expect(sessionCookies(signIn).length).toBeGreaterThan(0);
   });
+
+  it("preserves legacy credential hashes, issuer values and live sessions through the forward migration", async () => {
+    const signUp = await request(app).post("/api/auth/sign-up/email").set("origin", ORIGIN)
+      .send({ email: "legacy@example.com", password: PASSWORD, name: "Legacy" });
+    expect(signUp.status).toBe(200);
+    const cookies = sessionCookies(signUp).map((cookie) => cookie.split(";")[0]);
+    expect(cookies.length).toBeGreaterThan(0);
+    const sql = db.$client;
+    // Recreate the 1.7.0–1.7.2 constraints on this disposable database.
+    // These are real password hashes and signed session cookies; no provider
+    // credentials or external identity services are involved.
+    await sql`UPDATE "account" SET "issuer" = 'local:credential' WHERE "issuer" IS NULL`;
+    await sql`DROP INDEX "account_provider_account_id_uq"`;
+    await sql`ALTER TABLE "account" ALTER COLUMN "issuer" SET NOT NULL`;
+    await sql`CREATE UNIQUE INDEX "account_issuer_account_id_uq" ON "account" ("issuer", "account_id")`;
+    const accountsBefore = await sql`SELECT * FROM "account" ORDER BY "id"`;
+    const sessionsBefore = await sql`SELECT * FROM "session" ORDER BY "id"`;
+    const migration = fs.readFileSync(new URL("../../../packages/db/src/migrations/0395_better_auth_provider_account_identity.sql", import.meta.url), "utf8");
+    await sql.unsafe(migration);
+    await sql.unsafe(migration); // Retrying the SQL is harmless as well as journal retries.
+    expect(await sql`SELECT * FROM "account" ORDER BY "id"`).toEqual(accountsBefore);
+    expect(await sql`SELECT * FROM "session" ORDER BY "id"`).toEqual(sessionsBefore);
+    const existingSession = await request(app).get("/api/auth/get-session").set("cookie", cookies);
+    expect(existingSession.status).toBe(200);
+    expect(existingSession.body?.user?.email).toBe("legacy@example.com");
+    const signIn = await request(app).post("/api/auth/sign-in/email").set("origin", ORIGIN)
+      .send({ email: "legacy@example.com", password: PASSWORD });
+    expect(signIn.status).toBe(200);
+    expect(signIn.body?.user?.email).toBe("legacy@example.com");
+    const newSignUp = await request(app).post("/api/auth/sign-up/email").set("origin", ORIGIN)
+      .send({ email: "after-upgrade@example.com", password: PASSWORD, name: "After upgrade" });
+    expect(newSignUp.status).toBe(200);
+    const [created] = await sql`SELECT "issuer" FROM "account" WHERE "user_id" = ${newSignUp.body.user.id}`;
+    expect(created?.issuer).toBeNull();
+  });
+
 });

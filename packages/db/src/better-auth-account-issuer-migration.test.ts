@@ -21,10 +21,10 @@ import {
 const MIGRATION_FILE = "0230_better_auth_account_issuer.sql";
 const UNIQUE_INDEX = "account_issuer_account_id_uq";
 
-// Better Auth's own issuer helpers: `createLocalAccountIssuer("credential")`
+// Historical Better Auth 1.7.0–1.7.2 issuer helpers: `createLocalAccountIssuer("credential")`
 // for email/password and `createOAuthAccountIssuer(providerId)` for a social
-// provider that declares no issuer of its own. Sign-in looks the credential
-// account up by this exact value.
+// provider that declared no issuer of its own. That historical version matched
+// credential accounts using this exact value. Current identity uses provider/account.
 const CREDENTIAL_ISSUER = "local:credential";
 const OAUTH_ISSUER_PREFIX = "local:oauth:";
 
@@ -41,20 +41,15 @@ async function migrationHash() {
 }
 
 describe("account issuer schema", () => {
-  it("declares the column Better Auth requires and the key it indexes on", () => {
+  it("preserves the legacy column without requiring an issuer or its old unique key", () => {
     const config = getTableConfig(authAccounts);
     const issuer = config.columns.find((column) => column.name === "issuer");
     expect(issuer).toBeDefined();
-    expect(issuer?.notNull).toBe(true);
-
-    // Better Auth declares `(issuer, accountId)` unique on the account model
-    // and resolves accounts by that pair.
-    const unique = config.indexes.find((index) => index.config.name === UNIQUE_INDEX);
-    expect(unique?.config.unique).toBe(true);
-    expect(unique?.config.columns.map((column) => (column as { name: string }).name)).toEqual([
-      "issuer",
-      "account_id",
-    ]);
+    expect(issuer?.notNull).toBe(false);
+    expect(config.indexes.find((index) => index.config.name === UNIQUE_INDEX)).toBeUndefined();
+    const currentKey = config.indexes.find((index) => index.config.name === "account_provider_account_id_uq");
+    expect(currentKey?.config.unique).toBe(true);
+    expect(currentKey?.config.columns.map((column) => (column as { name: string }).name)).toEqual(["provider_id", "account_id"]);
   });
 });
 
@@ -78,6 +73,7 @@ describeEmbeddedPostgres("account issuer migration", () => {
     // Rewind to the pre-upgrade shape: no issuer column, no unique index.
     await sql`DELETE FROM "drizzle"."__drizzle_migrations" WHERE "hash" = ${await migrationHash()}`;
     await sql`DROP INDEX IF EXISTS ${sql(UNIQUE_INDEX)}`;
+    await sql`DROP INDEX IF EXISTS "account_provider_account_id_uq"`;
     await sql`ALTER TABLE "account" DROP COLUMN IF EXISTS "issuer"`;
 
     const credentialUserId = `user-${randomUUID()}`;

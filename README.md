@@ -67,6 +67,8 @@ pnpm build
 
 최신 통과 수·실패 이력·미검증 범위는 [리뷰 기록](doc/crewroom/REVIEW.ko.md)과 [foundation receipt](doc/plans/2026-10-28-crewroom-paperclip-foundation.md)에 구분해 남깁니다. fixture와 로컬 DB 검사는 실제 Claude custom endpoint의 추론·도구·중단·재개 품질 증거가 아닙니다. [Claude endpoint 안내](crewroom/CLAUDE-ENDPOINT.md)를 따라 실제 연결을 별도로 확인합니다.
 
+보안 의존성 패치와 기존 계정·세션을 보존하는 인증 마이그레이션을 포함합니다. 업데이트 전에는 [계정 이전과 snapshot 절차](doc/crewroom/DEPLOYMENT.ko.md)를 확인합니다. 감사 수치, 실제 설치·회귀 증거와 MSAL·Zod v3의 남은 경계는 [의존성 보안 기록](doc/crewroom/DEPENDENCY-SECURITY.ko.md)에 설명합니다. 별도의 [Linux 프로세스·원격 연속성 검증](doc/crewroom/RUNTIME-QUALIFICATION.ko.md)은 실제 모델 대신 고정된 테스트 provider를 사용합니다.
+
 [AGENTS.md](AGENTS.md), upstream `rules/`, [제품 경계](PRODUCT.md)를 먼저 읽습니다. [고정 Impeccable 설치](crewroom/IMPECCABLE.md)는 checksum 검증 후 스킬만 설치하며 자동 hook trust를 설정하지 않습니다. [upstream source receipt](crewroom/UPSTREAM.json)는 revision `cff331f6ca0a652b5e41641c68dfa5fa584c22ae`를 고정합니다. [원본 README](crewroom/UPSTREAM-README.md)와 [보존된 비활성 workflow](crewroom/upstream-workflows/README.md)도 제공합니다. 원본 Crewroom 구현은 Git history에 보존하며 두 번째 실행 체계로 사용하지 않습니다.
 
 ## 라이선스

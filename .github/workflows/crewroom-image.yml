@@ -21,7 +21,8 @@ permissions:
 
 concurrency:
   group: crewroom-image-${{ github.ref }}
-  cancel-in-progress: true
+  # Let the running image finish exporting its cache; queue only the latest successor.
+  cancel-in-progress: false
 
 jobs:
   image-and-persistence:

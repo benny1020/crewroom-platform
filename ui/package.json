@@ -61,7 +61,7 @@
     "i18next": "^26.4.2",
     "lexical": "0.48.0",
     "lucide-react": "^1.48.0",
-    "mermaid": "^12.1.0",
+    "mermaid": "12.2.0",
     "motion": "^13.1.1",
     "radix-ui": "^1.6.7",
     "react": "^19.2.8",
@@ -88,7 +88,7 @@
     "storybook": "10.6.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
-    "vite": "^8.2.2",
+    "vite": "8.2.4",
     "vitest": "^5.0.3"
   },
   "engines": {

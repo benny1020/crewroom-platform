@@ -69,6 +69,8 @@ docker compose --env-file deploy/crewroom/.env -f deploy/crewroom/compose.yaml r
 
 `down`은 컨테이너/network만 제거한다. **`down -v`는 영속 데이터를 삭제**하므로 정상 재시작/업데이트 명령으로 사용하지 않는다. 소스를 업데이트하기 전에는 snapshot을 만들고 기존 image tag/digest를 기록한다. schema migration 이후 예전 image로만 되돌리는 방식은 호환성을 보장하지 않는다.
 
+Better Auth 1.7.7 업데이트의 `0395` migration은 기존 계정·비밀번호 hash·세션·`issuer` 값을 보존하면서 `issuer`의 NOT NULL 제약과 옛 unique index를 해제하고, 현재 계정 식별 기준인 `(provider_id, account_id)`에 unique index를 적용해 동시 쓰기의 중복도 차단한다. 다른 제공자는 같은 account ID를 사용할 수 있다. `(provider_id, account_id)` 중복이 있으면 변경 전에 중복 그룹 수만 기록하고 중단한다. 계정을 자동 병합하거나 삭제하지 않으며, 운영자가 [공식 업그레이드 지침](https://www.better-auth.com/docs/guides/1-7-upgrade-guide)에 따라 소유 관계를 확인한 뒤 재시도해야 한다. 새 계정은 `issuer = NULL`이므로 1.7.0–1.7.2 앱으로만 되돌리거나 NOT NULL을 자동 복원하면 안 된다. 복구가 필요하면 호환되는 앱과 업데이트 전 snapshot을 별도 복구 프로젝트에서 함께 검증한다.
+
 ## 일관된 백업과 새 프로젝트로 복원
 
 snapshot 도구는 앱을 정상 종료해 쓰기를 멈추고 PG custom dump, `/paperclip` archive, 배포 secret 파일과 SHA-256 manifest를 생성한 뒤 원래 실행 중이었던 앱을 다시 시작한다. 백업 디렉터리는 owner-only다. 외부 agent/runtime가 `/paperclip`에 직접 쓰는 별도 구성을 추가했다면 그것도 먼저 멈춰야 한다. 진행 중인 외부 서비스 작업까지 스냅샷이 원자적으로 되돌리는 것은 아니다.

@@ -1,0 +1,242 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-29",
+  "scope": "Production dependency security patches; no product UX changes",
+  "policy": {
+    "reviewedMinimumTargets": true,
+    "incompatibleGlobalMajorOverrides": false,
+    "auditIgnoresAdded": false,
+    "installScriptsDisabledLocally": true,
+    "existingPatchHashesPreserved": true,
+    "sameMajorExceptReviewedParentScopedEsbuild": true,
+    "reviewedParentScopedException": {
+      "selector": "@esbuild-kit/core-utils@3.3.2>esbuild",
+      "from": "0.18.20",
+      "to": "0.25.0",
+      "reason": "Legacy transform-only adapter; actual sync/async transform and typed ESM loader verified"
+    }
+  },
+  "audit": {
+    "before": {
+      "info": 0,
+      "low": 15,
+      "moderate": 48,
+      "high": 47,
+      "critical": 3
+    },
+    "after": {
+      "info": 0,
+      "low": 1,
+      "moderate": 0,
+      "high": 1,
+      "critical": 0
+    },
+    "afterInstalledAndFrozenLock": true,
+    "rawReportsPrivate": true,
+    "remaining": [
+      {
+        "name": "cli",
+        "severity": "low",
+        "advisory": "https://github.com/advisories/GHSA-6cpc-mj5c-m9rq",
+        "installed": [
+          "0.3.1"
+        ],
+        "patched": ">=1.0.0",
+        "classification": "pnpm 9.15.4 workspace importer alias collision; raw low count retained"
+      },
+      {
+        "name": "@azure/msal-node",
+        "severity": "high",
+        "advisory": "https://github.com/advisories/GHSA-xcx6-jx8p-x3h5",
+        "installed": [
+          "5.6.0"
+        ],
+        "patched": ">=7.1.0",
+        "classification": "Real transitive advisory; current Teams source uses ClientCredential, authorization-code precondition not observed; forced major upgrade not applied"
+      }
+    ]
+  },
+  "installedAndLocked": [
+    {
+      "workspace": "server",
+      "name": "better-auth",
+      "version": "1.7.7",
+      "locked": true
+    },
+    {
+      "workspace": "server",
+      "name": "dompurify",
+      "version": "3.4.17",
+      "locked": true
+    },
+    {
+      "workspace": "server",
+      "name": "express",
+      "version": "5.2.1",
+      "locked": true
+    },
+    {
+      "workspace": "server",
+      "name": "multer",
+      "version": "2.5.0",
+      "locked": true
+    },
+    {
+      "workspace": "server",
+      "name": "sharp",
+      "version": "0.35.5",
+      "locked": true
+    },
+    {
+      "workspace": "server",
+      "name": "svix",
+      "version": "1.92.2",
+      "locked": true
+    },
+    {
+      "workspace": "server",
+      "name": "zod",
+      "version": "4.6.6",
+      "locked": true
+    },
+    {
+      "workspace": "packages/adapters/cursor-cloud",
+      "name": "@cursor/sdk",
+      "version": "1.0.38",
+      "locked": true
+    },
+    {
+      "workspace": "packages/mcp-server",
+      "name": "@modelcontextprotocol/sdk",
+      "version": "1.32.0",
+      "locked": true
+    },
+    {
+      "workspace": "ui",
+      "name": "mermaid",
+      "version": "12.2.0",
+      "locked": true
+    },
+    {
+      "workspace": "ui",
+      "name": "vite",
+      "version": "8.2.4",
+      "locked": true
+    }
+  ],
+  "lockedCriticalDependencies": [
+    {
+      "name": "proxy-addr@2.0.8",
+      "present": true
+    },
+    {
+      "name": "dompurify@3.4.17",
+      "present": true
+    },
+    {
+      "name": "better-auth@1.7.7",
+      "present": true
+    }
+  ],
+  "checks": {
+    "frozenInstall": "pass; --frozen-lockfile --ignore-scripts",
+    "targetedRuntime": {
+      "filesPassed": 12,
+      "passed": 179,
+      "failed": 0,
+      "skipped": 0,
+      "workerCount": 1,
+      "includes": "Real PostgreSQL credential signup after schema repair, asset sanitize, AgentMail signatures, Express auth mount, Cursor adapter and actual SDK schemas, shared validators, Markdown and actual Mermaid/KaTeX SVG"
+    },
+    "mermaidRuntime": {
+      "passed": 2,
+      "realPackages": true,
+      "svgLayoutMeasurements": "jsdom stub; does not prove visual geometry"
+    },
+    "mcpTools": {
+      "passed": 16
+    },
+    "types": {
+      "cursorCloud": "pass",
+      "shared": "pass",
+      "mcpServer": "pass",
+      "googleSheetsMcpServer": "pass",
+      "kvDemoMcpServer": "pass",
+      "ui": "pass; includes new Mermaid runtime test"
+    },
+    "initialCompatibilityDiscovery": {
+      "passed": 173,
+      "failed": 1,
+      "filesPassed": 9,
+      "filesFailed": 1,
+      "blocker": "Better Auth 1.7.7 account.issuer schema migration; assigned to backend repair",
+      "resolution": "Backend schema migration repaired; final combined targeted run passed"
+    },
+    "legacyTransformer": {
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "checks": [
+        "Actual installed esbuild 0.25.0",
+        "Legacy core-utils synchronous and asynchronous transforms",
+        "Legacy ESM loader imports typed module with native TypeScript stripping disabled"
+      ]
+    },
+    "backendAuth": {
+      "filesPassed": 3,
+      "passed": 7,
+      "skipped": 0,
+      "source": "Backend worker verification",
+      "dbGenerateAndTypes": "pass",
+      "serverTypes": "pass"
+    }
+  },
+  "limitations": [
+    "No live provider credentials or model execution used",
+    "Full remote regression/build and patched production image startup require a new CI candidate",
+    "Residual incompatible-major advisories remain under review; zero-critical does not mean zero-risk",
+    "Zod v3 compatibility entrypoint resource-amplification behavior remains despite the registry audit package count falling"
+  ],
+  "checkedAtUtc": "2026-10-28T15:49:09.643Z",
+  "installedTransitiveProof": [
+    {
+      "parent": "express@5.2.1",
+      "name": "proxy-addr",
+      "version": "2.0.8",
+      "locked": true
+    },
+    {
+      "parent": "express@5.2.1",
+      "name": "body-parser",
+      "version": "2.4.0",
+      "locked": true
+    },
+    {
+      "parent": "@esbuild-kit/core-utils@3.3.2",
+      "name": "esbuild",
+      "version": "0.25.0",
+      "locked": true
+    }
+  ],
+  "zodCompatibilityLimit": {
+    "package": "zod@4.6.6",
+    "cursorSdk": "1.0.38",
+    "observations": [
+      {
+        "entryPoint": "zod/v3",
+        "inputItems": 100,
+        "maximumItems": 1,
+        "success": false,
+        "visitedItems": 100
+      },
+      {
+        "entryPoint": "zod/v4",
+        "inputItems": 100,
+        "maximumItems": 1,
+        "success": false,
+        "visitedItems": 0
+      }
+    ],
+    "assessment": "Package audit high removed; v4 size bound fixed. v3 compatibility entrypoint still traverses the full oversized input. Cursor provider response schemas use v3; do not claim that residual path is fixed."
+  }
+}

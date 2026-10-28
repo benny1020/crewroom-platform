@@ -2752,6 +2752,13 @@
       "when": 1793152860397,
       "tag": "0394_conscious_whizzer",
       "breakpoints": true
+    },
+    {
+      "idx": 395,
+      "version": "7",
+      "when": 1793202336196,
+      "tag": "0395_better_auth_provider_account_identity",
+      "breakpoints": true
     }
   ]
 }

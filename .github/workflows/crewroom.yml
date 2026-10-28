@@ -81,6 +81,23 @@ jobs:
           server/src/__tests__/issue-feedback-routes.test.ts
           server/src/__tests__/heartbeat-run-privacy-routes.test.ts
           server/src/services/native-runtime/runner-bridge-tools.test.ts
+      - name: Legacy dependency transformer compatibility
+        run: node --test --test-concurrency=1 scripts/__tests__/crewroom-dependency-runtime.test.mjs
+      - name: Patched dependency runtime contracts
+        run: >-
+          pnpm exec vitest run --maxWorkers=2
+          server/src/__tests__/better-auth-credential-signup.integration.test.ts
+          server/src/__tests__/express5-auth-wildcard.test.ts
+          server/src/__tests__/assets.test.ts
+          server/src/__tests__/agentmail-api.test.ts
+          packages/adapters/cursor-cloud/src/server/execute.test.ts
+          packages/adapters/cursor-cloud/src/server/session.test.ts
+          packages/adapters/cursor-cloud/src/server/sdk-runtime.test.ts
+          packages/adapters/cursor-cloud/src/ui/build-config.test.ts
+          packages/adapters/cursor-cloud/src/ui/parse-stdout.test.ts
+          packages/shared/src/validators/asset.test.ts
+          ui/src/components/MarkdownBody.test.tsx
+          ui/src/lib/mermaid-runtime.test.ts
       - name: Verify real Linux descendant reaping and controller death
         run: node server/scripts/verify-workspace-supervisor.mjs
       - name: MCP explicit comment intent regression

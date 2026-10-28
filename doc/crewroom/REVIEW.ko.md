@@ -75,7 +75,7 @@ private source 보호는 기존 `issueService.create`의 run provenance 상속�
 
 ## 검증 기록과 남은 완료 조건
 
-2026-10-29 후속 검증 기준이다. 첫 full CI `40703906698`는 21개 job 중 12개 성공·9개 실패로 종료됐다. 기존 native runner shard는 4 files·107 통과·13 skip이며 새 R5 bwrap bridge 수정의 통과 증거가 아니다. R5 bridge 17개 집중 검사와 아래 수정을 반영한 새 후보 전체 CI를 기다린다. skip을 실행 증거로 세지 않는다.
+2026-10-29 후속 검증 기준이다. 첫 full CI `40703906698`는 21개 job 중 12개 성공·9개 실패로 종료됐다. 기존 native runner shard는 4 files·107 통과·13 skip이며 새 R5 bwrap bridge 수정의 통과 증거가 아니다. 이후 b08 후보(`b08e5947ff45981b939676e7cfa404c2b683264d`)의 기본 CI `40714076506`는 3개 job 모두 통과했다. 집중 job은 server 7 files·228 통과·플랫폼 skip 1개, MCP 16개, UI 17 files·614개를 통과했고 R5의 실제 Linux bwrap 경로도 실행했다. b08 전체 CI `40714076522`는 이 기록 시점 21개 중 12개 성공·실패 0개·나머지 진행 중이다. 이후 의존성·인증 스키마가 변경된 새 보안 후보는 별도 원격 검증을 받아야 한다. skip이나 이전 SHA의 통과를 새 후보의 실행 증거로 세지 않는다.
 
 | 증거 | 현재 확인 수준 |
 |---|---|
@@ -85,7 +85,9 @@ private source 보호는 기존 `issueService.create`의 run provenance 상속�
 | Claude probe fixture | foundation 기록에 27/27. 실제 custom endpoint inference 증거가 아님 |
 | isolated source startup | foundation 기록에 loopback 3117 API/UI health 및 새 PostgreSQL 55447. public deploy나 authenticated 다중 사용자 증거가 아님 |
 | UI focused suites | 10 files, 552/552, worker 1. 기본 native 및 classic composer, TaskChatThread, Crewroom·Avatar·navigation·breadcrumb 회귀. token/module 검사 통과. [별도 UI 기록](UI-VERIFICATION.ko.md) 참조 |
-| 전체 typecheck/build/test | 첫 CI의 fixture·R5·Git 진단·명세·보존 경로 문제를 수정하고 로컬 집중 재검증. 최종 backend·UI 소스 동결, UI 후속 3개 파일 38/38 및 전체 UI typecheck exit 0. 새 main 후보의 전체 회귀 CI 결과 대기. 전체 통과로 판정하지 않음 |
+| b08 원격 기본·집중 검사 | 기본 CI 3개 job 통과. server 228 통과·플랫폼 skip 1개, MCP 16개, UI 614개. b08 전체 회귀는 위 시점 진행 중이며 전체 통과로 판정하지 않음 |
+| 새 보안 후보의 로컬 검증 | 의존성 집중 12 files·179 통과·skip 0, MCP 16개, 실제 legacy transformer 3개, 관련 UI/shared/MCP/Cursor typecheck 통과. 인증 이전은 별도 실제 PostgreSQL 3 files·7 통과·skip 0. DB 생성·migration 검사·typecheck 및 server typecheck 통과. 이 묶음들은 일부 중복되므로 합산하지 않음 |
+| 새 보안 후보의 전체 typecheck/build/test | 로컬 집중 검사와 소스 검토 완료. 새 SHA의 원격 전체 회귀·production image 인증·재시작·복원은 대기. 이전 b08의 결과를 승계하지 않음 |
 | 신규 capability 및 R1–R3 회귀 | 위 focused 결과로 해당 수정 확인. live event 및 다중 로그인 전체 경로는 별도 |
 | 현재 UI visual review | 원본 캐릭터·대화 CTA·실제 paused 상태·명시적 scene preview를 확인. 최신 `media/team-1440x900.png`, `private-chat.png`, `task-opinion.png`, `task-revision.png`와 receipt가 실제 로컬 화면을 기록. 오류·빈 데이터·read-only 대체 응답은 `*.fixture.png`로 구분. [최종 시각 리뷰](UI-REVIEW.ko.md) 참조 |
 | Docker build/auth/restart/data persistence | 첫 image build 통과·health 실패 이력 보존. health/trusted-origin 수정 및 offline 검사 완료. 새 후보 image CI의 auth/restart/restore 결과 대기 |
@@ -103,9 +105,9 @@ OpenAPI의 Crewroom capability 명세 누락은 mounted-route manifest와 board-
 
 원격 general shard에서 detached descendant revocation 검사가 command 반환 직후 읽은 `ticks.txt` 값과 150ms 후 값을 다르게 관찰했다. `runner-bridge-tools.ts`는 바깥 bwrap process group에 SIGKILL을 보낸 뒤 Node `close`를 전체 자식 종료로 취급하여 workspace lane을 해제한다. 그러나 bwrap의 outer monitor는 초기 앱의 종료 정보를 보고 먼저 종료할 수 있다. 따라서 이 경로에는 권한 철회 뒤 쓰기와 다음 명령이 겹치지 않는다는 증명이 없다. 단순 파일 관찰 지연이나 검사 생략으로 수용하지 않는다. [bubblewrap 구현](https://github.com/containers/bubblewrap/blob/main/bubblewrap.c)의 `monitor_child`와 [PID namespace 설명](https://man7.org/linux/man-pages/man7/pid_namespaces.7.html)을 근거로 소유한 자식들의 종료 확인이 필요하다.
 
-현재 상태: **production 소스 조건부 수용, 제한 Linux helper proof 통과, 실제 bwrap bridge 회귀 대기**. 명령별 subreaper가 자기 자식만 종료·회수하고 `ECHILD`를 확인한 뒤 완료를 알리는 구현이다. Node는 유효한 확인과 helper 종료를 함께 검증하며, 늦게 끝난 authorization callback이 종료한 PID에 신호를 보내지 못하게 한다. 확인 실패는 workspace를 현재 controller 안에서 격리하고, 이미 기다리던 후속 명령도 진입 시 거부한다. controller의 제어 pipe가 닫히면 helper가 자식을 정리한다. 5초 응답 한도를 넘겨도 helper를 먼저 죽여 자식을 버리지 않는다. controller 재시작 이후까지 영구 격리를 제공한다는 뜻은 아니다.
+현재 상태: **소스 수용, 제한 Linux helper proof 및 b08의 실제 Linux bwrap 집중 회귀 통과**. 명령별 subreaper가 자기 자식만 종료·회수하고 `ECHILD`를 확인한 뒤 완료를 알리는 구현이다. Node는 유효한 확인과 helper 종료를 함께 검증하며, 늦게 끝난 authorization callback이 종료한 PID에 신호를 보내지 못하게 한다. 확인 실패는 workspace를 현재 controller 안에서 격리하고, 이미 기다리던 후속 명령도 진입 시 거부한다. controller의 제어 pipe가 닫히면 helper가 자식을 정리한다. 5초 응답 한도를 넘겨도 helper를 먼저 죽여 자식을 버리지 않는다. controller 재시작 이후까지 영구 격리를 제공한다는 뜻은 아니다.
 
-최종 제한 Linux container에서 실제 fork·setsid writer의 정상 완료·timeout·권한 철회를 각각 3회 실행해 ACK 이후 descendant PID 부재와 같은 파일의 후속 쓰기 보존을 확인했고, Node controller 강제 종료 후 EOF cleanup도 통과했다. 최종 harness의 시작 handshake와 실패 시 소유 프로세스 정리도 반영해 다시 통과했으며 container는 정상 종료·제거했다. 이 proof는 helper의 process lifecycle 검사이며 bwrap namespace/filesystem 격리 검사가 아니다. 실제 bwrap 실행과 ACK 누락·늦은 authorization 실패를 포함하는 Linux 조건 8개는 macOS에서 skip됐으며 새 GitHub Ubuntu 결과를 기다린다. 첫 실패와 수정 후 증거를 따로 보존한다.
+최종 제한 Linux container에서 실제 fork·setsid writer의 정상 완료·timeout·권한 철회를 각각 3회 실행해 ACK 이후 descendant PID 부재와 같은 파일의 후속 쓰기 보존을 확인했고, Node controller 강제 종료 후 EOF cleanup도 통과했다. 최종 harness의 시작 handshake와 실패 시 소유 프로세스 정리도 반영해 다시 통과했으며 container는 정상 종료·제거했다. 이 로컬 proof 자체는 helper의 process lifecycle 검사다. 이후 b08 GitHub Ubuntu 집중 job `122907613908`에서 bridge 17개 중 Linux 실행 대상이 통과했고 macOS 전용 deny-command 사례만 skip됐다. 실제 bwrap 완료·timeout·권한 철회·같은 파일 후속 쓰기와 ACK 누락 시 대기 명령 거부·늦은 authorization 처리를 실행했다. 같은 job의 Linux helper 9개 및 controller 종료 검사도 통과했다. 첫 실패와 수정 후 증거를 따로 보존한다.
 
 같은 suite의 denied-write `exit 2` 대 `exit 1` 실패는 별개다. shell별 실패 코드의 차이는 허용하되 실제 nonzero 종료, 원본 파일 불변, 비밀 내용 미노출을 모두 확인해야 한다. 기존 원격 실패는 수정 후 통과와 함께 보존한다. 이 Linux 검사는 실제 모델 연결 성공 증거가 아니다.
 
@@ -114,6 +116,18 @@ OpenAPI의 Crewroom capability 명세 누락은 mounted-route manifest와 board-
 원격 CI의 workspace-session과 workspace-preparation 실패 두 개는 같은 upstream 구현 결함을 드러냈다. `probeGitWorktreeBase`와 `ensureManagedRepositoriesIgnored`가 non-repository 오류의 고전적인 한 줄 형식만 허용한다. Git이 mount 경계에서 내는 두 줄 형식은 [공식 Git 구현](https://github.com/git/git/blob/master/setup.c)의 별도 정상 진단이다. 이 차이 때문에 실제 non-Git local path의 owner configuration 분류가 누락되고, 명시된 plain task directory의 inert metadata를 허용하는 repository preparation도 실패했다.
 
 현재 상태: **수정 소스 수용·로컬 집중 검사 통과, 새 Linux CI 대기**. 공유 classifier는 정확한 두 메시지 형식만 판별하며 추가 stderr와 불완전한 문구를 거부한다. 두 caller의 code 128·signal 없음·C locale·Git 환경 변수 부재 조건을 유지하고, 첫 경로의 조상 metadata 부재 검사도 보존했다. 두 번째 경로의 예외는 기존 provenance가 확인한 `plainTaskDirectory`에만 적용하며 symlink 검사를 유지한다. 전역 `GIT_DISCOVERY_ACROSS_FILESYSTEM` 변경이나 모든 non-repository 오류를 삼키는 우회는 없다. 두 형식·CRLF·공백/괄호 경로 및 잘못된 형식의 classifier 회귀가 추가됐다.
+
+### R7 · P1 · 보안 패치와 기존 인증 스키마의 호환성
+
+Better Auth 1.7.7 설치 후 실제 PostgreSQL 가입 검사가 500으로 실패했다. 1.7.0–1.7.2가 쓰던 필수 `account.issuer`를 새 라이브러리가 더 이상 쓰지 않기 때문이다. 새 `0395` migration은 기존 `0230`을 바꾸지 않고 issuer 컬럼과 값을 보존한 채 nullable로 바꾸며 이전 issuer 인덱스를 제거한다. 계정 identity는 `(provider_id, account_id)`다. migration 때 중복을 검사하는 것만으로 이후 동시 생성을 막지는 못하므로 새 tuple unique 인덱스를 함께 둔다. 이는 같은 계정의 정상 재연결을 기존 행 갱신으로 처리하는 라이브러리 계약과 일치하며, 다른 provider의 같은 account ID는 허용한다.
+
+현재 상태: **소스·schema·snapshot·journal 일치 확인 및 실제 PostgreSQL 3 files·7개 통과**. 하나의 DO block에서 account 테이블을 잠그고 중복 검사와 제약 변경을 원자적으로 처리한다. 중복은 건수만 보고하고 실패하며 계정·사용자를 병합하거나 삭제하지 않는다. 회귀는 기존 계정·password hash·issuer·session 행 보존, signed session 재사용과 기존 로그인, 새 nullable issuer 가입, 다른 provider의 같은 ID, 재실행, 서로 다른 두 DB 연결의 동시 쓰기 중 한 건만 성공함을 확인한다. 이전 라이브러리 바이너리 실행이 아니라 실제 현재 인증 데이터에 역사적 스키마 형태를 재현한 검사다. 새로운 NULL issuer 행이 생긴 뒤 과거 앱만 되돌리거나 NOT NULL을 자동 복원하는 rollback은 지원하지 않는다.
+
+### 의존성 보안과 선택적 런타임 qualification
+
+새 보안 후보의 frozen 설치 후 원본 audit 수치는 113개에서 2개(critical 0·high 1·moderate 0·low 1)로 줄었다. 남은 MSAL high는 실제 전이 의존성 경고이며 현재 Teams 호출은 advisory의 auth-code 흐름 대신 client credentials를 사용한다. low는 pnpm 9.15.4가 workspace 경로 `cli`를 npm 패키지 이름으로 보내는 충돌로 소스에서 확인했다. 원본 수치를 유지하고 ignore·allowlist를 추가하지 않았다. Zod 4.6.6 안의 v3 호환 파서는 여전히 과대 배열 전체를 검사하므로 Cursor provider 응답 경계까지 자원 증폭이 해결됐다고 주장하지 않는다. [보안 검토와 제한](DEPENDENCY-SECURITY.ko.md), [로컬 검증 영수증](dependency-remediation-receipt.json)을 따른다.
+
+[선택적 런타임 qualification](RUNTIME-QUALIFICATION.ko.md)은 dispatch 전용 추가 CI다. workflow/helper SHA와 검사할 40자리 제품 SHA를 별도 checkout하고 각각 검증한다. 실제 선택된 debug runner와 fake provider binary의 hash를 기록하며 기존 recovery의 실제 프로세스 8개와 remote continuity 5개가 누락·중복·실패·skip 없이 통과해야 한다. 권한은 contents read이고 container는 고유 owner label/ID로만 정리한다. raw DB·세션·TLS key·test 로그는 공개하지 않으며 allowlist receipt만 artifact로 남긴다. 소스 검토와 offline gate/cleanup 9개 검사는 수용하지만 실제 Linux 13개 실행은 새 제품 SHA의 CI 대기다. 실제 OS 프로세스·PostgreSQL·Docker/TLS 검사가 통과하더라도 provider는 fake이므로 실제 모델 실행 증거가 아니다.
 
 ## 공개 소스 점검 범위
 

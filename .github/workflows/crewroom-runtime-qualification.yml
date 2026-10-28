@@ -1,0 +1,74 @@
+name: Crewroom runtime qualification
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_revision:
+        description: Exact product commit to qualify (40 hexadecimal characters)
+        required: true
+        default: b08e5947ff45981b939676e7cfa404c2b683264d
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crewroom-runtime-qualification-${{ inputs.source_revision }}
+  cancel-in-progress: false
+
+jobs:
+  real-process-and-remote-continuity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      PRODUCT_REVISION: ${{ inputs.source_revision }}
+      HELPER_REVISION: ${{ github.sha }}
+      PAPERCLIP_TELEMETRY_DISABLED: '1'
+      HEARTBEAT_SCHEDULER_ENABLED: 'false'
+      CARGO_BUILD_JOBS: '2'
+      CARGO_PROFILE_DEV_DEBUG: '0'
+      RUSTUP_TOOLCHAIN: 1.97.1
+      GOMAXPROCS: '2'
+      GOMEMLIMIT: 3GiB
+    steps:
+      - name: Checkout qualification infrastructure
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          path: qualification-infra
+          persist-credentials: false
+      - name: Validate the immutable product revision
+        run: python3 qualification-infra/scripts/crewroom-runtime-qualification.py validate
+      - name: Check qualification receipt gates and cleanup guards offline
+        run: PYTHONDONTWRITEBYTECODE=1 python3 qualification-infra/scripts/crewroom-runtime-qualification.test.py
+      - name: Checkout the exact product snapshot separately
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.source_revision }}
+          path: qualification-product
+          persist-credentials: false
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        with:
+          version: 9.15.4
+          package_json_file: qualification-product/package.json
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.14.0
+      - name: Install the product-owned Rust toolchain
+        run: rustup toolchain install 1.97.1 --profile minimal --component rustfmt
+      - name: Qualify real processes, then remote continuity
+        run: >-
+          python3 qualification-infra/scripts/crewroom-runtime-qualification.py run
+          --source qualification-product
+          --public-output qualification-public
+      - name: Always clean only qualification-owned resources
+        if: always()
+        run: >-
+          python3 qualification-infra/scripts/crewroom-runtime-qualification.py cleanup
+          --public-output qualification-public
+      - name: Preserve the public qualification receipt only
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7, preserved upstream pin
+        with:
+          name: crewroom-runtime-${{ inputs.source_revision }}-${{ github.run_attempt }}
+          path: qualification-public/receipt.json
+          if-no-files-found: error
+          retention-days: 14

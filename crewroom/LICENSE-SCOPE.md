@@ -3,11 +3,11 @@
 The [BSD Zero Clause license](LICENSE) applies to original Crewroom contributions at the following paths. References below are relative to the repository root. This scope does not replace the licenses of copied or derived third-party material.
 
 - `README.md`, `PRODUCT.md`, `THIRD_PARTY_NOTICES.md`
-- `.github/workflows/crewroom-image.yml`
+- `.github/workflows/crewroom-image.yml`, `.github/workflows/crewroom-runtime-qualification.yml`
 - `doc/crewroom/**`
 - `doc/plans/2026-10-28-crewroom-paperclip-foundation.md`
 - `deploy/crewroom/**`, excluding credentials, environment files, runtime state and private snapshots
-- `scripts/crewroom-bootstrap.mjs`, `scripts/crewroom-dev.mjs`, `scripts/crewroom-capture.mjs`, `scripts/setup-impeccable.py`
+- `scripts/crewroom-bootstrap.mjs`, `scripts/crewroom-dev.mjs`, `scripts/crewroom-capture.mjs`, `scripts/setup-impeccable.py`, `scripts/crewroom-runtime-qualification.py`, `scripts/crewroom-runtime-qualification.test.py`
 - `ui/src/pages/Crewroom.tsx`
 - `ui/src/components/crewroom/**`
 - `ui/src/api/crewroom.ts`, `ui/src/api/heartbeats.crewroom.test.ts`
