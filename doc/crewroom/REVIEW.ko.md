@@ -2,7 +2,7 @@
 
 2026-10-28 · Astra 설계·코드 리뷰 · Sol 제품 구현
 
-**2026-10-29 현재 판정: 새 제품 5d2b242의 기본 CI 3개 job·전체 CI 21개 job·production 이미지 인증/ACL/재시작/복원을 수용한다. 추가 runtime qualification은 첫 remote warm 사례 실행 중 host의 1,200초 제한에 도달했으며, 내부 정지 원인은 미확정이다.** 제품 SHA는 `5d2b242658efe63c10c495bf526b329db2f2f064`다. 이전 기준선 `13e79d1a419ce1930b641edb8d587a23555dc535`의 45,760개 통과 수는 별도 역사적 증거이며 새 SHA로 승계하지 않는다. [새 집계 영수증](regression-receipt-5d2b242.json)은 실제 고유 사례 45,761개 통과·실패 0·retry 0, 조건부 skip 100개를 확인한다. 전체 Crewroom 확장 요구의 완료, 실제 모델·GitLab 연결이나 EC2 운영 배포 승인을 뜻하지 않는다. 아래에는 수정 전 실패와 수정 후 증거를 함께 보존한다.
+**2026-10-29 현재 판정: R10 제품 `0fcae1225dc5709e865db6d5504368da23d1e39d`의 연결 초기화 순서 수리, 해당 owner 전체 171개·타입 검사와 관측 도구 없는 Mac 원 warm 1개를 수용한다. 새 제품의 기본·전체·이미지·원본 Linux 13개 CI는 진행 중이다.** 이전 제품 `5d2b242658efe63c10c495bf526b329db2f2f064`의 기본 CI 3개 job·전체 CI 21개 job·production 이미지 인증/ACL/재시작/복원은 해당 소스의 통과 이력으로 보존한다. 그 소스의 remote warm 종료 정지는 아래 R10의 실제 재현과 수리로 연결했으며 새 SHA의 원격 수용은 별도 결과가 필요하다. [이전 집계 영수증](regression-receipt-5d2b242.json)의 실제 고유 사례 45,761개·실패 0·retry 0·조건부 skip 100개나 더 오래된 `13e79d1`의 45,760개를 새 소스로 승계하지 않는다. 전체 Crewroom 확장 요구의 완료, 실제 모델·GitLab 연결이나 EC2 운영 배포 승인을 뜻하지 않는다. 아래에는 수정 전 실패와 수정 후 증거를 함께 보존한다.
 
 ## 검토 대상과 유지한 경계
 
@@ -194,6 +194,8 @@ Mac의 원본 stock warm 사례를 별도로 재현해 90초 관측 제한에 �
 `WsJsonWireConnection.onJson`은 이미 받은 버퍼를 listener 등록 시 동기로 전달할 수 있다. 기존 `AuthorityConnection` constructor가 이 구독을 시작하면 `attachWireConnection`의 `connection` 대입 전에 processing Map이 `undefined` 키로 기록된다. 나중에 처리 완료 callback은 실제 connection 키를 조회하므로 해당 항목을 지우지 못하고, drain이 이미 완료한 Promise를 계속 기다리며 timer를 굶길 수 있다. 이미 닫힌 wire의 동기 close 전달도 삭제 후 stale connection 재등록을 만들 수 있었다.
 
 수리는 객체 생성, 소유 Set 등록, wire listener 활성화의 순서로 한정했다. drain의 Map을 강제로 비우거나 반복문에 yield를 넣지 않았으며 기존 정지·인증·lease·checkpoint·처리 완료 검사를 유지한다. 실제 export와 동기 buffered wire를 사용한 독립 child 재현은 수정 전 5초 상한에서 중단됐고, 같은 재현이 수정 후 약 0.12초에 drain·retirement·정상 종료를 완료했다. 한 연결·두 연결의 buffered frame과 이미 닫힌 wire 세 회귀를 추가했다. held commit/rejection·auth revocation·ingress gate를 포함한 집중 8개, 해당 owner 파일 전체 171개(skip 0), runner 전체 타입 검사가 통과했다. 새 제품 SHA의 실제 warm 및 원본 Linux 8+5·기본/전체/이미지 수용은 후속 결과로 별도 기록한다.
+
+제품 `0fcae1225dc5709e865db6d5504368da23d1e39d`의 후속 Mac 원 stock warm 사례는 overlay·inspector·profiler·sample 없이 실제 1/1 통과·실패 0·선택 skip 0으로 정상 종료했다. 다른 50개 필터 제외는 통과 수가 아니다. 원 fixture 180초와 로컬 관측 90초는 유지했고, test 프로세스/그룹·PG·컨테이너·private 자료 정리 네 항목을 모두 확인했다. 재사용한 두 ELF는 Rust 소스가 바뀌지 않은 5d 빌드 산출물이며 JS 제품 revision과 구분했다. [기본](https://github.com/benny1020/crewroom-platform/actions/runs/40777148891)·[전체](https://github.com/benny1020/crewroom-platform/actions/runs/40777148731)·[이미지](https://github.com/benny1020/crewroom-platform/actions/runs/40777148718)·[원본 Linux 13개](https://github.com/benny1020/crewroom-platform/actions/runs/40777149218)는 이 새 제품의 별도 수용 실행이다.
 
 ## 공개 소스 점검 범위
 
