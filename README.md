@@ -10,7 +10,7 @@ Crewroom은 [Paperclip](https://github.com/paperclipai/paperclip) 전체 소스�
 
 ## 제품에서 할 수 있는 일
 
-- 팀장·개발·운영·QA 명부에서 담당자를 찾고, 실제 업무와 실행 상태를 확인합니다.
+- 직속·개발·운영·QA 명부에서 담당자를 찾고, 실제 업무와 실행 상태를 확인합니다.
 - 팀장 보기와 팀원 보기, 사용자별 기본 비서를 선택합니다. 이 선택은 화면과 개인 선호이며 권한을 부여하지 않습니다.
 - 같은 에이전트와 대화를 이어갑니다. 대화 지침은 명확한 실행 요청에 일반 업무를 생성·배정하고, 질문과 아이디어는 대화로 다루도록 구성합니다. 실제 모델의 의도 해석·실행 품질은 연결 후 별도로 검증해야 합니다.
 - 업무별 댓글과 작업방에서 결과 확인·피드백·수정 요청을 이어갑니다. 완료한 업무는 의견만 저장하거나 같은 업무에 수정을 요청하는 흐름으로 구분합니다.
@@ -26,6 +26,10 @@ Crewroom은 [Paperclip](https://github.com/paperclipai/paperclip) 전체 소스�
 ## 아키텍처
 
 ![Crewroom architecture](doc/crewroom/architecture.png)
+
+에이전트의 이름·역할·설정과 업무 이력은 서버에 유지됩니다. 실행 요청이 승인되면 기존 Paperclip 실행 체계가 해당 업무의 작업공간과 세션을 준비하고 구성된 adapter를 실행합니다. 기본 구성은 Claude CLI harness이며 파일·코드·명령 실행을 지원합니다. 에이전트마다 Docker를 계속 띄우는 방식은 아니며, 기본 배포는 앱과 PostgreSQL 컨테이너로 구성합니다.
+
+업무 메타데이터·권한·댓글·실행 상태는 PostgreSQL, 실제 파일·에이전트 home·세션 자료는 앱의 지속 볼륨에 저장합니다. 대화, 공용 에이전트의 home, 업무 작업공간, 모델 세션은 각각 수명과 접근 범위가 다릅니다. [구현된 경계와 목표 설계](doc/crewroom/ARCHITECTURE.ko.md)를 함께 확인하세요.
 
 ## 격리된 로컬 실행
 
@@ -66,6 +70,16 @@ pnpm build
 ```
 
 최신 통과 수·실패 이력·미검증 범위는 [리뷰 기록](doc/crewroom/REVIEW.ko.md)과 [foundation receipt](doc/plans/2026-10-28-crewroom-paperclip-foundation.md)에 구분해 남깁니다. fixture와 로컬 DB 검사는 실제 Claude custom endpoint의 추론·도구·중단·재개 품질 증거가 아닙니다. [Claude endpoint 안내](crewroom/CLAUDE-ENDPOINT.md)를 따라 실제 연결을 별도로 확인합니다.
+
+2026-10-29 기준, 제품 소스 [`13e79d1`](https://github.com/benny1020/crewroom-platform/commit/13e79d1a419ce1930b641edb8d587a23555dc535)의 검증 결과입니다. 이후 문서·검증 helper만 바뀐 commit과 제품 revision은 구분합니다.
+
+| 검사 | 결과와 근거 |
+| --- | --- |
+| 기본 CI | [3개 작업 통과: 구조·집중 회귀·전체 타입 검사와 빌드](https://github.com/benny1020/crewroom-platform/actions/runs/40730054272) |
+| 전체 회귀 | [21개 작업·43개 Vitest 호출 완료, 실제 테스트 45,760개 통과·실패 0](https://github.com/benny1020/crewroom-platform/actions/runs/40730055102). 조건부 skip 100개는 별도입니다. [집계 증거](doc/crewroom/regression-receipt.json) |
+| production Docker 이미지 | [인증·초대·개인 대화/파일 권한·재시작·일관된 snapshot·새 프로젝트 복원 통과](https://github.com/benny1020/crewroom-platform/actions/runs/40730054313) |
+| 추가 실행 복구 검사 | 실제 프로세스 8개 통과. 원격 연속성 5개는 [실패 원인 확인 중](doc/crewroom/RUNTIME-QUALIFICATION.ko.md)입니다. 고정 테스트 provider를 사용합니다. |
+| 실제 외부 연결 | Claude custom endpoint 추론, GitLab 발행, EC2와 실제 도메인/TLS는 미검증입니다. |
 
 보안 의존성 패치와 기존 계정·세션을 보존하는 인증 마이그레이션을 포함합니다. 업데이트 전에는 [계정 이전과 snapshot 절차](doc/crewroom/DEPLOYMENT.ko.md)를 확인합니다. 감사 수치, 실제 설치·회귀 증거와 MSAL·Zod v3의 남은 경계는 [의존성 보안 기록](doc/crewroom/DEPENDENCY-SECURITY.ko.md)에 설명합니다. 별도의 [Linux 프로세스·원격 연속성 검증](doc/crewroom/RUNTIME-QUALIFICATION.ko.md)은 실제 모델 대신 고정된 테스트 provider를 사용합니다.
 

@@ -2,7 +2,7 @@
 
 2026-10-28 · Astra 설계·코드 리뷰 · Sol 제품 구현
 
-**판정: Paperclip 기반 제품의 첫 단면이며, 전체 Crewroom 요구의 완료나 운영 배포 승인은 아니다.** 이 문서는 현재 소스에서 확인한 구현, 회귀 수정 요청, 실제 검증의 한계를 분리한다. 구현과 테스트가 진행 중이므로 아래 미해결 항목은 후속 증거로만 완료 처리한다.
+**2026-10-29 현재 판정: 제품 13e의 기본 CI 3개 job, 전체 회귀 21개 job 및 production 이미지의 인증·private ACL·재시작·백업·새 환경 복원 검증을 수용한다. 추가 runtime qualification의 remote 5개와 cleanup 실패는 미해결이다.** 검증한 제품 SHA는 `13e79d1a419ce1930b641edb8d587a23555dc535`다. 전체 Crewroom 확장 요구의 완료, 실제 모델·GitLab 연결이나 EC2 운영 배포 승인을 뜻하지 않는다. 아래에는 수정 전 실패와 수정 후 증거를 함께 보존한다.
 
 ## 검토 대상과 유지한 경계
 
@@ -69,13 +69,17 @@ private source 보호는 기존 `issueService.create`의 run provenance 상속�
 
 현 upstream local CLI adapter는 app container 내부 실행이다. 별도 DB container는 job별 filesystem/process/credential 격리의 증거가 아니다. 분리 runner service를 Compose에 선언하기만 해서는 실제 execution transport가 연결되지 않는다. Docker socket이나 privileged mode로 우회하지 않는다.
 
-현재 상태: **원격 image build·CLI identity·typecheck 및 후속 이미지의 최초 인증까지 통과, 초대 smoke 계약 수정 완료, 새 후보 전체 image 검증 대기**. 첫 image CI `40703906634`는 unhealthy에서 멈췄다. 익명 authenticated `/api/health`가 내부 `startupRecovery`를 숨기는 기존 정책을 보존하고 Compose probe가 공개된 `status:ok`를 확인하도록 수정했다. `CREWROOM_PUBLIC_URL` 한 값이 공개 URL과 단일 trusted origin에 동일하게 적용된다. 이후 723 후보 image CI `40713387606`는 build와 최초 admin·signup을 실제 통과했지만, 정상 human invite 수락의 HTTP 202를 smoke가 200/201로 기대해 중단됐다. 수정 harness는 202 receipt의 company·human identity·상태를 확인하고 pending인 경우만 같은 request ID를 승인한 뒤 실제 active viewer membership을 검사한다. 기존 private 읽기 404와 쓰기 capability false 검사는 유지한다. 배포 관련 Node 9개·Python 12개 offline 검사는 통과했지만 새 이미지의 전체 privacy·재시작·복원 증거는 아직 대기다.
+현재 상태: **제품 13e image CI `40730054313`의 build·인증·private ACL·재시작·일관된 snapshot·새 환경 복원 검증 통과**. 이미지 ID는 `sha256:99ec1bbf9ae413186563563d245780fc9ddafb741480d19fdfc0d05da5e41b18`이다. 최초 admin·가입·viewer 초대와 실제 서로 다른 로그인 세션의 private 대화/첨부 접근 차단을 검사했다. DB·파일·환경 설정의 일관된 snapshot을 별도 프로젝트와 포트 3119에 복원한 뒤 원본과 복원 환경의 인증·ACL·파일 보존을 확인했다. 이는 CI Docker 환경에서의 배포·복구 증거이며 EC2 실운영 증거는 아니다.
+
+수정 전 실패도 보존한다. 첫 image CI `40703906634`는 unhealthy에서 멈췄다. 익명 authenticated `/api/health`가 내부 `startupRecovery`를 숨기는 정책을 보존하고 Compose probe가 공개된 `status:ok`를 확인하도록 수정했다. `CREWROOM_PUBLIC_URL` 한 값이 공개 URL과 단일 trusted origin에 동일하게 적용된다. 이후 723 후보 image CI `40713387606`는 build와 최초 admin·signup을 통과했지만, 정상 human invite 수락의 HTTP 202를 smoke가 200/201로 기대해 중단됐다. 수정 harness는 202 receipt의 company·human identity·상태를 확인하고 pending인 경우만 같은 request ID를 승인한 뒤 실제 active viewer membership을 검사한다. private 읽기 404와 쓰기 capability false 검사를 유지했으며, offline Node 9개·Python 12개뿐 아니라 위 13e 이미지 CI에서도 실행했다.
 
 이전 로컬 실패는 유지한다. Docker VM 8 GiB에서 Rust runner와 UI 빌드 뒤 server `tsc`가 exit `137`/`ResourceExhausted`로 종료됐고, Node heap 3072→2048 MiB 재시도도 실패했다. 이후 설치된 TypeScript 7 launcher가 native Go compiler를 실행한다는 것을 확인해 build stage에만 `GOMAXPROCS=2`, soft GC target `GOMEMLIMIT=3GiB`를 적용했다. full typecheck는 유지했다. EC2 계정, 실제 domain/TLS, live provider/GitLab 계정이 없는 상태에서 EC2 배포나 실제 업무 실행 성공을 주장하지 않는다.
 
 ## 검증 기록과 남은 완료 조건
 
-2026-10-29 후속 검증 기준이다. 첫 full CI `40703906698`는 21개 job 중 12개 성공·9개 실패로 종료됐다. 기존 native runner shard는 4 files·107 통과·13 skip이며 새 R5 bwrap bridge 수정의 통과 증거가 아니다. 이후 b08 후보(`b08e5947ff45981b939676e7cfa404c2b683264d`)의 기본 CI `40714076506`는 3개 job 모두 통과했다. 집중 job은 server 7 files·228 통과·플랫폼 skip 1개, MCP 16개, UI 17 files·614개를 통과했고 R5의 실제 Linux bwrap 경로도 실행했다. b08 전체 CI `40714076522`는 이 기록 시점 21개 중 12개 성공·실패 0개·나머지 진행 중이다. 이후 의존성·인증 스키마가 변경된 새 보안 후보는 별도 원격 검증을 받아야 한다. skip이나 이전 SHA의 통과를 새 후보의 실행 증거로 세지 않는다.
+2026-10-29 후속 검증 기준이다. 제품 13e의 기본 CI `40730054272`는 3/3 job, 전체 CI `40730055102`는 21/21 job, image CI `40730054313`는 전체 절차를 통과했다. [집계 영수증](regression-receipt.json)은 21개 job·43개 Vitest 호출 완료, 중복을 제거한 실제 실행 45,760개 통과·실패 0·retry 0을 확인한다. 조건부 skip 100개(전체 skip 파일 12개 포함)는 통과로 세지 않는다. 별도 chat shard의 필터 skip 11,123건은 다른 shard에서 실행된 같은 사례의 반복 제외이며 미실행 테스트 수가 아니다. 별도 qualification `40736309647`는 실제 로컬 프로세스 8/8·skip 0, remote 0/5 통과·5개 실패·skip 0 및 cleanup 실패다. 추가 관측 helper `02314ddbf158b302c73f96942abf10671d2faaa8`를 사용한 같은 제품의 재실행 `40738818450`도 local 8/8·remote 0/5 통과로 종료됐다. 정제된 nested cause는 일반 Error로 남아 remote 다섯 실패의 공통 원인을 확정하지 못했다. cleanup은 stop exit 0 뒤 remove exit 1로 최초 실패했으며, 후속 recovery에서 소유 컨테이너 부재를 확인했다. 초기 실패는 지우지 않는다.
+
+이전 기록: 첫 full CI `40703906698`는 21개 job 중 12개 성공·9개 실패로 종료됐다. 기존 native runner shard는 4 files·107 통과·13 skip이며 새 R5 bwrap bridge 수정의 통과 증거가 아니다. b08 후보(`b08e5947ff45981b939676e7cfa404c2b683264d`)의 기본 CI `40714076506`는 3개 job 모두 통과했다. 집중 job은 server 7 files·228 통과·플랫폼 skip 1개, MCP 16개, UI 17 files·614개를 통과했고 R5의 실제 Linux bwrap 경로도 실행했다. b08 전체 CI `40714076522`의 당시 기록은 21개 중 12개 성공·실패 0개·나머지 진행 중이었다. 현재 판정은 이전 SHA 결과를 승계하지 않고 위 13e 실행을 따른다.
 
 | 증거 | 현재 확인 수준 |
 |---|---|
@@ -85,12 +89,13 @@ private source 보호는 기존 `issueService.create`의 run provenance 상속�
 | Claude probe fixture | foundation 기록에 27/27. 실제 custom endpoint inference 증거가 아님 |
 | isolated source startup | foundation 기록에 loopback 3117 API/UI health 및 새 PostgreSQL 55447. public deploy나 authenticated 다중 사용자 증거가 아님 |
 | UI focused suites | 10 files, 552/552, worker 1. 기본 native 및 classic composer, TaskChatThread, Crewroom·Avatar·navigation·breadcrumb 회귀. token/module 검사 통과. [별도 UI 기록](UI-VERIFICATION.ko.md) 참조 |
-| b08 원격 기본·집중 검사 | 기본 CI 3개 job 통과. server 228 통과·플랫폼 skip 1개, MCP 16개, UI 614개. b08 전체 회귀는 위 시점 진행 중이며 전체 통과로 판정하지 않음 |
+| b08 원격 기본·집중 검사 | 과거 증거: 기본 CI 3개 job 통과. server 228 통과·플랫폼 skip 1개, MCP 16개, UI 614개. 현재 제품의 판정은 아래 13e 실행 기준 |
 | 새 보안 후보의 로컬 검증 | 의존성 집중 12 files·179 통과·skip 0, MCP 16개, 실제 legacy transformer 3개, 관련 UI/shared/MCP/Cursor typecheck 통과. 0396까지 포함한 최신 인증 이전은 별도 실제 PostgreSQL 4 files·15 통과·skip 0. DB 생성·migration 검사·typecheck 및 full server typecheck 통과. 이 묶음들은 일부 중복되므로 합산하지 않음 |
-| 새 보안 후보의 전체 typecheck/build/test | 로컬 집중 검사와 소스 검토 완료. 새 SHA의 원격 전체 회귀·production image 인증·재시작·복원은 대기. 이전 b08의 결과를 승계하지 않음 |
+| 13e 보안 수정 제품의 전체 typecheck/build/test | 기본 CI 3/3·전체 CI 21/21 job 통과. production image 인증·재시작·복원도 통과. [집계 영수증](regression-receipt.json): 실제 실행 45,760개 통과·실패 0·retry 0, 조건부 skip 100개 별도. 21개 job·43개 Vitest 호출 완료 |
 | 신규 capability 및 R1–R3 회귀 | 위 focused 결과로 해당 수정 확인. live event 및 다중 로그인 전체 경로는 별도 |
 | 현재 UI visual review | 원본 캐릭터·대화 CTA·실제 paused 상태·명시적 scene preview를 확인. 최신 `media/team-1440x900.png`, `private-chat.png`, `task-opinion.png`, `task-revision.png`와 receipt가 실제 로컬 화면을 기록. 오류·빈 데이터·read-only 대체 응답은 `*.fixture.png`로 구분. [최종 시각 리뷰](UI-REVIEW.ko.md) 참조 |
-| Docker build/auth/restart/data persistence | 첫 health 실패 후 723 이미지의 build·최초 admin/signup 통과. 정상 초대 202를 오인한 harness 실패·수정 기록 보존. 새 후보 image CI의 전체 privacy/restart/restore 결과 대기 |
+| Docker build/auth/restart/data persistence | 13e image CI 전체 통과: 실제 admin/viewer 인증·private 대화/첨부 ACL·재시작·DB/파일/환경 snapshot·새 프로젝트 복원·원본/복원 재검사. 첫 health 및 초대 202 harness 실패 이력은 보존 |
+| 추가 runtime qualification | 13e local 8/8·skip 0, remote 5개 모두 실패·skip 0, cleanup 실패. 관측 재실행도 remote 5개 실패. nested 일반 Error만으로 원인 미확정. 최초 cleanup stop 0·remove 1 뒤 recovery에서 소유 컨테이너 부재 확인. 실제 모델 검사가 아님 |
 | 실제 model/tool/resume/stop, GitLab, EC2 | 미검증 |
 
 이전 실패도 유지한다. 잘못된 cwd의 최초 Vitest 호출은 tests를 찾지 못했다. 처음 privacy 회귀 assertion은 기존 403과 404 계약을 혼동했고 수정됐다. 초기 optional Copilot materialization은 실패 후 공식 installer로 회복됐지만 중단 원인은 확정되지 않았다. 최종 통과 일부만으로 이 이력을 지우지 않는다.
@@ -115,7 +120,7 @@ OpenAPI의 Crewroom capability 명세 누락은 mounted-route manifest와 board-
 
 원격 CI의 workspace-session과 workspace-preparation 실패 두 개는 같은 upstream 구현 결함을 드러냈다. `probeGitWorktreeBase`와 `ensureManagedRepositoriesIgnored`가 non-repository 오류의 고전적인 한 줄 형식만 허용한다. Git이 mount 경계에서 내는 두 줄 형식은 [공식 Git 구현](https://github.com/git/git/blob/master/setup.c)의 별도 정상 진단이다. 이 차이 때문에 실제 non-Git local path의 owner configuration 분류가 누락되고, 명시된 plain task directory의 inert metadata를 허용하는 repository preparation도 실패했다.
 
-현재 상태: **수정 소스 수용·로컬 집중 검사 통과, 새 Linux CI 대기**. 공유 classifier는 정확한 두 메시지 형식만 판별하며 추가 stderr와 불완전한 문구를 거부한다. 두 caller의 code 128·signal 없음·C locale·Git 환경 변수 부재 조건을 유지하고, 첫 경로의 조상 metadata 부재 검사도 보존했다. 두 번째 경로의 예외는 기존 provenance가 확인한 `plainTaskDirectory`에만 적용하며 symlink 검사를 유지한다. 전역 `GIT_DISCOVERY_ACROSS_FILESYSTEM` 변경이나 모든 non-repository 오류를 삼키는 우회는 없다. 두 형식·CRLF·공백/괄호 경로 및 잘못된 형식의 classifier 회귀가 추가됐다.
+현재 상태: **수정 소스·로컬 집중 검사 및 13e Linux 전체 CI 수용**. 공유 classifier는 정확한 두 메시지 형식만 판별하며 추가 stderr와 불완전한 문구를 거부한다. 두 caller의 code 128·signal 없음·C locale·Git 환경 변수 부재 조건을 유지하고, 첫 경로의 조상 metadata 부재 검사도 보존했다. 두 번째 경로의 예외는 기존 provenance가 확인한 `plainTaskDirectory`에만 적용하며 symlink 검사를 유지한다. 전역 `GIT_DISCOVERY_ACROSS_FILESYSTEM` 변경이나 모든 non-repository 오류를 삼키는 우회는 없다. 두 형식·CRLF·공백/괄호 경로 및 잘못된 형식의 classifier 회귀가 추가됐다.
 
 ### R7 · P1 · 보안 패치와 기존 인증 스키마의 호환성
 
@@ -123,7 +128,7 @@ Better Auth 1.7.7 설치 후 실제 PostgreSQL 가입 검사가 500으로 실패
 
 현재 상태: **소스·schema·snapshot·journal 일치 확인 및 실제 PostgreSQL 3 files·7개 통과**. 하나의 DO block에서 account 테이블을 잠그고 중복 검사와 제약 변경을 원자적으로 처리한다. 중복은 건수만 보고하고 실패하며 계정·사용자를 병합하거나 삭제하지 않는다. 회귀는 기존 계정·password hash·issuer·session 행 보존, signed session 재사용과 기존 로그인, 새 nullable issuer 가입, 다른 provider의 같은 ID, 재실행, 서로 다른 두 DB 연결의 동시 쓰기 중 한 건만 성공함을 확인한다. 이전 라이브러리 바이너리 실행이 아니라 실제 현재 인증 데이터에 역사적 스키마 형태를 재현한 검사다. 새로운 NULL issuer 행이 생긴 뒤 과거 앱만 되돌리거나 NOT NULL을 자동 복원하는 rollback은 지원하지 않는다.
 
-후속 최종 검사에서 공식 모델이 필수로 선언한 `user.email`과 `session.token` unique도 기존 schema에 빠져 있음을 확인했다. 이메일 조회 후 비동기 해시·생성하는 가입 경로에는 이를 대체할 잠금이 없었다. 발행한 0395를 보존하고 새 0396에서 user→session 순서로 잠근 뒤 두 중복 검사를 먼저 수행하고 unique 인덱스를 원자적으로 추가한다. exact text를 보존하며 대소문자 정규화·계정 병합·토큰 회전은 하지 않는다. **0396 포함 최종 PostgreSQL 검사는 4 files·15개 통과·skip 0**이다. 서로 다른 연결의 email/token 동시 쓰기는 각각 하나만 성공하며, 실제 HTTP 동시 가입도 200+422와 user 1개·credential account 1개·거절 응답 cookie 없음·정상 재로그인을 확인했다. 기존 user/account/session 행과 signed session을 보존하고, 기존 중복 발견 시 행·인덱스·migration journal이 변하지 않는 것도 검사했다. schema·snapshot·journal과 DB/full server typecheck를 확인해 이 인증 수정 범위를 수용한다. 새 후보 원격 CI는 별도 대기다.
+후속 최종 검사에서 공식 모델이 필수로 선언한 `user.email`과 `session.token` unique도 기존 schema에 빠져 있음을 확인했다. 이메일 조회 후 비동기 해시·생성하는 가입 경로에는 이를 대체할 잠금이 없었다. 발행한 0395를 보존하고 새 0396에서 user→session 순서로 잠근 뒤 두 중복 검사를 먼저 수행하고 unique 인덱스를 원자적으로 추가한다. exact text를 보존하며 대소문자 정규화·계정 병합·토큰 회전은 하지 않는다. **0396 포함 최종 PostgreSQL 검사는 4 files·15개 통과·skip 0**이다. 서로 다른 연결의 email/token 동시 쓰기는 각각 하나만 성공하며, 실제 HTTP 동시 가입도 200+422와 user 1개·credential account 1개·거절 응답 cookie 없음·정상 재로그인을 확인했다. 기존 user/account/session 행과 signed session을 보존하고, 기존 중복 발견 시 행·인덱스·migration journal이 변하지 않는 것도 검사했다. schema·snapshot·journal과 DB/full server typecheck를 확인해 이 인증 수정 범위를 수용한다. 이후 13e의 전체 CI와 production 이미지에서도 실제 인증·재시작·snapshot 복원 검증을 통과했다.
 
 ### 의존성 보안과 선택적 런타임 qualification
 
@@ -131,15 +136,19 @@ Better Auth 1.7.7 설치 후 실제 PostgreSQL 가입 검사가 500으로 실패
 
 [선택적 런타임 qualification](RUNTIME-QUALIFICATION.ko.md)은 dispatch 전용 추가 CI다. workflow/helper SHA와 검사할 40자리 제품 SHA를 별도 checkout하고 각각 검증한다. 실제 선택된 debug runner와 fake provider binary의 hash를 기록하며 기존 recovery의 실제 프로세스 8개와 remote continuity 5개가 누락·중복·실패·skip 없이 통과해야 한다. 권한은 contents read이고 container는 고유 owner label/ID로만 정리한다. raw DB·세션·TLS key·test 로그는 공개하지 않으며 allowlist receipt만 artifact로 남긴다. 실제 OS 프로세스·PostgreSQL·Docker/TLS 검사가 통과하더라도 provider는 fake이므로 실제 모델 실행 증거가 아니다.
 
-첫 실제 1afaaed 후보 qualification `40721425314`는 로컬 8개 중 **5개 통과·3개 실패**, remote 5개는 미수행, cleanup은 통과했다. 기존 공개 receipt만으로 세 실패의 원인은 확정하지 못했으며 제품 runtime이 수정됐다고 주장하지 않는다. 후속 CI helper는 고정된 사례 이름·상태, 고정 error-class enum, 허용된 회귀 파일 하나의 줄·열, 제한된 boolean/정수 또는 collection 길이 비교값만 공개한다. 문자열·객체 내용, 임의 경로와 원문 stack은 내보내지 않는다. 로컬 선택 사례가 모두 진입했고 소유 프로세스 정리가 확인된 경우에는 독립 remote 검사도 수행하되 로컬 실패는 최종 실패로 유지한다. 준비 실패·누락·skip·정리 불확실은 후속 실행을 막는다. 공개 Rust dependency cache는 제품 binary·DB/session/TLS fixture를 포함하지 않는다. 이 helper 수정은 **소스 검토 및 offline 19개 검사 통과**, 같은 새 후보 SHA의 실제 재실행은 대기다.
+첫 실제 1afaaed 후보 qualification `40721425314`는 로컬 8개 중 **5개 통과·3개 실패**, remote 5개는 미수행, cleanup은 통과했다. 기존 공개 receipt만으로 세 실패의 원인은 확정하지 못했으며 제품 runtime이 수정됐다고 주장하지 않는다. 후속 CI helper는 고정된 사례 이름·상태, 고정 error-class enum, 허용된 회귀 파일 하나의 줄·열, 제한된 boolean/정수 또는 collection 길이 비교값만 공개한다. 문자열·객체 내용, 임의 경로와 원문 stack은 내보내지 않는다. 로컬 선택 사례가 모두 진입했고 소유 프로세스 정리가 확인된 경우에는 독립 remote 검사도 수행하되 로컬 실패는 최종 실패로 유지한다. 준비 실패·누락·skip·정리 불확실은 후속 실행을 막는다. 공개 Rust dependency cache는 제품 binary·DB/session/TLS fixture를 포함하지 않는다. 당시 helper 수정은 **소스 검토 및 offline 19개 검사 통과**였으며, 이후 실행 결과는 아래에 별도로 기록한다.
 
-234 후보 재실행도 5개 통과·3개 실패였으며 세 실패는 모두 provider 종료 대기에서 발생했다. CI helper가 subreaper로 입양한 종료 자식을 suite가 끝날 때까지 회수하지 않아 좀비도 `kill(pid, 0)`에 살아 있다고 응답하는 조건을 작은 Linux fixture에서 재현했다. CI 전용 수정은 각 Popen 생성 후 해당 PID를 보호한 회수 thread를 시작해 자기 자식만 개별 nonblocking wait로 회수하고, 다음 spawn·최종 cleanup 전에 thread 종료를 확인한다. 살아 있는 자식에는 신호를 보내지 않는다. 256 MiB·1 CPU·네트워크 없는 실제 Linux proof에서 좀비 소멸, 직접 명령 exit 7 보존, 살아 있는 입양 자식과 다른 worker의 sibling 보존, 정상·예외 경로의 join·cleanup을 확인했고 offline 검사는 24개 통과했다. 원격 준비 실패는 아직 확정되지 않았으며 고정 operation·exit code·도구 누락 여부만 추가 기록한다. 고정 Node 이미지의 필수 도구 5개는 실제 확인했으므로 이미지 교체나 timeout·skip 완화는 하지 않았다. 이 CI 소스 수정은 수용하되, 동일 제품 234를 새 helper로 검사해 기존 실패가 해소되는지 확인한 뒤 새 제품 SHA의 13개도 검증해야 한다. 이미지 CI는 측정된 cache export 지연 때문에 `cache-to`만 제거하고 `cache-from`과 기능 검사를 유지한다.
+234 후보 재실행도 5개 통과·3개 실패였으며 세 실패는 모두 provider 종료 대기에서 발생했다. CI helper가 subreaper로 입양한 종료 자식을 suite가 끝날 때까지 회수하지 않아 좀비도 `kill(pid, 0)`에 살아 있다고 응답하는 조건을 작은 Linux fixture에서 재현했다. CI 전용 수정은 각 Popen 생성 후 해당 PID를 보호한 회수 thread를 시작해 자기 자식만 개별 nonblocking wait로 회수하고, 다음 spawn·최종 cleanup 전에 thread 종료를 확인한다. 살아 있는 자식에는 신호를 보내지 않는다. 256 MiB·1 CPU·네트워크 없는 실제 Linux proof에서 좀비 소멸, 직접 명령 exit 7 보존, 살아 있는 입양 자식과 다른 worker의 sibling 보존, 정상·예외 경로의 join·cleanup을 확인했고 offline 검사는 24개 통과했다. 이후 고정 operation·exit code·도구 누락 여부를 추가해 원격 준비 실패 위치를 구분했다. 고정 Node 이미지의 필수 도구 5개는 실제 확인했으므로 이미지 교체나 timeout·skip 완화는 하지 않았다. 동일 제품 234의 controlled 재실행 `40730091748`에서 local 8/8·skip 0, 입양 자식 5개 회수·cleanup 통과를 확인했다. 따라서 앞선 local 세 실패는 helper의 좀비 회수 문제였으며 제품 runtime 수리는 필요하지 않았다. 234에는 이후 공식 generator로 고친 stale catalog hash가 있었으므로 그 제품의 remote 5개 통과를 최종 조건으로 요구하지 않는다. 최종 13개 수용 기준은 유효한 generated metadata를 포함한 제품 13e다. 이미지 CI는 측정된 cache export 지연 때문에 `cache-to`만 제거하고 `cache-from`과 기능 검사를 유지한다.
+
+후속 remote 준비 실패는 capability 없는 root가 복사된 바이너리를 chmod하는 단계에서 발생했다. 작은 Linux proof에서 호스트 UID 501·mode 0700을 유지한 복사본에 같은 실패를 재현했다. 이 UID는 로컬 proof 값이며 CI의 실제 UID로 주장하지 않는다. 원제품 바이너리의 mode/hash를 보존하고 private staging copy만 0555로 만든 뒤 실제 실행 UID의 읽기·실행 권한과 원본·복사본·컨테이너 SHA를 확인하도록 수정했다. capability나 privileged 실행은 추가하지 않았다. 234 control `40733514766`과 유효 제품 13e의 `40736309647`에서 local 8개와 remote 준비가 통과했다. 그러나 13e에서도 remote 5개 모두 실행 후 실패했고 cleanup도 실패했다. stock Vitest JSON은 fixture가 감싼 Error의 cause를 생략하므로 wrapper 위치만으로 제품 결함의 원인을 확정할 수 없다.
+
+**현재 열린 수용 조건은 제품 13e의 remote 5개 및 소유 프로세스·컨테이너 cleanup 성공이다.** 추가 helper `02314dd`는 공식 Vitest reporter API로 최대 8단계 cause를 읽되 고정 title·오류 분류·fixture 위치·제한된 primitive만 기록한다. private 0600 sidecar를 Python에서 다시 검증하며 stock JSON의 검사 수·skip·실패 gate를 바꾸지 않는다. 초기 cleanup과 재시도 cleanup을 별도 기록하고 소유·ID·단계·종료 코드만 공개한다. Python 35개·Node 5개 및 작은 실제 Vitest의 단독/병용 실패 보존 검사를 통과했다. 제품·fixture·timeout 변경 없이 같은 13e를 검사한 `40738818450`에서도 local 8개 통과·remote 5개 실패가 유지됐다. nested 일반 Error를 보존했지만 remote 실패 원인을 특정하지 못했다. 초기 cleanup의 stop exit 0·remove exit 1과 recovery의 소유 컨테이너 부재를 구분해 기록했다. 후속 CI helper는 자동 제거 경합을 없애기 위해 `--rm` 제거를 준비하며 소유 확인과 명시적 제거·최종 부재 검증은 유지한다. 별도로 실제 staging 소유 함수를 사용한 tar 소유권 결함의 before/after 재현이 진행 중이다. 이 독립 후보 결함을 다섯 실패의 원인이나 완료된 제품 수정으로 주장하지 않는다.
 
 ### R8 · P2 · Zod 보안 패치 뒤 댓글 길이 계약
 
 1afaaed 후보의 전체 CI에서 `agent-commentary`의 초과 본문 요청이 기존 400 대신 idempotency 충돌 409에 도달했다. Zod 4.6의 문자열 `max`가 Unicode code point를 세면서 기존 API·runner의 JavaScript UTF-16 길이 제한과 달라진 것이 원인이다. 공유 schema에 명시적인 `body.length` 검사를 추가하고 기존 `too_big` 오류 metadata와 OpenAPI `maxLength`를 보존했다. 동일 오류를 중복 추가하지 않으며 idempotency 정책은 바꾸지 않는다.
 
-현재 상태: **수정 소스 수용, shared·실제 PostgreSQL integration 2 files·32개 및 OpenAPI 28개·shared typecheck 통과**. surrogate pair·ASCII·혼합 문자열의 경계와 초과를 검사하고, HTTP의 기존/새 idempotency key 및 native 경로에서 초과 본문이 prior retry 조회보다 먼저 거절되는 것을 확인했다. 같은 새 후보의 원격 전체 회귀는 대기다. 이 수정의 범위는 agent commentary이며 다른 문자열 정책을 함께 변경한 것으로 해석하지 않는다.
+현재 상태: **수정 소스 수용, shared·실제 PostgreSQL integration 2 files·32개 및 OpenAPI 28개·shared typecheck 통과**. surrogate pair·ASCII·혼합 문자열의 경계와 초과를 검사하고, HTTP의 기존/새 idempotency key 및 native 경로에서 초과 본문이 prior retry 조회보다 먼저 거절되는 것을 확인했다. 이후 13e 원격 전체 CI 21개 job도 통과했다. 이 수정의 범위는 agent commentary이며 다른 문자열 정책을 함께 변경한 것으로 해석하지 않는다.
 
 뒤따른 metadata 검사에서 도구 description에 연결된 generated JSON 갱신 누락도 보완했다. 공식 generator가 두 description, seeded catalog hash, fixture manifest hash의 세 파일을 재생성했고 관련 10개 check가 통과했다. source diff도 해당 설명·hash 연결만 바뀐 것을 확인했으며 Rust 실행이나 runtime 동작 변경의 증거로 세지 않는다.
 
@@ -172,8 +181,8 @@ Better Auth 1.7.7 설치 후 실제 PostgreSQL 가입 검사가 500으로 실패
 | 비서에게 질문하거나 일을 요청 | 기존 Agent Chat·private issue·사용자 comment·normal wake, 명확 실행 요청과 질문을 구분하는 directive | 모델 미연결 상태에서는 응답·의도 판단·도구 실행 완료를 수용할 수 없음 |
 | 대화에서 업무를 나누고 결과를 받기 | native/MCP/HTTP task creation, initial plan, source provenance, idempotency, 기존 assignment/wake와 chat completion delivery가 존재 | 신규 회귀는 생성·비공개·중복 방지 경계. 실제 모델을 통한 생성→실행→산출물→원 대화 결과 회신은 별도 E2E 증거 필요 |
 | 업무별 의견·수정·재요청 | 기존 task comment·queued steering·interrupt·reopen·workspace 복구와 문서 revision을 재사용. Crewroom 업무 링크로 진입 | R4 서버/API/MCP 및 기본·classic UI 회귀 통과. 실제 기본 UI의 same-task 의견 저장·재개 상태 전이 확인. 실제 agent 재수정 산출물은 미검증 |
-| 여러 사용자가 권한 안에서 협업 | authenticated mode·membership·grant·private task ACL은 core 기능. Crewroom은 개인 대화 creation/admission과 capability projection을 보강 | disposable DB 검증과 실제 서로 다른 로그인 세션의 전체 데이터 경로 검증은 구별 |
-| EC2에서 지속 운영하고 복구 | production Docker target, 앱/DB 지속 볼륨, 최초 인증, quiesced DB+파일 snapshot 및 새 프로젝트 restore 도구 구현 | 원격 이미지 build·최초 admin/signup 통과. health 및 invite 202 harness 수정·offline 검사 통과. 새 image CI의 전체 privacy/restart/restore 및 실제 EC2·TLS 운영 증거 대기 |
+| 여러 사용자가 권한 안에서 협업 | authenticated mode·membership·grant·private task ACL은 core 기능. Crewroom은 개인 대화 creation/admission과 capability projection을 보강 | 13e image CI에서 admin/viewer의 실제 로그인과 private 대화·첨부 ACL 확인. 검색·work products·전체 run log/event stream 등 모든 데이터 경로의 증거로 확대하지 않음 |
+| EC2에서 지속 운영하고 복구 | production Docker target, 앱/DB 지속 볼륨, 최초 인증, quiesced DB+파일 snapshot 및 새 프로젝트 restore 도구 구현 | 13e CI Docker 환경의 인증·private ACL·재시작·DB/파일/환경 snapshot·새 프로젝트 복원 통과. 실제 EC2·도메인·TLS 운영은 미검증 |
 | 재사용 스킬로 업무 시작 | 기존 skill catalog/version/assignment를 사용하고 Crewroom 요청에 선택한 skill/version을 기록 | 이번 UI 선택이 실제 실행 시 immutable snapshot으로 적용됐다는 증거는 아직 없음 |
 
 별도 설계 목표 중 **추가 구현이 필요한 것**은 사용자별 독립 비서 identity/home/memory binding, Crewroom 부서 ACL, source revision 철회에 따른 누적 context 폐기, exact proposal 승인에 묶인 GitLab publisher다. 기존 core의 task/workspace lease·session·approval·versioned skill 기능이 없다는 뜻이 아니다. 현재 배포의 local CLI가 앱과 같은 컨테이너에서 실행되므로 신뢰할 수 없는 작업의 OS/process/credential 격리는 이 배포만으로 제공하지 않는다. 모델 endpoint·GitLab·EC2의 실제 자격증명과 운영 대상이 없는 항목은 **실연결 미검증**이며, 단순 UI 완료로 그 증거를 대신하지 않는다.

@@ -1,0 +1,101 @@
+{
+  "sourceRevision": "13e79d1a419ce1930b641edb8d587a23555dc535",
+  "runId": 40730055102,
+  "runAttempt": 1,
+  "runUrl": "https://github.com/benny1020/crewroom-platform/actions/runs/40730055102",
+  "conclusion": "success",
+  "totals": {
+    "configuredJobs": 21,
+    "completedJobs": 21,
+    "successfulExecutionSteps": 21,
+    "expectedVitestInvocations": 43,
+    "completedVitestInvocations": 43,
+    "fileInvocationsPassed": 2632,
+    "fileInvocationsFailed": 0,
+    "fileInvocationsSkipped": 12,
+    "distinctFiles": 2637,
+    "distinctFilesPassed": 2625,
+    "distinctFilesSkipped": 12,
+    "executedTestsPassed": 45760,
+    "executedTestsFailed": 0,
+    "distinctExecutedCases": 45760,
+    "conditionalSkippedTests": 100,
+    "rawSkippedOccurrences": 11223,
+    "chatFilterSkippedOccurrences": 11123,
+    "retriedCases": 0
+  },
+  "interpretation": {
+    "chat": "Eight workers selected all 770 source test registrations exactly; these expand to 1589 distinct passed Vitest cases. Every case is filter-skipped in seven other workers, producing 11123 raw skipped occurrences. These are not 11123 untested cases.",
+    "conditionalSkips": "100 declared/conditional skips remain in non-chat suites, including 12 wholly skipped files. These are excluded coverage, not passed tests.",
+    "fileMultiplicity": "The one chat file ran eight times, so 2644 module executions correspond to 2637 distinct files.",
+    "exitCodes": "All 21 execution steps completed successfully with bash pipefail. Numeric zero is inferred from that execution contract; no separate exit-code artifact exists.",
+    "workspaceInventoryLimit": "Workspace jobs prove every configured project invocation completed, and the two workspace-a module sets are disjoint. The artifacts do not retain a separate pre-run expected native Vitest file inventory.",
+    "scope": "Only this full regression run is counted. Focused/basic/image/runtime qualification results are not added."
+  },
+  "chatSourceRegistrationCoverage": {
+    "workers": 8,
+    "selectedRegistrations": 770,
+    "distinctExpandedCasesPassed": 1589,
+    "filterSkippedOccurrences": 11123,
+    "duplicatesInExecutedCaseIds": 0
+  },
+  "skippedModulePaths": [
+    "packages/adapters/claude-local/src/server/setup-token-characterization.test.ts",
+    "packages/plugins/sandbox-providers/daytona/src/duplex-command-stream.live.test.ts",
+    "server/scripts/workspace-recovery-provider.test.mjs",
+    "server/src/__tests__/case-handoff-native.integration.test.ts",
+    "server/src/__tests__/customer-success-cloud.test.ts",
+    "server/src/__tests__/run-failure-sentry-real-sdk.test.ts",
+    "server/src/__tests__/workspace-runtime-https-live-exercise.test.ts",
+    "server/src/services/native-runtime/native-warm-transition-restart.integration.test.ts",
+    "server/src/services/native-runtime/native-workspace-export-resume.live.test.ts",
+    "server/src/services/native-runtime/paperclip-runner-real-server.integration.test.ts",
+    "server/src/services/native-runtime/runner-tool-results-prp.integration.test.ts",
+    "server/src/services/native-runtime/runner-tool-results.live.test.ts"
+  ],
+  "workspaceANativeShardOverlapFiles": 0,
+  "sourceContractProvenance": [
+    {
+      "path": ".github/workflows/crewroom-full-regression.yml",
+      "sourceRevisionSha256": "a6780b215301e8c2082f6c42883a74699ba7092d67a7de76812fe0c930ecc7f1",
+      "workingSourceMatchesRunRevision": true
+    },
+    {
+      "path": "scripts/run-vitest-stable.mjs",
+      "sourceRevisionSha256": "0b34914ea377cfa75abd32a0c0cb14aeb11ce7057c9385276753489c594238c3",
+      "workingSourceMatchesRunRevision": true
+    },
+    {
+      "path": "scripts/general-server-shard.mjs",
+      "sourceRevisionSha256": "ce809911cac307063fc2746118c1d6229c280e3d866b82ee5b776c89f5c016f3",
+      "workingSourceMatchesRunRevision": true
+    },
+    {
+      "path": "scripts/general-server-shard-durations.json",
+      "sourceRevisionSha256": "b43e7c7df724e802efbd28926a7eea9e92120b111bbd8dc3ca84f6f1d4220e42",
+      "workingSourceMatchesRunRevision": true
+    },
+    {
+      "path": "scripts/serialized-shard-durations.json",
+      "sourceRevisionSha256": "4d2a598cab31751335c870c60a211205dfe1c6adece84f63b3f963c01ed9be0b",
+      "workingSourceMatchesRunRevision": true
+    },
+    {
+      "path": "scripts/test-line-shard.mjs",
+      "sourceRevisionSha256": "38ffda04607204699b84839f16b44708088d111ae1c54acf1a4aa1f2eb703dcf",
+      "workingSourceMatchesRunRevision": true
+    },
+    {
+      "path": "scripts/ci-profile/vitest-reporter.mjs",
+      "sourceRevisionSha256": "ecc7f1e33e1e00b658b3f8253856613d7efb63c7c9f394d13c191578acaf2cf7",
+      "workingSourceMatchesRunRevision": true
+    },
+    {
+      "path": "scripts/ci-profile/record.mjs",
+      "sourceRevisionSha256": "2d8dac2f4ebaab6c87c31e0202c77a93049f062944864f9a574929c7fd2d42d6",
+      "workingSourceMatchesRunRevision": true
+    }
+  ],
+  "officialArtifactDigestMatches": 21,
+  "summarySha256": "899a0733a8452b2e42caa7fb8349b2175084710e5f3a0e918a421d5fa31b70e4"
+}
