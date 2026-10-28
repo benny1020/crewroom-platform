@@ -104,9 +104,21 @@ describe("internal agent commentary through both transports", () => {
     expect((await post(f, { ...input, kind: "suggestion", body })).status).toBe(201);
     expect((await rows(f))[0].body).toBe(body);
     expect((await post(f, { ...input, kind: "suggestion", body: body + "!" })).status).toBe(400);
+    expect((await post(f, { ...input, kind: "suggestion", body: body + "!", idempotencyKey: "oversized-new-key" })).status).toBe(400);
+    expect(await rows(f)).toHaveLength(1);
     const secretBody = "It printed Authorization: Bearer sk-test-very-sensitive-credential before failing.";
     expect((await post(f, { ...input, kind: "complaint", body: secretBody, idempotencyKey: "secret" })).status).toBe(201);
     expect((await rows(f)).find(r => r.idempotencyKey === "secret")?.body).not.toContain("sk-test-very-sensitive-credential");
+  });
+
+  it("enforces the UTF-16 body ceiling before native retry lookup", async () => {
+    const f = await server.fixture();
+    const body = "🙂".repeat(262_144);
+    const submit = (value: string) => f.authority.execute({ tool: "submit_suggestion", callId: randomUUID(), arguments: { ...input, body: value } });
+    await expect(submit(body)).resolves.toMatchObject({ kind: "suggestion", replayed: false });
+    await expect(submit(body + "!")).rejects.toThrow(/at most 524288/);
+    expect(await rows(f)).toHaveLength(1);
+    expect((await rows(f))[0].body.length).toBe(524_288);
   });
 
   it("rejects spoofed input, cross-company HTTP access, board access, and missing authentication", async () => {

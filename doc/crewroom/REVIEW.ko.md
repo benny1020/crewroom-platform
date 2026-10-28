@@ -69,7 +69,7 @@ private source 보호는 기존 `issueService.create`의 run provenance 상속�
 
 현 upstream local CLI adapter는 app container 내부 실행이다. 별도 DB container는 job별 filesystem/process/credential 격리의 증거가 아니다. 분리 runner service를 Compose에 선언하기만 해서는 실제 execution transport가 연결되지 않는다. Docker socket이나 privileged mode로 우회하지 않는다.
 
-현재 상태: **첫 원격 image build·CLI identity·typecheck 통과, health 계약 수정 완료, 새 후보 image CI 대기**. image CI `40703906634`는 unhealthy에서 멈춰 authenticated privacy/restart/snapshot/restore를 실행하지 못했다. 익명 authenticated `/api/health`가 내부 `startupRecovery`를 숨기는 기존 정책을 보존하고 Compose probe가 공개된 `status:ok`를 확인하도록 수정했다. `CREWROOM_PUBLIC_URL` 한 값이 공개 URL과 단일 trusted origin에 동일하게 적용된다. 배포 관련 Node 9개·Python 4개 offline 검사는 통과했지만 실제 이미지의 인증·재시작·복원 증거를 대신하지 않는다.
+현재 상태: **원격 image build·CLI identity·typecheck 및 후속 이미지의 최초 인증까지 통과, 초대 smoke 계약 수정 완료, 새 후보 전체 image 검증 대기**. 첫 image CI `40703906634`는 unhealthy에서 멈췄다. 익명 authenticated `/api/health`가 내부 `startupRecovery`를 숨기는 기존 정책을 보존하고 Compose probe가 공개된 `status:ok`를 확인하도록 수정했다. `CREWROOM_PUBLIC_URL` 한 값이 공개 URL과 단일 trusted origin에 동일하게 적용된다. 이후 723 후보 image CI `40713387606`는 build와 최초 admin·signup을 실제 통과했지만, 정상 human invite 수락의 HTTP 202를 smoke가 200/201로 기대해 중단됐다. 수정 harness는 202 receipt의 company·human identity·상태를 확인하고 pending인 경우만 같은 request ID를 승인한 뒤 실제 active viewer membership을 검사한다. 기존 private 읽기 404와 쓰기 capability false 검사는 유지한다. 배포 관련 Node 9개·Python 12개 offline 검사는 통과했지만 새 이미지의 전체 privacy·재시작·복원 증거는 아직 대기다.
 
 이전 로컬 실패는 유지한다. Docker VM 8 GiB에서 Rust runner와 UI 빌드 뒤 server `tsc`가 exit `137`/`ResourceExhausted`로 종료됐고, Node heap 3072→2048 MiB 재시도도 실패했다. 이후 설치된 TypeScript 7 launcher가 native Go compiler를 실행한다는 것을 확인해 build stage에만 `GOMAXPROCS=2`, soft GC target `GOMEMLIMIT=3GiB`를 적용했다. full typecheck는 유지했다. EC2 계정, 실제 domain/TLS, live provider/GitLab 계정이 없는 상태에서 EC2 배포나 실제 업무 실행 성공을 주장하지 않는다.
 
@@ -86,11 +86,11 @@ private source 보호는 기존 `issueService.create`의 run provenance 상속�
 | isolated source startup | foundation 기록에 loopback 3117 API/UI health 및 새 PostgreSQL 55447. public deploy나 authenticated 다중 사용자 증거가 아님 |
 | UI focused suites | 10 files, 552/552, worker 1. 기본 native 및 classic composer, TaskChatThread, Crewroom·Avatar·navigation·breadcrumb 회귀. token/module 검사 통과. [별도 UI 기록](UI-VERIFICATION.ko.md) 참조 |
 | b08 원격 기본·집중 검사 | 기본 CI 3개 job 통과. server 228 통과·플랫폼 skip 1개, MCP 16개, UI 614개. b08 전체 회귀는 위 시점 진행 중이며 전체 통과로 판정하지 않음 |
-| 새 보안 후보의 로컬 검증 | 의존성 집중 12 files·179 통과·skip 0, MCP 16개, 실제 legacy transformer 3개, 관련 UI/shared/MCP/Cursor typecheck 통과. 인증 이전은 별도 실제 PostgreSQL 3 files·7 통과·skip 0. DB 생성·migration 검사·typecheck 및 server typecheck 통과. 이 묶음들은 일부 중복되므로 합산하지 않음 |
+| 새 보안 후보의 로컬 검증 | 의존성 집중 12 files·179 통과·skip 0, MCP 16개, 실제 legacy transformer 3개, 관련 UI/shared/MCP/Cursor typecheck 통과. 0396까지 포함한 최신 인증 이전은 별도 실제 PostgreSQL 4 files·15 통과·skip 0. DB 생성·migration 검사·typecheck 및 full server typecheck 통과. 이 묶음들은 일부 중복되므로 합산하지 않음 |
 | 새 보안 후보의 전체 typecheck/build/test | 로컬 집중 검사와 소스 검토 완료. 새 SHA의 원격 전체 회귀·production image 인증·재시작·복원은 대기. 이전 b08의 결과를 승계하지 않음 |
 | 신규 capability 및 R1–R3 회귀 | 위 focused 결과로 해당 수정 확인. live event 및 다중 로그인 전체 경로는 별도 |
 | 현재 UI visual review | 원본 캐릭터·대화 CTA·실제 paused 상태·명시적 scene preview를 확인. 최신 `media/team-1440x900.png`, `private-chat.png`, `task-opinion.png`, `task-revision.png`와 receipt가 실제 로컬 화면을 기록. 오류·빈 데이터·read-only 대체 응답은 `*.fixture.png`로 구분. [최종 시각 리뷰](UI-REVIEW.ko.md) 참조 |
-| Docker build/auth/restart/data persistence | 첫 image build 통과·health 실패 이력 보존. health/trusted-origin 수정 및 offline 검사 완료. 새 후보 image CI의 auth/restart/restore 결과 대기 |
+| Docker build/auth/restart/data persistence | 첫 health 실패 후 723 이미지의 build·최초 admin/signup 통과. 정상 초대 202를 오인한 harness 실패·수정 기록 보존. 새 후보 image CI의 전체 privacy/restart/restore 결과 대기 |
 | 실제 model/tool/resume/stop, GitLab, EC2 | 미검증 |
 
 이전 실패도 유지한다. 잘못된 cwd의 최초 Vitest 호출은 tests를 찾지 못했다. 처음 privacy 회귀 assertion은 기존 403과 404 계약을 혼동했고 수정됐다. 초기 optional Copilot materialization은 실패 후 공식 installer로 회복됐지만 중단 원인은 확정되지 않았다. 최종 통과 일부만으로 이 이력을 지우지 않는다.
@@ -123,11 +123,21 @@ Better Auth 1.7.7 설치 후 실제 PostgreSQL 가입 검사가 500으로 실패
 
 현재 상태: **소스·schema·snapshot·journal 일치 확인 및 실제 PostgreSQL 3 files·7개 통과**. 하나의 DO block에서 account 테이블을 잠그고 중복 검사와 제약 변경을 원자적으로 처리한다. 중복은 건수만 보고하고 실패하며 계정·사용자를 병합하거나 삭제하지 않는다. 회귀는 기존 계정·password hash·issuer·session 행 보존, signed session 재사용과 기존 로그인, 새 nullable issuer 가입, 다른 provider의 같은 ID, 재실행, 서로 다른 두 DB 연결의 동시 쓰기 중 한 건만 성공함을 확인한다. 이전 라이브러리 바이너리 실행이 아니라 실제 현재 인증 데이터에 역사적 스키마 형태를 재현한 검사다. 새로운 NULL issuer 행이 생긴 뒤 과거 앱만 되돌리거나 NOT NULL을 자동 복원하는 rollback은 지원하지 않는다.
 
+후속 최종 검사에서 공식 모델이 필수로 선언한 `user.email`과 `session.token` unique도 기존 schema에 빠져 있음을 확인했다. 이메일 조회 후 비동기 해시·생성하는 가입 경로에는 이를 대체할 잠금이 없었다. 발행한 0395를 보존하고 새 0396에서 user→session 순서로 잠근 뒤 두 중복 검사를 먼저 수행하고 unique 인덱스를 원자적으로 추가한다. exact text를 보존하며 대소문자 정규화·계정 병합·토큰 회전은 하지 않는다. **0396 포함 최종 PostgreSQL 검사는 4 files·15개 통과·skip 0**이다. 서로 다른 연결의 email/token 동시 쓰기는 각각 하나만 성공하며, 실제 HTTP 동시 가입도 200+422와 user 1개·credential account 1개·거절 응답 cookie 없음·정상 재로그인을 확인했다. 기존 user/account/session 행과 signed session을 보존하고, 기존 중복 발견 시 행·인덱스·migration journal이 변하지 않는 것도 검사했다. schema·snapshot·journal과 DB/full server typecheck를 확인해 이 인증 수정 범위를 수용한다. 새 후보 원격 CI는 별도 대기다.
+
 ### 의존성 보안과 선택적 런타임 qualification
 
 새 보안 후보의 frozen 설치 후 원본 audit 수치는 113개에서 2개(critical 0·high 1·moderate 0·low 1)로 줄었다. 남은 MSAL high는 실제 전이 의존성 경고이며 현재 Teams 호출은 advisory의 auth-code 흐름 대신 client credentials를 사용한다. low는 pnpm 9.15.4가 workspace 경로 `cli`를 npm 패키지 이름으로 보내는 충돌로 소스에서 확인했다. 원본 수치를 유지하고 ignore·allowlist를 추가하지 않았다. Zod 4.6.6 안의 v3 호환 파서는 여전히 과대 배열 전체를 검사하므로 Cursor provider 응답 경계까지 자원 증폭이 해결됐다고 주장하지 않는다. [보안 검토와 제한](DEPENDENCY-SECURITY.ko.md), [로컬 검증 영수증](dependency-remediation-receipt.json)을 따른다.
 
-[선택적 런타임 qualification](RUNTIME-QUALIFICATION.ko.md)은 dispatch 전용 추가 CI다. workflow/helper SHA와 검사할 40자리 제품 SHA를 별도 checkout하고 각각 검증한다. 실제 선택된 debug runner와 fake provider binary의 hash를 기록하며 기존 recovery의 실제 프로세스 8개와 remote continuity 5개가 누락·중복·실패·skip 없이 통과해야 한다. 권한은 contents read이고 container는 고유 owner label/ID로만 정리한다. raw DB·세션·TLS key·test 로그는 공개하지 않으며 allowlist receipt만 artifact로 남긴다. 소스 검토와 offline gate/cleanup 9개 검사는 수용하지만 실제 Linux 13개 실행은 새 제품 SHA의 CI 대기다. 실제 OS 프로세스·PostgreSQL·Docker/TLS 검사가 통과하더라도 provider는 fake이므로 실제 모델 실행 증거가 아니다.
+[선택적 런타임 qualification](RUNTIME-QUALIFICATION.ko.md)은 dispatch 전용 추가 CI다. workflow/helper SHA와 검사할 40자리 제품 SHA를 별도 checkout하고 각각 검증한다. 실제 선택된 debug runner와 fake provider binary의 hash를 기록하며 기존 recovery의 실제 프로세스 8개와 remote continuity 5개가 누락·중복·실패·skip 없이 통과해야 한다. 권한은 contents read이고 container는 고유 owner label/ID로만 정리한다. raw DB·세션·TLS key·test 로그는 공개하지 않으며 allowlist receipt만 artifact로 남긴다. 실제 OS 프로세스·PostgreSQL·Docker/TLS 검사가 통과하더라도 provider는 fake이므로 실제 모델 실행 증거가 아니다.
+
+첫 실제 1afaaed 후보 qualification `40721425314`는 로컬 8개 중 **5개 통과·3개 실패**, remote 5개는 미수행, cleanup은 통과했다. 기존 공개 receipt만으로 세 실패의 원인은 확정하지 못했으며 제품 runtime이 수정됐다고 주장하지 않는다. 후속 CI helper는 고정된 사례 이름·상태, 고정 error-class enum, 허용된 회귀 파일 하나의 줄·열, 제한된 boolean/정수 또는 collection 길이 비교값만 공개한다. 문자열·객체 내용, 임의 경로와 원문 stack은 내보내지 않는다. 로컬 선택 사례가 모두 진입했고 소유 프로세스 정리가 확인된 경우에는 독립 remote 검사도 수행하되 로컬 실패는 최종 실패로 유지한다. 준비 실패·누락·skip·정리 불확실은 후속 실행을 막는다. 공개 Rust dependency cache는 제품 binary·DB/session/TLS fixture를 포함하지 않는다. 이 helper 수정은 **소스 검토 및 offline 19개 검사 통과**, 같은 새 후보 SHA의 실제 재실행은 대기다.
+
+### R8 · P2 · Zod 보안 패치 뒤 댓글 길이 계약
+
+1afaaed 후보의 전체 CI에서 `agent-commentary`의 초과 본문 요청이 기존 400 대신 idempotency 충돌 409에 도달했다. Zod 4.6의 문자열 `max`가 Unicode code point를 세면서 기존 API·runner의 JavaScript UTF-16 길이 제한과 달라진 것이 원인이다. 공유 schema에 명시적인 `body.length` 검사를 추가하고 기존 `too_big` 오류 metadata와 OpenAPI `maxLength`를 보존했다. 동일 오류를 중복 추가하지 않으며 idempotency 정책은 바꾸지 않는다.
+
+현재 상태: **수정 소스 수용, shared·실제 PostgreSQL integration 2 files·32개 및 OpenAPI 28개·shared typecheck 통과**. surrogate pair·ASCII·혼합 문자열의 경계와 초과를 검사하고, HTTP의 기존/새 idempotency key 및 native 경로에서 초과 본문이 prior retry 조회보다 먼저 거절되는 것을 확인했다. 같은 새 후보의 원격 전체 회귀는 대기다. 이 수정의 범위는 agent commentary이며 다른 문자열 정책을 함께 변경한 것으로 해석하지 않는다.
 
 ## 공개 소스 점검 범위
 
@@ -159,7 +169,7 @@ Better Auth 1.7.7 설치 후 실제 PostgreSQL 가입 검사가 500으로 실패
 | 대화에서 업무를 나누고 결과를 받기 | native/MCP/HTTP task creation, initial plan, source provenance, idempotency, 기존 assignment/wake와 chat completion delivery가 존재 | 신규 회귀는 생성·비공개·중복 방지 경계. 실제 모델을 통한 생성→실행→산출물→원 대화 결과 회신은 별도 E2E 증거 필요 |
 | 업무별 의견·수정·재요청 | 기존 task comment·queued steering·interrupt·reopen·workspace 복구와 문서 revision을 재사용. Crewroom 업무 링크로 진입 | R4 서버/API/MCP 및 기본·classic UI 회귀 통과. 실제 기본 UI의 same-task 의견 저장·재개 상태 전이 확인. 실제 agent 재수정 산출물은 미검증 |
 | 여러 사용자가 권한 안에서 협업 | authenticated mode·membership·grant·private task ACL은 core 기능. Crewroom은 개인 대화 creation/admission과 capability projection을 보강 | disposable DB 검증과 실제 서로 다른 로그인 세션의 전체 데이터 경로 검증은 구별 |
-| EC2에서 지속 운영하고 복구 | production Docker target, 앱/DB 지속 볼륨, 최초 인증, quiesced DB+파일 snapshot 및 새 프로젝트 restore 도구 구현 | 첫 image build 통과·health 실패. health/trusted-origin 수정 후 offline 검사 통과. 새 image CI의 auth/restart/restore 및 실제 EC2·TLS 운영 증거 대기 |
+| EC2에서 지속 운영하고 복구 | production Docker target, 앱/DB 지속 볼륨, 최초 인증, quiesced DB+파일 snapshot 및 새 프로젝트 restore 도구 구현 | 원격 이미지 build·최초 admin/signup 통과. health 및 invite 202 harness 수정·offline 검사 통과. 새 image CI의 전체 privacy/restart/restore 및 실제 EC2·TLS 운영 증거 대기 |
 | 재사용 스킬로 업무 시작 | 기존 skill catalog/version/assignment를 사용하고 Crewroom 요청에 선택한 skill/version을 기록 | 이번 UI 선택이 실제 실행 시 immutable snapshot으로 적용됐다는 증거는 아직 없음 |
 
 별도 설계 목표 중 **추가 구현이 필요한 것**은 사용자별 독립 비서 identity/home/memory binding, Crewroom 부서 ACL, source revision 철회에 따른 누적 context 폐기, exact proposal 승인에 묶인 GitLab publisher다. 기존 core의 task/workspace lease·session·approval·versioned skill 기능이 없다는 뜻이 아니다. 현재 배포의 local CLI가 앱과 같은 컨테이너에서 실행되므로 신뢰할 수 없는 작업의 OS/process/credential 격리는 이 배포만으로 제공하지 않는다. 모델 endpoint·GitLab·EC2의 실제 자격증명과 운영 대상이 없는 항목은 **실연결 미검증**이며, 단순 UI 완료로 그 증거를 대신하지 않는다.

@@ -1,11 +1,19 @@
 import { z } from "zod";
 
-/** Same ceiling as an ordinary issue document; brevity is guidance, not a quota. */
+/** Historical document-sized ceiling in UTF-16 code units; brevity is not a quota. */
 export const AGENT_COMMENTARY_MAX_LENGTH = 524_288;
 export const AGENT_COMMENTARY_KINDS = ["complaint", "suggestion"] as const;
 
 export const agentCommentaryToolInputSchema = z.object({
-  body: z.string().max(AGENT_COMMENTARY_MAX_LENGTH).refine((body) => body.trim().length > 0, "Feedback must not be empty"),
+  body: z.string().max(AGENT_COMMENTARY_MAX_LENGTH)
+    // Zod 4.6 counts Unicode code points for max(); the API and runner helper
+    // have always bounded JavaScript string length, including surrogate pairs.
+    .superRefine((body, ctx) => {
+      if (body.length > AGENT_COMMENTARY_MAX_LENGTH && !ctx.issues.some((issue) => issue.code === "too_big")) {
+        ctx.addIssue({ code: "too_big", origin: "string", maximum: AGENT_COMMENTARY_MAX_LENGTH, inclusive: true });
+      }
+    })
+    .refine((body) => body.trim().length > 0, "Feedback must not be empty"),
   idempotencyKey: z.string().trim().min(1).max(240),
 }).strict();
 

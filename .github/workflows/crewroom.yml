@@ -55,7 +55,7 @@ jobs:
       - run: pnpm --filter @paperclipai/plugin-sdk ensure-build-deps
       - name: Deployment readiness and diagnostic privacy contracts
         run: |
-          python3 -m unittest deploy/crewroom/diagnostics_test.py
+          python3 -m unittest deploy/crewroom/diagnostics_test.py deploy/crewroom/smoke_contracts_test.py
           node --test --test-concurrency=1 scripts/__tests__/crewroom-deploy-readiness.test.mjs
       - name: Require working Linux user and PID namespaces
         shell: bash

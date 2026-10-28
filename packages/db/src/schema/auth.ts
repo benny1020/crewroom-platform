@@ -8,7 +8,9 @@ export const authUsers = pgTable("user", {
   image: text("image"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
-});
+}, (table) => ({
+  emailUq: uniqueIndex("user_email_uq").on(table.email),
+}));
 
 export const authSessions = pgTable("session", {
   id: text("id").primaryKey(),
@@ -19,7 +21,9 @@ export const authSessions = pgTable("session", {
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
   userId: text("user_id").notNull().references(() => authUsers.id, { onDelete: "cascade" }),
-});
+}, (table) => ({
+  tokenUq: uniqueIndex("session_token_uq").on(table.token),
+}));
 
 /**
  * Better Auth's `account` model. Every column here has to exist for the

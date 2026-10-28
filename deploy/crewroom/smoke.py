@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Verify authenticated privacy and DB/file persistence on an isolated test instance."""
-import argparse, hashlib, http.cookiejar, json, os, secrets, urllib.request, urllib.error
+import argparse, hashlib, json, os, secrets
 from pathlib import Path
+from smoke_contracts import Client, accept_viewer_invite
 
 os.umask(0o077)
 p = argparse.ArgumentParser()
@@ -12,25 +13,7 @@ args = p.parse_args()
 state_path = args.state_file.absolute()
 state_path.parent.mkdir(parents=True, exist_ok=True)
 
-class Client:
-    def __init__(self):
-        self.opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
-    def call(self, method, path, data=None, expected=(200,), raw=None, content_type=None):
-        payload = raw if raw is not None else (json.dumps(data).encode() if data is not None else None)
-        headers = {'Origin': args.base, 'Content-Type': content_type or 'application/json'}
-        request = urllib.request.Request(args.base + path, data=payload, headers=headers, method=method)
-        try:
-            response = self.opener.open(request, timeout=60)
-            status, body = response.status, response.read()
-        except urllib.error.HTTPError as error:
-            status, body = error.code, error.read()
-        if status not in expected:
-            raise RuntimeError(f'HTTP smoke failed: method={method}, status={status}, expected={expected}')
-        return json.loads(body) if body and content_type is None else body
-    def login(self, account):
-        return self.call('POST', '/api/auth/sign-in/email', account)
-
-admin, viewer = Client(), Client()
+admin, viewer = Client(args.base), Client(args.base)
 health = admin.call('GET', '/api/health')
 if health.get('status') != 'ok':
     raise RuntimeError('Application has not reached public readiness')
@@ -51,12 +34,7 @@ if args.phase == 'seed':
     admin.call('PATCH', '/api/companies/' + company_id, {'requireBoardApprovalForNewAgents': False})
     admin.call('PATCH', '/api/instance/settings/experimental', {'enableAgentChat': True})
     invite = admin.call('POST', f'/api/companies/{company_id}/invites', {'allowedJoinTypes': 'human', 'humanRole': 'viewer'}, expected=(201,))
-    joined = viewer.call('POST', '/api/invites/' + invite['token'] + '/accept', {'requestType': 'human'}, expected=(200,201))
-    request_id = joined.get('id') or joined.get('joinRequest', {}).get('id')
-    if not request_id:
-        raise RuntimeError('Join request receipt missing ID')
-    if joined.get('status') == 'pending_approval':
-        admin.call('POST', f'/api/companies/{company_id}/join-requests/{request_id}/approve', {})
+    accept_viewer_invite(admin, viewer, invite['token'], company_id)
     agent = admin.call('POST', f'/api/companies/{company_id}/agents', {'name': 'Persistence verifier', 'role': 'engineer', 'adapterType': 'process', 'adapterConfig': {'command': '/bin/false'}, 'runtimeConfig': {'heartbeat': {'enabled': False, 'wakeOnDemand': False}}}, expected=(200,201))
     state['agentId'] = agent['id']
     chat = admin.call('POST', f'/api/companies/{company_id}/chats/' + agent['id'], {})

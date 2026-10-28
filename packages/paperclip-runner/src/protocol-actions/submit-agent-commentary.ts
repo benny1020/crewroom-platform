@@ -28,7 +28,7 @@ function commentaryAction(kind: "complaint" | "suggestion", description: string,
         inputSchema: {
           type: "object",
           properties: {
-            body: { type: "string", minLength: 1, maxLength: 524288, description: "Free-form feedback. Keep it brief; no required fields, labels, or template." },
+            body: { type: "string", minLength: 1, maxLength: 524288, description: "Free-form feedback, at most 524288 UTF-16 code units (server-enforced). Keep it brief; no required fields, labels, or template." },
             idempotencyKey: { type: "string", minLength: 1, maxLength: 240, description: "A stable key for this submission. Transport replay reuses it; do not retry a failed or uncertain submission yourself." },
           },
           required: ["body", "idempotencyKey"], additionalProperties: false,

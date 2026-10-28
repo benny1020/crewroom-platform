@@ -10,10 +10,12 @@ Ubuntu 24.04 x64에서 Node 24.14.0, pnpm 9.15.4, Rust 1.97.1을 사용한다. F
 
 1. Recovery 파일을 실행하고 `realProcessIt`의 확장된 이름 8개가 각각 정확히 한 번 `passed`인지 확인한다. 실제 PostgreSQL checkpoint 쓰기, controller 파일 유실, hot/hard restart, prompt 호환성, 격리된 이전 journal 복구를 다룬다.
 2. 자격증명 없는 fake provider를 담은 disposable Node 24.14.0 trixie amd64 container에서 remote `warm`, `hard`, `legacy`, `changed`, `same-server` 5개를 실행한다. 이미지 digest를 고정하고 localhost에 자동 할당한 포트만 게시한다. 테스트용 TLS 인증서와 키는 임시 생성한다.
-3. 선택한 사례가 누락·중복·실패·skip되면 실패한다. 두 번째 `-t` 실행에서 선택하지 않아 pending인 다른 사례는 `unselectedSkipped`로 별도 기록하며 13개 qualification 성공에 포함하지 않는다.
+3. 선택한 사례가 누락·중복·실패·skip되면 실패한다. 로컬 8개가 모두 실제 진입했고 assertion 실패만 있는 경우에는 소유 프로세스 정리를 확인한 뒤 독립 원격 5개도 실행해 결과를 수집한다. 준비 실패·누락·skip 또는 정리 불확실이면 후속 검사를 시작하지 않는다. 로컬 실패는 원격 성공으로 덮어쓰지 않는다. 두 번째 `-t` 실행에서 선택하지 않아 pending인 다른 사례는 `unselectedSkipped`로 별도 기록하며 13개 qualification 성공에 포함하지 않는다.
 
 컨테이너는 2 GiB/2 CPU/256 PID 제한, `--init`, capability 전체 제거와 `no-new-privileges`를 사용한다. 호스트 디렉터리나 Docker socket을 mount하지 않고 privileged 실행이나 호스트 sysctl 변경도 하지 않는다. Docker 제어는 호스트의 기존 테스트 helper가 수행한다. 임시 fake provider, TLS 키, PostgreSQL, 세션 상태와 원문 Vitest JSON은 공개 artifact에 넣지 않는다.
 
-종료·실패 시 helper가 추적한 프로세스와 고유 owner label/ID를 가진 컨테이너만 정리한다. `always()` 단계가 컨테이너 정리를 다시 확인한다. 정리 실패도 실패 receipt가 되며, 확인되지 않은 정리를 성공으로 기록하지 않는다. 볼륨·캐시·다른 서비스는 삭제하지 않는다. 공개 artifact는 SHA, toolchain, binary hash, 단계 상태와 테스트 수만 포함한 `receipt.json` 하나다.
+종료·실패 시 helper가 추적한 프로세스와 고유 owner label/ID를 가진 컨테이너만 정리한다. `always()` 단계가 컨테이너 정리를 다시 확인한다. 정리 실패도 실패 receipt가 되며, 확인되지 않은 정리를 성공으로 기록하지 않는다. 볼륨·캐시·다른 서비스는 삭제하지 않는다. 공개 artifact는 `receipt.json` 하나다. SHA, toolchain, binary hash, 단계 상태·exit code·테스트 수 외에 고정된 13개 사례의 이름·상태를 기록한다. 실패 진단은 고정 error-class enum, 허용된 회귀 파일 하나의 소스 상대 경로·줄·열, 형식이 확인된 boolean 또는 짧은 정수 비교값으로 제한한다. 원문 오류 메시지·stack 전체·임의 파일 경로·문자열/객체 비교값·환경 변수·인증 정보는 복사하지 않는다. Vitest의 선언 위치도 허용된 동일 파일로만 기록한다.
+
+Rust 재실행은 기존 SHA로 고정된 rust-cache action으로 공개 dependency cache를 재사용한다. Workspace crate·제품 실행 binary·테스트 상태·TLS/DB/session fixture는 캐시 대상에서 제외한다. 테스트 실패 뒤에도 dependency cache만 저장할 수 있으며 테스트 통과 판정에는 영향을 주지 않는다.
 
 로컬에서는 이 CI를 대신하는 무거운 실행을 하지 않았다. Python gate/cleanup의 offline 검사와 workflow 구문 검사는 런타임 13개 통과 증거가 아니며, 실제 결과는 해당 제품 SHA의 GitHub Actions receipt로 확인한다.

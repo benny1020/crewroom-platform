@@ -71,6 +71,8 @@ docker compose --env-file deploy/crewroom/.env -f deploy/crewroom/compose.yaml r
 
 Better Auth 1.7.7 업데이트의 `0395` migration은 기존 계정·비밀번호 hash·세션·`issuer` 값을 보존하면서 `issuer`의 NOT NULL 제약과 옛 unique index를 해제하고, 현재 계정 식별 기준인 `(provider_id, account_id)`에 unique index를 적용해 동시 쓰기의 중복도 차단한다. 다른 제공자는 같은 account ID를 사용할 수 있다. `(provider_id, account_id)` 중복이 있으면 변경 전에 중복 그룹 수만 기록하고 중단한다. 계정을 자동 병합하거나 삭제하지 않으며, 운영자가 [공식 업그레이드 지침](https://www.better-auth.com/docs/guides/1-7-upgrade-guide)에 따라 소유 관계를 확인한 뒤 재시도해야 한다. 새 계정은 `issuer = NULL`이므로 1.7.0–1.7.2 앱으로만 되돌리거나 NOT NULL을 자동 복원하면 안 된다. 복구가 필요하면 호환되는 앱과 업데이트 전 snapshot을 별도 복구 프로젝트에서 함께 검증한다.
 
+후속 `0396` migration은 [Better Auth 공식 core schema](https://better-auth.com/docs/concepts/database)가 요구하는 `user.email`과 `session.token` unique index를 추가한다. 두 테이블을 고정 순서로 잠그고 기존 text 값의 중복 그룹을 먼저 검사한다. 중복이 있으면 값이나 토큰을 로그에 남기지 않고 전체 변경을 중단한다. 이메일 정규화, 계정 병합·삭제, token rotation은 수행하지 않는다. 기존 계정과 세션 값은 그대로 보존하며, 동시 가입·세션 생성에서도 같은 키가 여러 행에 기록되지 않게 한다. 공개된 `0395` 이력은 변경하지 않는다.
+
 ## 일관된 백업과 새 프로젝트로 복원
 
 snapshot 도구는 앱을 정상 종료해 쓰기를 멈추고 PG custom dump, `/paperclip` archive, 배포 secret 파일과 SHA-256 manifest를 생성한 뒤 원래 실행 중이었던 앱을 다시 시작한다. 백업 디렉터리는 owner-only다. 외부 agent/runtime가 `/paperclip`에 직접 쓰는 별도 구성을 추가했다면 그것도 먼저 멈춰야 한다. 진행 중인 외부 서비스 작업까지 스냅샷이 원자적으로 되돌리는 것은 아니다.
@@ -104,6 +106,8 @@ python3 deploy/crewroom/smoke.py seed --state-file .paperclip/container-smoke.js
 python3 deploy/crewroom/smoke.py check --state-file .paperclip/container-smoke.json
 python3 deploy/crewroom/smoke.py check --base http://localhost:3119 --state-file .paperclip/container-smoke.json
 ```
+
+초대 수락의 HTTP `202`는 요청 접수이며 멤버십 성공의 근거로 사용하지 않는다. 응답의 human join request ID·회사·사용자·승인 상태를 확인하고 `pending_approval`이면 같은 요청을 관리자가 승인한다. 현재 human 초대가 이미 `approved`를 반환하면 중복 승인하지 않는다. 이어 관리자 조회에서 그 사용자의 활성 `viewer` 멤버십을 확인한다. 거절 응답, 승인 대기 유지, 다른 사용자·역할은 실패 처리한다.
 
 두 사용자의 실제 인증 세션으로 개인 대화 상세·목록·첨부 파일과 viewer 쓰기 제한을 확인하고 파일 checksum을 대조한다. state 파일, snapshot, 환경 파일, 인증 응답과 원문 앱 로그는 공개 CI artifact에 포함하지 않는다. 이 검사는 실제 모델 추론이나 독립 사용자별 런타임 격리 검사가 아니다.
 

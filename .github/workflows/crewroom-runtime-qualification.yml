@@ -6,7 +6,6 @@ on:
       source_revision:
         description: Exact product commit to qualify (40 hexadecimal characters)
         required: true
-        default: b08e5947ff45981b939676e7cfa404c2b683264d
 
 permissions:
   contents: read
@@ -54,6 +53,14 @@ jobs:
           node-version: 24.14.0
       - name: Install the product-owned Rust toolchain
         run: rustup toolchain install 1.97.1 --profile minimal --component rustfmt
+      - name: Cache public Rust dependencies
+        uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2, preserved upstream pin
+        with:
+          workspaces: qualification-product/packages/paperclip-runner/runner -> target
+          shared-key: crewroom-runtime-qualification-v1-dev-debug0
+          cache-workspace-crates: false
+          cache-bin: false
+          cache-on-failure: true
       - name: Qualify real processes, then remote continuity
         run: >-
           python3 qualification-infra/scripts/crewroom-runtime-qualification.py run

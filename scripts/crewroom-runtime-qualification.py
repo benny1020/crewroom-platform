@@ -78,6 +78,99 @@ def report_counts(report, expected, only_selected=False):
     return counts
 
 
+def selected_cases_entered(report, expected):
+    assertions = [case for suite in report.get("testResults", []) for case in suite.get("assertionResults", [])]
+    selected = [case for case in assertions if case.get("title") in expected]
+    return (len(selected) == len(expected) and {case.get("title") for case in selected} == set(expected)
+            and all(case.get("status") in ["passed", "failed"] for case in selected))
+
+
+def safe_source_location(value, source):
+    # Only this exact public fixture may enter the receipt. Resolve absolute,
+    # file: and relative paths before checking; never echo arbitrary stack paths.
+    match = re.fullmatch(r"(.+):(\d{1,7}):(\d{1,6})", value)
+    if not match:
+        return None
+    name, line, column = match.groups()
+    if name.startswith("file://"):
+        name = name[7:]
+    candidate = Path(name)
+    if not candidate.is_absolute():
+        candidate = source / candidate
+    try:
+        relative = candidate.resolve().relative_to(source.resolve()).as_posix()
+    except (ValueError, OSError):
+        return None
+    if relative != RECOVERY_FILE or not (0 < int(line) <= 1_000_000 and 0 < int(column) <= 100_000):
+        return None
+    return {"file": RECOVERY_FILE, "line": int(line), "column": int(column)}
+
+
+def safe_failure(failure, source):
+    # This function consumes private text but only emits fixed enums, the exact
+    # allowlisted fixture path, and bounded primitive comparisons. Never copy
+    # error text, exception properties, arbitrary values or paths into output.
+    if not isinstance(failure, str):
+        return {"errorClass": "unknown"}
+    clean = re.sub(r"\x1b\[[0-9;]*m", "", failure[:200_000])
+    first = clean.splitlines()[0] if clean else ""
+    classes = {"AssertionError": "assertion", "TypeError": "type_error", "RangeError": "range_error",
+               "ReferenceError": "reference_error", "SyntaxError": "syntax_error", "TimeoutError": "timeout", "Error": "error"}
+    kind = re.match(r"^(AssertionError|TypeError|RangeError|ReferenceError|SyntaxError|TimeoutError|Error):", first)
+    result = {"errorClass": classes[kind[1]] if kind else "unknown"}
+    if re.match(r"^Error: (?:(?:Test|Hook) timed out|Timed out)(?: in| after| waiting|\.)", first):
+        result["errorClass"] = "timeout"
+    locations = []
+    for line in clean.splitlines()[1:]:
+        # Stack-only records, not source excerpts or error messages containing
+        # path-like text. Absolute private/TLS paths cannot pass the allowlist.
+        frame = re.fullmatch(r"\s+at (?:[^()\r\n]+ \()?([^()\r\n]+:\d+:\d+)\)?\s*", line)
+        if frame:
+            location = safe_source_location(frame[1], source)
+            if location and location not in locations:
+                locations.append(location)
+    if locations:
+        result["locations"] = locations[:3]
+    primitive = r"(true|false|-?(?:0|[1-9]\d{0,6}))"
+    comparison = re.fullmatch(r"AssertionError: expected " + primitive + r" to (be|equal|deeply equal|be greater than|be less than|be greater than or equal to|be less than or equal to) " + primitive + r"(?: // Object\.is equality)?", first)
+    if comparison:
+        def value(raw):
+            return raw == "true" if raw in ["true", "false"] else int(raw)
+        actual, expected = value(comparison[1]), value(comparison[3])
+        operators = {"be": "equal", "equal": "equal", "deeply equal": "equal", "be greater than": "greater_than",
+                     "be less than": "less_than", "be greater than or equal to": "greater_or_equal", "be less than or equal to": "less_or_equal"}
+        result["comparison"] = {"operator": operators[comparison[2]], "expected": expected, "actual": actual}
+    length = re.fullmatch(r"AssertionError: expected .+ to have a length of ([0-9]{1,7}) but got ([0-9]{1,7})", first)
+    if length:
+        # Collection content stays private; only its reported cardinality leaves.
+        result["comparison"] = {"operator": "length_equal", "expected": int(length[1]), "actual": int(length[2])}
+    return result
+
+
+def report_diagnostics(report, expected, source):
+    assertions = [case for suite in report.get("testResults", []) for case in suite.get("assertionResults", [])]
+    cases = []
+    for title in expected:
+        matches = [case for case in assertions if case.get("title") == title]
+        status = "missing" if not matches else "duplicate" if len(matches) != 1 else matches[0].get("status")
+        if status not in ["passed", "failed", "pending", "skipped", "todo", "disabled", "missing", "duplicate"]:
+            status = "unknown"
+        case = {"title": title, "status": status}
+        if len(matches) == 1:
+            failures = matches[0].get("failureMessages")
+            if status == "failed":
+                case["failures"] = [safe_failure(failure, source) for failure in failures[:3]] if isinstance(failures, list) and failures else [{"errorClass": "unknown"}]
+            # Vitest's declaration location is a useful fallback if the failure
+            # stack lacks a source frame. The file is constant, never report.name.
+            location = matches[0].get("location")
+            if isinstance(location, dict):
+                line, column = location.get("line"), location.get("column")
+                if type(line) is int and type(column) is int and 0 < line <= 1_000_000 and 0 < column <= 100_000:
+                    case["declaration"] = {"file": RECOVERY_FILE, "line": line, "column": column}
+        cases.append(case)
+    return cases
+
+
 def owned_children_cleanup():
     # This helper is a subreaper. Only its own unreaped direct children are
     # signalled; no process-name scan, borrowed PID or unrelated service is used.
@@ -155,6 +248,7 @@ def run_qualification(source, output):
     state_path = private / "owner.json"
     state_path.write_text(json.dumps(state))
     stage = "preflight"
+    qualification_passed = True
     current = None
     # Build/test children receive no ambient provider/account credentials.
     allowed = ["PATH", "HOME", "USER", "LOGNAME", "SHELL", "LANG", "LC_ALL", "RUSTUP_HOME", "CARGO_HOME", "PNPM_HOME", "COREPACK_HOME"]
@@ -230,13 +324,24 @@ def run_qualification(source, output):
         stage = "local_real_processes"
         local_report = private / "local-report.json"
         code = run(["pnpm", "exec", "vitest", "run", "--project", "@paperclipai/server", RECOVERY_FILE,
-                    "--maxWorkers=1", "--reporter=json", "--outputFile=" + str(local_report)], timeout=1200, allow_failure=True)
-        counts = report_counts(json.loads(local_report.read_text()), LOCAL_CASES)
+                    "--maxWorkers=1", "--includeTaskLocation", "--reporter=json", "--outputFile=" + str(local_report)], timeout=1200, allow_failure=True)
+        report = json.loads(local_report.read_text())
+        counts = report_counts(report, LOCAL_CASES)
+        counts["cases"] = report_diagnostics(report, LOCAL_CASES, source)
+        counts["exitCode"] = code
+        if code != 0:
+            counts["status"] = "failed"
         receipt["stages"][stage] = counts
-        if code != 0 or counts["status"] != "passed":
-            raise QualificationFailure("local_exact_case_gate_failed")
+        qualification_passed = counts["status"] == "passed"
+        # Independent remote cases may still collect evidence after an entered
+        # local assertion fails. Missing/skipped cases indicate preparation did
+        # not complete, so those still stop the subsequent stages.
+        if not selected_cases_entered(report, LOCAL_CASES):
+            raise QualificationFailure("local_cases_not_entered")
+        stage = "local_process_cleanup"
         if not owned_children_cleanup():
             raise QualificationFailure("local_process_cleanup_unconfirmed")
+        receipt["stages"][stage] = {"status": "passed"}
         stage = "remote_container"
         name = "crewroom-qualification-" + os.environ["GITHUB_RUN_ID"] + "-" + os.environ["GITHUB_RUN_ATTEMPT"]
         state["container"] = name
@@ -272,16 +377,20 @@ def run_qualification(source, output):
                       "PAPERCLIP_TEST_RUNNER_CONTAINER": name, "PAPERCLIP_TEST_RUNNER_PORT": port.rsplit(":", 1)[1],
                       "PAPERCLIP_TEST_LINUX_RUNNER_BINARY": str(runner), "PAPERCLIP_TEST_FAKE_CODEX_WRAPPER": str(wrapper)}
         code = run(["pnpm", "exec", "vitest", "run", "--project", "@paperclipai/server", RECOVERY_FILE,
-                    "-t", "preserves remote warm continuity across completed turns:", "--maxWorkers=1", "--reporter=json", "--outputFile=" + str(remote_report)],
+                    "-t", "preserves remote warm continuity across completed turns:", "--maxWorkers=1", "--includeTaskLocation", "--reporter=json", "--outputFile=" + str(remote_report)],
                    timeout=1200, env=remote_env, allow_failure=True)
-        counts = report_counts(json.loads(remote_report.read_text()), REMOTE_CASES, only_selected=True)
+        report = json.loads(remote_report.read_text())
+        counts = report_counts(report, REMOTE_CASES, only_selected=True)
+        counts["cases"] = report_diagnostics(report, REMOTE_CASES, source)
+        counts["exitCode"] = code
+        if code != 0:
+            counts["status"] = "failed"
         receipt["stages"][stage] = counts
-        if code != 0 or counts["status"] != "passed":
-            raise QualificationFailure("remote_exact_case_gate_failed")
+        qualification_passed = qualification_passed and counts["status"] == "passed"
         stage = "source_integrity"
         run(["git", "diff", "--exit-code", "HEAD", "--"])
         receipt["stages"][stage] = {"status": "passed"}
-        receipt["status"] = "passed"
+        receipt["status"] = "passed" if qualification_passed else "failed"
     except BaseException:
         receipt["stages"].setdefault(stage, {})["status"] = "failed"
         receipt["status"] = "failed"

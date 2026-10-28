@@ -152,4 +152,52 @@ describeEmbeddedPostgres("Better Auth credential sign-up against the real schema
     expect(created?.issuer).toBeNull();
   });
 
+  it("preserves existing accounts, hashes and signed sessions through the email/token unique migration", async () => {
+    const signUp = await request(app).post("/api/auth/sign-up/email").set("origin", ORIGIN)
+      .send({ email: "before-unique@example.com", password: PASSWORD, name: "Before unique" });
+    expect(signUp.status).toBe(200);
+    const cookies = sessionCookies(signUp).map((cookie) => cookie.split(";")[0]);
+    expect(cookies.length).toBeGreaterThan(0);
+    const sql = db.$client;
+    await sql`DROP INDEX "user_email_uq"`;
+    await sql`DROP INDEX "session_token_uq"`;
+    const usersBefore = await sql`SELECT * FROM "user" ORDER BY "id"`;
+    const accountsBefore = await sql`SELECT * FROM "account" ORDER BY "id"`;
+    const sessionsBefore = await sql`SELECT * FROM "session" ORDER BY "id"`;
+    const migration = fs.readFileSync(new URL("../../../packages/db/src/migrations/0396_better_auth_unique_identity_keys.sql", import.meta.url), "utf8");
+    await sql.unsafe(migration);
+    await sql.unsafe(migration);
+    expect(await sql`SELECT * FROM "user" ORDER BY "id"`).toEqual(usersBefore);
+    expect(await sql`SELECT * FROM "account" ORDER BY "id"`).toEqual(accountsBefore);
+    expect(await sql`SELECT * FROM "session" ORDER BY "id"`).toEqual(sessionsBefore);
+    const existingSession = await request(app).get("/api/auth/get-session").set("cookie", cookies);
+    expect(existingSession.status).toBe(200);
+    expect(existingSession.body?.user?.email).toBe("before-unique@example.com");
+    const signIn = await request(app).post("/api/auth/sign-in/email").set("origin", ORIGIN)
+      .send({ email: "before-unique@example.com", password: PASSWORD });
+    expect(signIn.status).toBe(200);
+    expect(signIn.body?.user?.email).toBe("before-unique@example.com");
+  });
+
+  it("keeps one user and one credential account after concurrent real sign-ups", async () => {
+    const email = "concurrent-signup@example.com";
+    const responses = await Promise.all(["First", "Second"].map((name) => request(app)
+      .post("/api/auth/sign-up/email").set("origin", ORIGIN).send({ email, password: PASSWORD, name })));
+    expect(responses.map((response) => response.status).sort()).toEqual([200, 422]);
+    const denied = responses.find((response) => response.status !== 200)!;
+    expect(["FAILED_TO_CREATE_USER", "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL"]).toContain(denied.body?.code);
+    expect(sessionCookies(denied)).toHaveLength(0);
+    const sql = db.$client;
+    const users = await sql`SELECT "id" FROM "user" WHERE "email" = ${email}`;
+    expect(users).toHaveLength(1);
+    const accounts = await sql`SELECT "user_id", "provider_id", "password" FROM "account" WHERE "user_id" = ${users[0]!.id}`;
+    expect(accounts).toHaveLength(1);
+    expect(accounts[0]?.provider_id).toBe("credential");
+    expect(accounts[0]?.password).toBeTruthy();
+    const signIn = await request(app).post("/api/auth/sign-in/email").set("origin", ORIGIN)
+      .send({ email, password: PASSWORD });
+    expect(signIn.status).toBe(200);
+    expect(signIn.body?.user?.id).toBe(users[0]!.id);
+  });
+
 });
