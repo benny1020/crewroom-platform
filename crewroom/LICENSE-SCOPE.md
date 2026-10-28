@@ -7,7 +7,7 @@ The [BSD Zero Clause license](LICENSE) applies to original Crewroom contribution
 - `doc/crewroom/**`
 - `doc/plans/2026-10-28-crewroom-paperclip-foundation.md`
 - `deploy/crewroom/**`, excluding credentials, environment files, runtime state and private snapshots
-- `scripts/crewroom-bootstrap.mjs`, `scripts/crewroom-dev.mjs`, `scripts/setup-impeccable.py`
+- `scripts/crewroom-bootstrap.mjs`, `scripts/crewroom-dev.mjs`, `scripts/crewroom-capture.mjs`, `scripts/setup-impeccable.py`
 - `ui/src/pages/Crewroom.tsx`
 - `ui/src/components/crewroom/**`
 - `ui/src/api/crewroom.ts`, `ui/src/api/heartbeats.crewroom.test.ts`

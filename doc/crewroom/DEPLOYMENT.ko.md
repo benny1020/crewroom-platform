@@ -59,7 +59,7 @@ docker compose --env-file deploy/crewroom/.env -f deploy/crewroom/compose.yaml -
 
 `<project>_postgres`에는 DB가, `<project>_appdata`에는 `/paperclip` 전체가 저장된다. 후자는 암호화 secret master key, 설정, 업로드, agent home, 세션 및 workspace 파일을 포함한다. DB만 복원해서는 전체 작업 상태를 복원했다고 할 수 없다. DB와 앱 데이터 및 signing secrets를 함께 보존한다.
 
-앱은 image의 tini와 upstream shutdown을 사용한다. Compose는 앱 PID 한도 2048, 90초 종료 유예, health check와 `unless-stopped` 재시작을 설정한다. health의 `startupRecovery.phase=ready`는 API startup 완료를 뜻하며 Claude 연결이나 작업 성공의 증거가 아니다.
+앱은 image의 tini와 upstream shutdown을 사용한다. Compose는 앱 PID 한도 2048, 90초 종료 유예, health check와 `unless-stopped` 재시작을 설정한다. 인증은 `CREWROOM_PUBLIC_URL` 하나를 trusted origin으로 명시해 호스트 포트 매핑·reverse proxy의 공개 origin을 보존하며 wildcard나 origin 검증 해제를 사용하지 않는다. 익명 health probe는 HTTP 성공과 공개 응답의 `status: "ok"`를 함께 요구한다. 서버는 startup recovery가 ready일 때만 이 상태를 반환하며, 내부 `startupRecovery` 필드는 인증 모드의 익명 응답에 공개하지 않는다. `starting`, 오류 응답과 잘못된 JSON은 readiness 실패다. 이는 Claude 연결이나 작업 성공의 증거가 아니다.
 
 ```sh
 docker compose --env-file deploy/crewroom/.env -f deploy/crewroom/compose.yaml ps

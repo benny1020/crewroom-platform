@@ -3,6 +3,7 @@ import { spawn } from "node:child_process";
 import { constants, existsSync } from "node:fs";
 import * as fs from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import type { NativeRuntimeContextSnapshot } from "../../vendor/paperclip-runner/index.js";
 import { openRunnerApiWorkspaceFile, openRunnerWorkspaceFile } from "./runner-api-files.js";
@@ -27,7 +28,7 @@ export const RUNNER_BRIDGE_SCHEMAS = new Map<string, z.ZodType>(specs.map(([name
 // macOS sandbox-exec confines files but cannot contain detached descendants.
 // Advertise commands only with a PID namespace that survives neither the
 // initial command nor its controller. File tools remain available on macOS.
-export function workspaceCommandSandboxAvailable() { return process.platform === "linux" && existsSync("/usr/bin/bwrap"); }
+export function workspaceCommandSandboxAvailable() { return process.platform === "linux" && existsSync("/usr/bin/bwrap") && existsSync("/usr/bin/python3"); }
 export function runnerBridgeDefinitions(options: { workspace: boolean; skills: boolean; api: boolean; mode: string }) {
   return specs.filter(([name]) => (!name.startsWith("workspace_") || options.workspace) && (name !== "workspace_run" || workspaceCommandSandboxAvailable())
     && (!["workspace_run", "workspace_write", "comment_on_task", "write_task_document"].includes(name) || options.mode === "standard")
@@ -133,6 +134,9 @@ export async function settleRunnerBridgeRead(read: () => Promise<unknown>) {
   }
 }
 const workspaceLanes = new Map<string, Promise<void>>();
+// Controller-local fail-closed state. Restart recovery remains the runtime
+// owner's responsibility; an unconfirmed cleanup never authorizes another tool.
+const quarantinedWorkspaces = new Set<string>();
 export async function executeWorkspaceTool(root: string, name: string, raw: unknown, authorize: () => Promise<void>) {
   // One local controller owns admitted tools. Serialize each canonical workspace
   // across calls and agents, including commands, so hash checks and writes form
@@ -142,7 +146,12 @@ export async function executeWorkspaceTool(root: string, name: string, raw: unkn
   const lane = new Promise<void>(resolve => { release = resolve; });
   workspaceLanes.set(key, lane);
   await previous;
-  try { return await executeWorkspaceToolInLane(key, name, raw, authorize); }
+  try {
+    // Recheck after acquiring the lane: an earlier command may have timed out
+    // while a successor was already waiting for it.
+    if (quarantinedWorkspaces.has(key)) throw new Error("runner_workspace_cleanup_unconfirmed");
+    return await executeWorkspaceToolInLane(key, name, raw, authorize);
+  }
   finally { release(); if (workspaceLanes.get(key) === lane) workspaceLanes.delete(key); }
 }
 async function executeWorkspaceToolInLane(root: string, name: string, raw: unknown, authorize: () => Promise<void>) {
@@ -177,24 +186,60 @@ async function executeWorkspaceToolInLane(root: string, name: string, raw: unkno
   const cwd = await fs.realpath(root), privateHome = path.join(cwd, ".paperclip-dot-home");
   await fs.mkdir(privateHome, { recursive: true, mode: 0o700 });
   await confined(cwd, ".paperclip-dot-home");
-  // Bubblewrap owns a private PID namespace and an init/reaper. Killing the
-  // outer supervisor tears it down even when descendants fork and setsid().
-  const program = "/usr/bin/bwrap";
+  // bwrap can report its initial command's exit before its namespace settles.
+  // A subreaper must own orphaned descendants and acknowledge ECHILD first.
+  const supervisor = fileURLToPath(new URL("../scripts/workspace-command-supervisor.py", import.meta.url));
   const protectedPaths = await protectedWorkspaceDirectories(cwd);
   const masks = protectedPaths.flatMap(directory => ["--tmpfs", directory, "--remount-ro", directory]);
   const args = ["--die-with-parent", "--unshare-all", "--cap-drop", "ALL", "--ro-bind", "/usr", "/usr", "--ro-bind", "/bin", "/bin", "--ro-bind", "/lib", "/lib", ...(existsSync("/lib64") ? ["--ro-bind", "/lib64", "/lib64"] : []), "--proc", "/proc", "--dev", "/dev", "--bind", cwd, cwd, ...masks, "--chdir", cwd, "--", input.program, ...input.args];
   await authorize();
   return new Promise<Record<string, unknown>>((resolve, reject) => {
-    const child = spawn(program, args, { cwd, detached: process.platform !== "win32", stdio: ["ignore", "pipe", "pipe"],
+    const child = spawn("/usr/bin/python3", [supervisor, "/usr/bin/bwrap", ...args], { cwd, stdio: ["pipe", "pipe", "pipe", "pipe"],
       env: { PATH: process.env.PATH ?? "/usr/bin:/bin", HOME: privateHome, TMPDIR: privateHome, LANG: "en_US.UTF-8" } });
     let output = "", outputBytes = 0, truncated = false, stopped: string | null = null, checking = false;
+    let status = "", finished = false, closed = false;
+    let cleanupDeadline: ReturnType<typeof setTimeout> | undefined;
     const capture = (bytes: Buffer) => { const available = Math.max(0, PAGE_BYTES - outputBytes); output += bytes.subarray(0, available).toString("utf8"); outputBytes += Math.min(available, bytes.length); truncated ||= bytes.length > available; };
     child.stdout.on("data", capture); child.stderr.on("data", capture);
-    const stop = (reason: string) => { stopped = reason; if (child.pid) try { process.kill(-child.pid, "SIGKILL"); } catch { /* already stopped */ } };
+    child.stdio[3]?.on("data", (bytes: Buffer) => { status += bytes.toString("utf8"); if (status.length > 1024) status = "invalid"; });
+    child.stdin.on("error", () => { /* A concurrently exiting helper may close the control pipe. */ });
+    const failClosed = () => {
+      if (finished) return;
+      finished = true;
+      quarantinedWorkspaces.add(cwd);
+      reject(new Error("runner_workspace_cleanup_unconfirmed"));
+    };
+    const stop = (reason: string) => {
+      if (closed || finished || stopped !== null) return;
+      stopped = reason;
+      clearTimeout(timeout); clearInterval(poll);
+      // EOF also reaches the helper when this Node controller dies. Keep the
+      // reaper alive until it has settled its own children, even past the UI
+      // response deadline; never kill it first and abandon its descendants.
+      child.stdin.end();
+      cleanupDeadline = setTimeout(failClosed, 5000);
+    };
     const timeout = setTimeout(() => stop("timeout"), input.timeoutMs);
     const poll = setInterval(() => { if (checking) return; checking = true; void authorize().catch(() => stop("authority_revoked")).finally(() => { checking = false; }); }, 500);
-    const clear = () => { clearTimeout(timeout); clearInterval(poll); };
-    child.once("error", error => { clear(); reject(error); });
-    child.once("close", (exitCode, signal) => { clear(); if (child.pid) try { process.kill(-child.pid, "SIGKILL"); } catch { /* owned group already exited */ } resolve({ exitCode, signal, output, truncated, stopped }); });
+    const clear = () => { clearTimeout(timeout); clearInterval(poll); if (cleanupDeadline) clearTimeout(cleanupDeadline); };
+    child.once("error", error => {
+      clear(); closed = true;
+      if (child.pid) { child.stdin.end(); failClosed(); }
+      else if (!finished) { finished = true; reject(error); }
+    });
+    child.once("close", (exitCode, signal) => {
+      clear(); closed = true;
+      if (finished) return;
+      let receipt: { settled?: boolean; error?: string; exitCode?: number | null; signal?: string | null };
+      try {
+        receipt = JSON.parse(status);
+        if (!receipt || typeof receipt !== "object" || Array.isArray(receipt)) { failClosed(); return; }
+      } catch { failClosed(); return; }
+      if (exitCode !== 0 || signal !== null || receipt.settled !== true || receipt.error ||
+          !(receipt.exitCode === null || Number.isInteger(receipt.exitCode)) ||
+          !(receipt.signal === null || typeof receipt.signal === "string")) { failClosed(); return; }
+      finished = true;
+      resolve({ exitCode: receipt.exitCode, signal: receipt.signal, output, truncated, stopped });
+    });
   });
 }

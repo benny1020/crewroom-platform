@@ -30,6 +30,8 @@ jobs:
     env:
       PAPERCLIP_TELEMETRY_DISABLED: '1'
       EXPECTED_COMMIT: ${{ github.sha }}
+      DOCKER_BUILD_RECORD_UPLOAD: 'false'
+      DOCKER_BUILD_SUMMARY: 'false'
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - name: Generate isolated secrets without displaying them
@@ -37,14 +39,22 @@ jobs:
           python3 deploy/crewroom/setup.py
           docker compose --env-file deploy/crewroom/.env -p crewroom-ci -f deploy/crewroom/compose.yaml config --quiet
           mkdir -p .ci-profile
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
       - name: Build production target with full TypeScript checks
-        shell: bash
-        run: |
-          set -o pipefail
-          docker build --target production --progress plain \
-            --build-arg CARGO_BUILD_JOBS=1 --build-arg BUILD_NODE_HEAP_MB=4096 \
-            --build-arg PAPERCLIP_BUILD_COMMIT="${GITHUB_SHA}" \
-            -t crewroom-next:local . 2>&1 | tee .ci-profile/image-build.log
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
+        with:
+          context: .
+          target: production
+          load: true
+          push: false
+          tags: crewroom-next:local
+          build-args: |
+            CARGO_BUILD_JOBS=1
+            BUILD_NODE_HEAP_MB=4096
+            PAPERCLIP_BUILD_COMMIT=${{ github.sha }}
+          cache-from: type=gha,scope=crewroom-production
+          cache-to: type=gha,mode=max,scope=crewroom-production
       - name: Record image identity and public CLI versions
         run: |
           docker image inspect crewroom-next:local --format '{{.Id}}' > .ci-profile/image-id.txt
@@ -78,6 +88,13 @@ jobs:
         run: |
           printf '%s\n' 'PASS: production image, authenticated first admin and local invite, private conversation and file ACL, restart, consistent snapshot and fresh-project restore.' > .ci-profile/image-smoke-summary.txt
           printf '%s\n' 'No live model inference, email delivery, GitLab publication, EC2, or TLS claim.' >> .ci-profile/image-smoke-summary.txt
+      - name: Capture secret-safe failure diagnostics before cleanup
+        if: failure()
+        run: |
+          python3 deploy/crewroom/diagnostics.py --project crewroom-ci --output .ci-profile/deployment-diagnostics.json
+          if test -f deploy/crewroom/.env.restore; then
+            python3 deploy/crewroom/diagnostics.py --project crewroom-ci-restored --env-file deploy/crewroom/.env.restore --label restored --output .ci-profile/deployment-diagnostics-restored.json
+          fi
       - name: Stop only the disposable verification projects
         if: always()
         run: |
@@ -92,10 +109,13 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7, preserved upstream pin
         with:
           name: crewroom-image-${{ github.sha }}-${{ github.run_attempt }}
+          # BuildKit output stays in the Build step's GitHub log. Never upload
+          # .dockerbuild records, generated secrets or complete runtime logs.
           path: |
-            .ci-profile/image-build.log
             .ci-profile/image-id.txt
             .ci-profile/cli-versions.json
             .ci-profile/image-smoke-summary.txt
+            .ci-profile/deployment-diagnostics.json
+            .ci-profile/deployment-diagnostics-restored.json
           if-no-files-found: warn
           retention-days: 14

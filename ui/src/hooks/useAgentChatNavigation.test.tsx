@@ -12,7 +12,7 @@ vi.mock("@/api/agentChats", () => ({ agentChatsApi: { ensure: mocks.ensure } }))
 vi.mock("@/lib/router", () => ({ useNavigate: () => mocks.navigate }));
 vi.mock("@/context/SidebarContext", () => ({ useSidebar: () => ({ isMobile: false, setSidebarOpen: vi.fn() }) }));
 const agent = { id: "agent-a", companyId: "company-a", name: "Helper" } as Agent;
-const chat = { id: "private-chat", updatedAt: "2026-10-28T00:00:00Z" } as Issue;
+const chat = { id: "private-chat", updatedAt: new Date("2026-10-28T00:00:00Z") } as Issue;
 let client: QueryClient;
 let container: HTMLDivElement;
 let root: ReturnType<typeof createRoot>;

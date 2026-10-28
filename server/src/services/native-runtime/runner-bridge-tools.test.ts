@@ -1,14 +1,29 @@
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
+import { spawn } from "node:child_process";
+import { EventEmitter } from "node:events";
+import { PassThrough } from "node:stream";
 import { materializeAsset } from "./runtime-context.js";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { executeWorkspaceTool, readAssignedSkill, readWorkspaceUploadFile, runnerBridgeDefinitions, workspaceCommandSandboxAvailable, settleRunnerBridgeRead } from "./runner-bridge-tools.js";
 const roots: string[] = [];
 afterEach(async () => { await Promise.all(roots.splice(0).map(root => rm(root, { recursive: true, force: true }))); });
 const root = async () => { const directory = await mkdtemp(join(tmpdir(), "dot-bridge-")); roots.push(directory); return directory; };
 const authorize = async () => {};
+vi.mock("node:child_process", async (load) => {
+  const actual = await load<typeof import("node:child_process")>();
+  return { ...actual, spawn: vi.fn(actual.spawn) };
+});
+function fakeSupervisor() {
+  const stdin = new PassThrough(), stdout = new PassThrough(), stderr = new PassThrough(), status = new PassThrough();
+  const child = Object.assign(new EventEmitter(), { stdin, stdout, stderr, stdio: [stdin, stdout, stderr, status] });
+  let started!: () => void;
+  const ready = new Promise<void>(resolve => { started = resolve; });
+  vi.mocked(spawn).mockImplementationOnce(() => { started(); return child as unknown as ReturnType<typeof spawn>; });
+  return { child, status, ready };
+}
 describe("Runner workspace bridge", () => {
   it("guards new writes, existing content, traversal and symlinks", async () => {
     const directory = await root(), outside = await root();
@@ -116,17 +131,58 @@ if sys.argv[1] != "completion":
     time.sleep(20)
 `);
       let revoked = false;
-      const result = await executeWorkspaceTool(directory, "workspace_run", {
+      let admitted!: () => void;
+      const admission = new Promise<void>(resolve => { admitted = resolve; });
+      const execution = executeWorkspaceTool(directory, "workspace_run", {
         program: "/usr/bin/python3", args: ["detach.py", mode], timeoutMs: mode === "timeout" ? 1000 : 5000,
       }, async () => {
+        admitted();
         if (revoked) throw new Error("revoked");
         if (mode === "revocation") revoked = await readFile(join(directory, "ticks.txt")).then(() => true, () => false);
-      }) as any;
+      });
+      await admission;
+      const successor = executeWorkspaceTool(directory, "workspace_run", {
+        program: "/bin/sh", args: ["-c", "printf successor > ticks.txt"],
+      }, authorize);
+      const result = await execution as any;
       expect(result.stopped).toBe(mode === "timeout" ? "timeout" : mode === "revocation" ? "authority_revoked" : null);
-      const final = await readFile(join(directory, "ticks.txt"), "utf8");
+      await successor;
+      expect(await readFile(join(directory, "ticks.txt"), "utf8")).toBe("successor");
       await new Promise(resolve => setTimeout(resolve, 150));
-      expect(await readFile(join(directory, "ticks.txt"), "utf8")).toBe(final);
+      expect(await readFile(join(directory, "ticks.txt"), "utf8")).toBe("successor");
     });
+
+  it.skipIf(!workspaceCommandSandboxAvailable())("quarantines queued and later tools when the supervisor closes without a settlement receipt", async () => {
+    const directory = await root(), fake = fakeSupervisor();
+    const execution = executeWorkspaceTool(directory, "workspace_run", { program: "/bin/true" }, authorize);
+    await fake.ready;
+    const successor = executeWorkspaceTool(directory, "workspace_write", { path: "must-not-exist.txt", text: "unsafe", expectedSha256: null }, authorize);
+    const outcomes = Promise.allSettled([execution, successor]);
+    fake.child.emit("close", 0, null);
+    for (const outcome of await outcomes) expect(outcome).toMatchObject({ status: "rejected", reason: expect.objectContaining({ message: "runner_workspace_cleanup_unconfirmed" }) });
+    await expect(executeWorkspaceTool(directory, "workspace_write", { path: "later.txt", text: "unsafe", expectedSha256: null }, authorize)).rejects.toThrow("cleanup_unconfirmed");
+    await expect(readFile(join(directory, "must-not-exist.txt"))).rejects.toMatchObject({ code: "ENOENT" });
+    await expect(readFile(join(directory, "later.txt"))).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it.skipIf(!workspaceCommandSandboxAvailable())("ignores an authorization rejection arriving after confirmed supervisor settlement", async () => {
+    const directory = await root(), fake = fakeSupervisor();
+    let calls = 0, checking!: () => void, revoke!: (error: Error) => void;
+    const checkStarted = new Promise<void>(resolve => { checking = resolve; });
+    const pendingCheck = new Promise<void>((_resolve, reject) => { revoke = reject; });
+    const execution = executeWorkspaceTool(directory, "workspace_run", { program: "/bin/true" }, async () => {
+      if (++calls > 2) { checking(); await pendingCheck; }
+    });
+    await fake.ready;
+    const stop = vi.spyOn(fake.child.stdin, "end");
+    await checkStarted;
+    fake.status.write(JSON.stringify({ settled: true, exitCode: 0, signal: null }));
+    fake.child.emit("close", 0, null);
+    await expect(execution).resolves.toMatchObject({ stopped: null, exitCode: 0 });
+    revoke(new Error("late revocation"));
+    await new Promise(resolve => setImmediate(resolve));
+    expect(stop).not.toHaveBeenCalled();
+  });
 
   it("serializes overlapping writes so only one observed hash can commit", async () => {
     const directory = await root();
@@ -156,7 +212,9 @@ if sys.argv[1] != "completion":
     const read = await executeWorkspaceTool(directory, "workspace_run", { program: "/bin/cat", args: [secret] }, authorize);
     expect(read).toMatchObject({ exitCode: 1 }); expect(String((read as any).output)).not.toContain("PRIVATE");
     const write = await executeWorkspaceTool(directory, "workspace_run", { program: "/bin/sh", args: ["-c", 'printf stolen > "$1"', "sh", secret] }, authorize);
-    expect(write).toMatchObject({ exitCode: 1 }); expect(await readFile(secret, "utf8")).toBe("PRIVATE");
+    expect((write as any).exitCode).toBeGreaterThan(0);
+    expect(String((write as any).output)).not.toContain("PRIVATE");
+    expect(await readFile(secret, "utf8")).toBe("PRIVATE");
   });
   it.skipIf(!workspaceCommandSandboxAvailable())("stops its owned process on authority loss and bounds output", async () => {
     const directory = await root(); let calls = 0;

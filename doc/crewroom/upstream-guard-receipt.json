@@ -1,0 +1,213 @@
+{
+  "purpose": "Preserve upstream source drift guards after intentional workflow deactivation; fixture reads only, no workflow activation or assertion weakening.",
+  "referenceCommit": "fd6f7bcd284b5aa13d506aae13b13aeb13161c8c",
+  "preservedWorkflowCount": 23,
+  "preservedWorkflows": [
+    {
+      "original": ".github/workflows/agent-runtime-images.yml",
+      "retained": "crewroom/upstream-workflows/agent-runtime-images.yml",
+      "sha256": "7369415b859663f31197f1a9c32cf2587ff582ec84dec45cc207be8a0e4f9c63",
+      "byteIdentical": true
+    },
+    {
+      "original": ".github/workflows/ci-profile.yml",
+      "retained": "crewroom/upstream-workflows/ci-profile.yml",
+      "sha256": "9a3ed88560d01fbf5b1c0fcf58cef833d90139f9c30874bbd8e49c25ca0dc1bc",
+      "byteIdentical": true
+    },
+    {
+      "original": ".github/workflows/ci-routing.yml",
+      "retained": "crewroom/upstream-workflows/ci-routing.yml",
+      "sha256": "b6628392c326ed8467ecf8106e44480468c761f86280c5396caf8f4aaa7a0f93",
+      "byteIdentical": true
+    },
+    {
+      "original": ".github/workflows/ci-work-benchmark.yml",
+      "retained": "crewroom/upstream-workflows/ci-work-benchmark.yml",
+      "sha256": "839394d99663f0148c8e43409b5102d6fe963df9638c498ecfbb7e720ea2e527",
+      "byteIdentical": true
+    },
+    {
+      "original": ".github/workflows/cloud-migrator-artifacts.yml",
+      "retained": "crewroom/upstream-workflows/cloud-migrator-artifacts.yml",
+      "sha256": "233ce32ae70127490d4b38fdd00d8fa7f789e16c689481348a4e31a814dd2048",
+      "byteIdentical": true
+    },
+    {
+      "original": ".github/workflows/cloud-readiness.yml",
+      "retained": "crewroom/upstream-workflows/cloud-readiness.yml",
+      "sha256": "6fa94435fcf0524e50f4d883fa08fd3d59d8f42344cdda28718f1fa212ab84c2",
+      "byteIdentical": true
+    },
+    {
+      "original": ".github/workflows/commitperclip-review.yml",
+      "retained": "crewroom/upstream-workflows/commitperclip-review.yml",
+      "sha256": "a8539be6abee4c493d8a14075a1e1b573ff3650f5f9f40a21f7786f5798119aa",
+      "byteIdentical": true
+    },
+    {
+      "original": ".github/workflows/docker-runner-check.yml",
+      "retained": "crewroom/upstream-workflows/docker-runner-check.yml",
+      "sha256": "0dff510cac88f95d09e80ca1b9bb4171c149282e892bccaeb047cc1163cbd0a7",
+      "byteIdentical": true
+    },
+    {
+      "original": ".github/workflows/docker.yml",
+      "retained": "crewroom/upstream-workflows/docker.yml",
+      "sha256": "7eb5b3c2f708eb83d9163540c686c1f6489bc59482b8fc7b4cfb350b3903e2cc",
+      "byteIdentical": true
+    },
+    {
+      "original": ".github/workflows/e2e.yml",
+      "retained": "crewroom/upstream-workflows/e2e.yml",
+      "sha256": "29185b02020a518f67bc58d945293aa580cea162c68048110f81c9ca275e2651",
+      "byteIdentical": true
+    },
+    {
+      "original": ".github/workflows/pr-trusted.yml",
+      "retained": "crewroom/upstream-workflows/pr-trusted.yml",
+      "sha256": "9dd2f1905e0a4bf527a7a1dc4b186d3abe6dfdd71e43049f224bdac58b2575e3",
+      "byteIdentical": true
+    },
+    {
+      "original": ".github/workflows/pr.yml",
+      "retained": "crewroom/upstream-workflows/pr.yml",
+      "sha256": "ef001e97b296ac6e5251a91379df43ee53b6a76344b4e3b914e2fb8c832709c7",
+      "byteIdentical": true
+    },
+    {
+      "original": ".github/workflows/refresh-lockfile.yml",
+      "retained": "crewroom/upstream-workflows/refresh-lockfile.yml",
+      "sha256": "accb123a576e4dc72a02ac7317cc93ad67bb354e2f6eaaed233e9b2d245521e3",
+      "byteIdentical": true
+    },
+    {
+      "original": ".github/workflows/release-smoke.yml",
+      "retained": "crewroom/upstream-workflows/release-smoke.yml",
+      "sha256": "bfbac35557f7038abe40e485ba12be4904a48724d4fb5755535dcf1886bf7529",
+      "byteIdentical": true
+    },
+    {
+      "original": ".github/workflows/release-verify.yml",
+      "retained": "crewroom/upstream-workflows/release-verify.yml",
+      "sha256": "6b8120c1d137b1284f10ef88580579697a2814e94cd3e8b35e2699357c9c1515",
+      "byteIdentical": true
+    },
+    {
+      "original": ".github/workflows/release.yml",
+      "retained": "crewroom/upstream-workflows/release.yml",
+      "sha256": "e3d29905ff0ad472bcd031d7de135f8f6e159aaceba75330a8aaa3e8b3262bc7",
+      "byteIdentical": true
+    },
+    {
+      "original": ".github/workflows/runner-chaos-evals.yml",
+      "retained": "crewroom/upstream-workflows/runner-chaos-evals.yml",
+      "sha256": "469407f7ff5bdbf35483e7402362a67e9a8084a893378150bf72c38b56905d20",
+      "byteIdentical": true
+    },
+    {
+      "original": ".github/workflows/runner-full-stack-e2e.yml",
+      "retained": "crewroom/upstream-workflows/runner-full-stack-e2e.yml",
+      "sha256": "55692bec0e313cef28c51f25351d1c6890f3a182975a5a1f27053caa52953857",
+      "byteIdentical": true
+    },
+    {
+      "original": ".github/workflows/runner-live-evals.yml",
+      "retained": "crewroom/upstream-workflows/runner-live-evals.yml",
+      "sha256": "243c53bc7854704886fca0f1147e536f89b8b9162e3779ee0e9636b713afa510",
+      "byteIdentical": true
+    },
+    {
+      "original": ".github/workflows/runner-protocol-live-evals.yml",
+      "retained": "crewroom/upstream-workflows/runner-protocol-live-evals.yml",
+      "sha256": "bc594f57fe0e053083f386c87d8fc282d578524846343564e357ff334d00a5d2",
+      "byteIdentical": true
+    },
+    {
+      "original": ".github/workflows/sentry-contract.yml",
+      "retained": "crewroom/upstream-workflows/sentry-contract.yml",
+      "sha256": "54756ab2ab2ae811ca2b32e666a5593ff88d0c59b4473c84be78769a0a09b834",
+      "byteIdentical": true
+    },
+    {
+      "original": ".github/workflows/storybook-deploy.yml",
+      "retained": "crewroom/upstream-workflows/storybook-deploy.yml",
+      "sha256": "0da3a8a457946ef093aeadfeffb71019b5681898115dc0c9a31b66ce0d22387e",
+      "byteIdentical": true
+    },
+    {
+      "original": ".github/workflows/storybook-visual.yml",
+      "retained": "crewroom/upstream-workflows/storybook-visual.yml",
+      "sha256": "6e9eb32c2f942fb1570a712e7cba81e1d04ea4145c56fb2bfe5044fa67d89c40",
+      "byteIdentical": true
+    }
+  ],
+  "upstreamReadme": {
+    "path": "crewroom/UPSTREAM-README.md",
+    "sha256": "b7c58fc6fe8a5900502c6166950f53fc3e1ff979a0d279cff23d48de9b569d7c",
+    "byteIdentical": true
+  },
+  "changedTestFiles": [
+    "server/src/__tests__/cloud-image-bundled-plugins.test.ts",
+    "server/src/__tests__/docker-build-stamp.test.ts",
+    "server/src/__tests__/container-init-reaping.test.ts",
+    "server/src/__tests__/cloud-image-sentry.test.ts",
+    "packages/paperclip-runner/scripts/runner-protocol-eval-workflow-security.test.mjs",
+    ".github/scripts/tests/release-runner-cache.test.mjs",
+    ".github/scripts/tests/lockfile-refresh-cache.test.mjs",
+    ".github/scripts/tests/cloud-readiness.test.mjs",
+    ".github/scripts/tests/post-merge-runner-routing.test.mjs",
+    ".github/scripts/tests/ci-routing.test.mjs",
+    ".github/scripts/tests/lockfile-refresh-workflows.test.mjs",
+    ".github/scripts/tests/pr-dependency-cache.test.mjs",
+    ".github/scripts/tests/typecheck-rust-cache.test.mjs",
+    ".github/scripts/tests/pr-runner-rust-cache.test.mjs",
+    ".github/scripts/tests/ci-profile.test.mjs",
+    ".github/scripts/tests/docker-canary-promotion.test.mjs",
+    ".github/scripts/tests/ci-dependency-cache.test.mjs",
+    "scripts/preview-artifacts.test.mjs",
+    "scripts/cloud-migrator-artifacts.test.mjs",
+    "scripts/service-onboard-smoke.test.mjs",
+    "scripts/release-lib.test.mjs",
+    "scripts/docker-onboard-smoke.test.mjs",
+    "scripts/prepare-npm-readme.test.mjs",
+    "scripts/__tests__/run-vitest-stable-shard.test.mjs",
+    "scripts/__tests__/runner-release-crate-cache.test.mjs",
+    "scripts/__tests__/public-install-closure.test.mjs",
+    "scripts/__tests__/release-verify-workflow.test.mjs",
+    "scripts/__tests__/eval-schedule-monitor.test.mjs",
+    "scripts/__tests__/storybook-deploy.test.mjs",
+    "scripts/__tests__/e2e-shard.test.mjs",
+    "tests/runner-e2e/legacy-claude-cli.test.ts",
+    "tests/runner-e2e/daytona-image.test.ts",
+    "tests/runner-e2e/workflow-security.test.ts",
+    "tests/runner-e2e/paid-runner-routing.test.mjs",
+    "tests/runner-e2e/workflow-target.test.ts",
+    "tests/runner-e2e/codex-ci-sandbox.test.ts"
+  ],
+  "onlyDeclaredPathTransformations": true,
+  "unchangedChecks": [
+    "test assertions and regex checks",
+    "GitHub API workflow identity fixtures",
+    "embedded workflow uses values",
+    "active docker-cloud retirement absence guard"
+  ],
+  "localVerification": {
+    "serverDriftGuards": {
+      "files": 4,
+      "testsPassed": 32,
+      "workerLimit": 1
+    },
+    "nodeStaticSubset": {
+      "files": 5,
+      "testsPassed": 24,
+      "testConcurrency": 1
+    },
+    "mjsSyntaxChecked": 27
+  },
+  "originalRemoteFailures": [
+    "cloud-image-sentry.test.ts: missing .github/workflows/release.yml",
+    "container-init-reaping.test.ts: missing .github/workflows/docker.yml"
+  ],
+  "limits": "Only the stated focused/static checks were run locally; this receipt does not claim the complete GitHub regression matrix passed."
+}

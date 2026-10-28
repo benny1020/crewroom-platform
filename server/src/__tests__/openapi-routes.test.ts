@@ -48,6 +48,7 @@ const apiPrefixes: Record<string, string> = {
   "company-skill-policy.ts": "/api",
   "connection-intents.ts": "/api",
   "costs.ts": "/api",
+  "crewroom.ts": "/api",
   "dashboard.ts": "/api",
   "dot-runner.ts": "/api",
   "muse.ts": "/api",
@@ -969,6 +970,21 @@ describe("openapi routes", () => {
     expect(spec.paths[base + "/test"].post.requestBody.content["application/json"].schema).toMatchObject({
       type: "object", additionalProperties: false, properties: {},
     });
+  });
+
+  it("documents board-only Crewroom capability hints for the selected assignee", () => {
+    const { spec } = loadSpecRoutes();
+    const operation = spec.paths["/api/companies/{companyId}/crewroom/capabilities"].get;
+    expect(operation["x-paperclip-authorization"]).toEqual({ actor: "board" });
+    expect(operation.security).toEqual([{ BoardSessionAuth: [] }, { BoardApiKeyAuth: [] }]);
+    expect(operation.parameters).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: "assigneeAgentId", in: "query", required: false, schema: expect.objectContaining({ type: "string", format: "uuid" }) }),
+    ]));
+    expect(operation.responses["200"].content["application/json"].schema.required).toEqual(expect.arrayContaining([
+      "companyId", "assigneeAgentId", "canCreateUnassignedTask", "canAssignTasks", "canConfigureAgents", "canCreateAgents", "reasonCodes",
+    ]));
+    expect(operation.responses["403"]).toBeDefined();
+    expect(operation.responses["404"]).toBeDefined();
   });
 
   it("covers the mounted server routes exactly", () => {

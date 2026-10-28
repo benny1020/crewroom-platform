@@ -12,7 +12,7 @@ it("rejects the old CLI that cannot discover mounted skills and requires the exa
   expect(qualifiedLegacyClaudeVersion(`warning: ${LEGACY_CLAUDE_CLI_VERSION} (Claude Code)`)).toBe(false);
 });
 it("keeps the workflow installation pin synchronized with local qualification", () => {
-  const workflow = readFileSync(new URL("../../.github/workflows/runner-full-stack-e2e.yml", import.meta.url), "utf8");
+  const workflow = readFileSync(new URL("../../crewroom/upstream-workflows/runner-full-stack-e2e.yml", import.meta.url), "utf8");
   expect(workflow).toContain(`@anthropic-ai/claude-code@${LEGACY_CLAUDE_CLI_VERSION}`);
   expect(workflow).not.toContain("@anthropic-ai/claude-code@2.1.19");
   expect(workflow).toContain("--omit=dev --ignore-scripts @anthropic-ai/claude-code");

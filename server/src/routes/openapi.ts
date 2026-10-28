@@ -1474,6 +1474,7 @@ const BOARD_ONLY_OPERATIONS = new Set([
   "POST /api/bootstrap/claim",
   "GET /api/companies/{companyId}/resource-memberships/me",
   "GET /api/companies/{companyId}/primary-agent/me",
+  "GET /api/companies/{companyId}/crewroom/capabilities",
   "PUT /api/companies/{companyId}/primary-agent/me",
   "PUT /api/companies/{companyId}/resource-memberships/me/agents/{agentId}",
   "PUT /api/companies/{companyId}/resource-memberships/me/documents/{documentId}",
@@ -6701,6 +6702,28 @@ registry.registerPath({
     body: jsonBody(upsertSidebarOrderPreferenceSchema),
   },
   responses: { 200: r.ok(), 400: r.badRequest, 401: r.unauthorized },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/api/companies/{companyId}/crewroom/capabilities",
+  tags: ["crewroom"],
+  summary: "Read current Crewroom action hints for a selected assignee",
+  description: "Board-user presentation hints scoped to current company membership and the optional concrete assignee. Returns Cache-Control: no-store. Viewer membership keeps mutations disabled. These booleans do not grant authority: each mutation rechecks its current resource and policy.",
+  request: {
+    params: z.object({ companyId: z.string().uuid() }),
+    query: z.object({ assigneeAgentId: z.string().uuid().optional() }),
+  },
+  responses: {
+    200: r.ok(z.object({
+      companyId: z.string().uuid(), assigneeAgentId: z.string().uuid().nullable(),
+      canCreateUnassignedTask: z.boolean(), canAssignTasks: z.boolean(),
+      canConfigureAgents: z.boolean(), canCreateAgents: z.boolean(),
+      reasonCodes: z.object({ createUnassignedTask: z.string().nullable(), assignTasks: z.string().nullable(),
+        configureAgents: z.string().nullable(), createAgents: z.string().nullable() }),
+    })),
+    400: r.badRequest, 401: r.unauthorized, 403: r.forbidden, 404: r.notFound,
+  },
 });
 
 const primaryAgentPreferenceResponse = z.object({

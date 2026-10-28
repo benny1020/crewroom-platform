@@ -2,30 +2,30 @@
   {
     "antipattern": "side-tab",
     "name": "Side-tab accent border",
-    "description": "Thick colored border on one side of a card — the most recognizable tell of AI-generated UIs. Use a subtler accent or remove it entirely.",
+    "description": "Thick colored border on one side of a card \u2014 the most recognizable tell of AI-generated UIs. Use a subtler accent or remove it entirely.",
     "severity": "warning",
     "category": "slop",
-    "file": "/Users/roopre/Desktop/playground/crewroom-paperclip/ui/src/index.css",
+    "file": "ui/src/index.css",
     "line": 2199,
     "snippet": "border-left: 3px solid var(--border)"
   },
   {
     "antipattern": "gradient-text",
     "name": "Gradient text",
-    "description": "Gradient text is decorative rather than meaningful — a common AI tell, especially on headings and metrics. Use solid colors for text.",
+    "description": "Gradient text is decorative rather than meaningful \u2014 a common AI tell, especially on headings and metrics. Use solid colors for text.",
     "severity": "warning",
     "category": "slop",
-    "file": "/Users/roopre/Desktop/playground/crewroom-paperclip/ui/src/index.css",
+    "file": "ui/src/index.css",
     "line": 4124,
     "snippet": "background-clip: text + gradient"
   },
   {
     "antipattern": "bounce-easing",
     "name": "Bounce or elastic easing",
-    "description": "Bounce and elastic easing feel dated and tacky. Real objects decelerate smoothly — use exponential easing (ease-out-quart/quint/expo) instead.",
+    "description": "Bounce and elastic easing feel dated and tacky. Real objects decelerate smoothly \u2014 use exponential easing (ease-out-quart/quint/expo) instead.",
     "severity": "advisory",
     "category": "slop",
-    "file": "/Users/roopre/Desktop/playground/crewroom-paperclip/ui/src/index.css",
+    "file": "ui/src/index.css",
     "line": 1198,
     "snippet": "animation: typing-bounce",
     "advisory": true

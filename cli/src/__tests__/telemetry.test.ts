@@ -5,6 +5,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const ORIGINAL_ENV = { ...process.env };
 const CI_ENV_VARS = ["CI", "CONTINUOUS_INTEGRATION", "BUILD_NUMBER", "GITHUB_ACTIONS", "GITLAB_CI"];
+const roots: string[] = [];
+function temporaryRoot() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "paperclip-cli-telemetry-"));
+  roots.push(root);
+  return root;
+}
 
 function makeConfigPath(root: string, enabled: boolean): string {
   const configPath = path.join(root, ".paperclip", "config.json");
@@ -70,21 +76,26 @@ function makeConfigPath(root: string, enabled: boolean): string {
 
 describe("cli telemetry", () => {
   beforeEach(() => {
+    // Install the network boundary before exercising any enabled configuration.
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true })));
     process.env = { ...ORIGINAL_ENV };
     for (const key of CI_ENV_VARS) {
       delete process.env[key];
     }
-    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true })));
+    delete process.env.PAPERCLIP_TELEMETRY_DISABLED;
+    delete process.env.DO_NOT_TRACK;
+    process.env.PAPERCLIP_TELEMETRY_ENDPOINT = "https://telemetry.example.invalid/events";
   });
 
   afterEach(() => {
     process.env = { ...ORIGINAL_ENV };
     vi.unstubAllGlobals();
     vi.resetModules();
+    for (const root of roots.splice(0)) fs.rmSync(root, { recursive: true, force: true });
   });
 
   it("respects telemetry.enabled=false from the config file", async () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "paperclip-cli-telemetry-"));
+    const root = temporaryRoot();
     const configPath = makeConfigPath(root, false);
     process.env.PAPERCLIP_HOME = path.join(root, "home");
     process.env.PAPERCLIP_INSTANCE_ID = "telemetry-test";
@@ -97,7 +108,7 @@ describe("cli telemetry", () => {
   });
 
   it("creates telemetry state only after the first event is tracked", async () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "paperclip-cli-telemetry-"));
+    const root = temporaryRoot();
     process.env.PAPERCLIP_HOME = path.join(root, "home");
     process.env.PAPERCLIP_INSTANCE_ID = "telemetry-test";
 
@@ -113,5 +124,18 @@ describe("cli telemetry", () => {
     expect(fs.existsSync(statePath)).toBe(true);
 
     await flushTelemetry();
+    expect(fetch).toHaveBeenCalledWith("https://telemetry.example.invalid/events", expect.any(Object));
+  });
+
+  it.each(["PAPERCLIP_TELEMETRY_DISABLED", "DO_NOT_TRACK"])("honors explicit %s even when the fixture enables telemetry", async key => {
+    const root = temporaryRoot();
+    process.env[key] = "1";
+    process.env.PAPERCLIP_HOME = path.join(root, "home");
+    process.env.PAPERCLIP_INSTANCE_ID = "telemetry-test";
+    const { initTelemetry, flushTelemetry } = await import("../telemetry.js");
+    expect(initTelemetry({ enabled: true })).toBeNull();
+    await flushTelemetry();
+    expect(fs.existsSync(path.join(root, "home", "instances", "telemetry-test", "telemetry", "state.json"))).toBe(false);
+    expect(fetch).not.toHaveBeenCalled();
   });
 });

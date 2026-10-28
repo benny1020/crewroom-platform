@@ -93,7 +93,7 @@ describe("runner E2E Daytona image contract", () => {
       readFile(
         path.join(
           repositoryRoot,
-          ".github/workflows/runner-full-stack-e2e.yml",
+          "crewroom/upstream-workflows/runner-full-stack-e2e.yml",
         ),
         "utf8",
       ),

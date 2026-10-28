@@ -5,7 +5,7 @@ import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { Sidebar } from "./Sidebar";
+import { PaperclipSidebar } from "./Sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 const mockHeartbeatsApi = vi.hoisted(() => ({
@@ -131,7 +131,7 @@ async function flushReact() {
   flushSync(() => {});
 }
 
-describe("Sidebar", () => {
+describe("PaperclipSidebar", () => {
   let container: HTMLDivElement;
 
   async function renderSidebar() {
@@ -144,7 +144,7 @@ describe("Sidebar", () => {
       root.render(
         <QueryClientProvider client={queryClient}>
           <TooltipProvider>
-            <Sidebar />
+            <PaperclipSidebar />
           </TooltipProvider>
         </QueryClientProvider>,
       );

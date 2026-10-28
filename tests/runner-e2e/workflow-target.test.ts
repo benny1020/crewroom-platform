@@ -8,7 +8,7 @@ const queuedSha = "a".repeat(40);
 const advancedSha = "b".repeat(40);
 
 async function resolveTarget(event: string, cadence: string, branch = "master") {
-  const workflow = await readFile(new URL("../../.github/workflows/runner-full-stack-e2e.yml", import.meta.url), "utf8");
+  const workflow = await readFile(new URL("../../crewroom/upstream-workflows/runner-full-stack-e2e.yml", import.meta.url), "utf8");
   const step = workflow.split("      - name: Resolve requested repository branch to an immutable commit\n")[1]!.split("\n      - name:")[0]!;
   const script = step.split("        run: |\n")[1]!.replace(/^ {10}/gm, "");
   const directory = await mkdtemp(path.join(os.tmpdir(), "eval-workflow-target-"));
@@ -50,7 +50,7 @@ describe("paid workflow target authorization", () => {
 
 describe("qualification image dependency correction", () => {
   it.each([true, false])("applies the workflow correction only to its own source: %s", async sameSource => {
-    const workflow = await readFile(new URL("../../.github/workflows/docker-runner-check.yml", import.meta.url), "utf8");
+    const workflow = await readFile(new URL("../../crewroom/upstream-workflows/docker-runner-check.yml", import.meta.url), "utf8");
     const step = workflow.split("      - name: Apply reviewed qualification lock corrections\n")[1]!.split("\n      - ")[0]!;
     const script = step.split("        run: |\n")[1]!.replace(/^ {10}/gm, "");
     const directory = await mkdtemp(path.join(os.tmpdir(), "eval-image-lock-target-"));

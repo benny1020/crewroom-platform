@@ -20,7 +20,7 @@ describe("public repository paid workflow security", () => {
       ["runner-full-stack-e2e.yml", "test", "report", "Run paid cell"],
       ["runner-protocol-live-evals.yml", "eval_shard_0", "eval_shard_1", "Run one immutable direct protocol cell"],
     ] as const) {
-      const workflow = await readFile(path.join(repositoryRoot, ".github/workflows", filename), "utf8");
+      const workflow = await readFile(path.join(repositoryRoot, "crewroom/upstream-workflows", filename), "utf8");
       const credentialSteps = workflow.split(/\n(?= {6}- )/u).filter(step => step.includes("secrets.COPILOT_GITHUB_TOKEN"));
       expect(credentialSteps, filename).toHaveLength(1);
       const credentialStep = credentialSteps[0]!;
@@ -41,7 +41,7 @@ describe("public repository paid workflow security", () => {
   });
 
   it("keeps the manual hosted Linux image build credential-free and pins the authorized target", async () => {
-    const workflow = await readFile(path.join(repositoryRoot, ".github/workflows/docker-runner-check.yml"), "utf8");
+    const workflow = await readFile(path.join(repositoryRoot, "crewroom/upstream-workflows/docker-runner-check.yml"), "utf8");
     const manual = workflow.slice(workflow.indexOf("  authorize_manual:"));
     expect(manual.match(/AWS_CI_TRUSTED_USER_IDS/gu)).toHaveLength(2);
     expect(manual.match(/test "\$REPOSITORY_ID" = 1170821064/gu)).toHaveLength(2);
@@ -64,7 +64,7 @@ describe("public repository paid workflow security", () => {
 
   it("uses the reviewed master branch for the first-party trusted PR workflow", async () => {
     const ordinaryPrWorkflow = await readFile(
-      path.join(repositoryRoot, ".github/workflows/pr.yml"),
+      path.join(repositoryRoot, "crewroom/upstream-workflows/pr.yml"),
       "utf8",
     );
     const trustedWorkflowCalls = [
@@ -88,7 +88,7 @@ describe("public repository paid workflow security", () => {
       "pr-trusted.yml",
     ]) {
       const workflow = await readFile(
-        path.join(repositoryRoot, ".github/workflows", workflowName),
+        path.join(repositoryRoot, "crewroom/upstream-workflows", workflowName),
         "utf8",
       );
       const pnpmSetupSteps = workflow
@@ -133,7 +133,7 @@ describe("public repository paid workflow security", () => {
 
     for (const { name, expectedCachedSetupNodeSteps } of workflows) {
       const workflow = await readFile(
-        path.join(repositoryRoot, ".github/workflows", name),
+        path.join(repositoryRoot, "crewroom/upstream-workflows", name),
         "utf8",
       );
       const steps = workflow.split(/\n(?= {6}- )/u);
@@ -183,7 +183,7 @@ describe("public repository paid workflow security", () => {
       ].map(async (name) => ({
         name,
         contents: await readFile(
-          path.join(repositoryRoot, ".github/workflows", name),
+          path.join(repositoryRoot, "crewroom/upstream-workflows", name),
           "utf8",
         ),
       })),
@@ -602,7 +602,7 @@ describe("public repository paid workflow security", () => {
   });
 
   it("keeps provider credentials inside explicitly gated paid workflows", async () => {
-    const workflowDirectory = path.join(repositoryRoot, ".github/workflows");
+    const workflowDirectory = path.join(repositoryRoot, "crewroom/upstream-workflows");
     const allowedProviderWorkflows = new Set([
       "e2e.yml",
       "runner-full-stack-e2e.yml",
@@ -639,7 +639,7 @@ describe("public repository paid workflow security", () => {
         "runner-live-evals.yml",
         "runner-protocol-live-evals.yml",
       ].map((name) =>
-        readFile(path.join(repositoryRoot, ".github/workflows", name), "utf8"),
+        readFile(path.join(repositoryRoot, "crewroom/upstream-workflows", name), "utf8"),
       ),
     );
     for (const [index, workflow] of workflows.entries()) {
@@ -662,7 +662,7 @@ describe("public repository paid workflow security", () => {
 
   it("builds runner outputs once without provider credentials and verifies them in every paid cell", async () => {
     const workflow = await readFile(
-      path.join(repositoryRoot, ".github/workflows/runner-full-stack-e2e.yml"),
+      path.join(repositoryRoot, "crewroom/upstream-workflows/runner-full-stack-e2e.yml"),
       "utf8",
     );
     const buildJobStart = workflow.indexOf("  build_runner_artifacts:");
@@ -774,7 +774,7 @@ describe("public repository paid workflow security", () => {
 
   it("keeps reporting jobs on the committed lockfile without registry re-resolution", async () => {
     const workflow = await readFile(
-      path.join(repositoryRoot, ".github/workflows/runner-full-stack-e2e.yml"), "utf8",
+      path.join(repositoryRoot, "crewroom/upstream-workflows/runner-full-stack-e2e.yml"), "utf8",
     );
     for (const jobName of ["report", "publish_history"]) {
       const job = workflow.split(`\n  ${jobName}:`)[1]!.split(/\n  [a-z_]+:/u)[0]!;
@@ -791,7 +791,7 @@ describe("public repository paid workflow security", () => {
 
   it("binds rerun evidence and Pages artifacts to the exact workflow attempt", async () => {
     const workflow = await readFile(
-      path.join(repositoryRoot, ".github/workflows/runner-full-stack-e2e.yml"),
+      path.join(repositoryRoot, "crewroom/upstream-workflows/runner-full-stack-e2e.yml"),
       "utf8",
     );
     const reportStart = workflow.indexOf("  report:");
@@ -843,7 +843,7 @@ describe("public repository paid workflow security", () => {
   });
 
   it("keeps recurring reports private while preserving a content-free liveness receipt", async () => {
-    const workflow = await readFile(path.join(repositoryRoot, ".github/workflows/runner-full-stack-e2e.yml"), "utf8");
+    const workflow = await readFile(path.join(repositoryRoot, "crewroom/upstream-workflows/runner-full-stack-e2e.yml"), "utf8");
     const paid = workflow.split("\n  test:")[1]!.split("\n  report:")[0]!;
     const manual = paid.split("\n  test_recurring:")[0]!;
     const recurring = paid.split("\n  test_recurring:")[1]!;
@@ -877,7 +877,7 @@ describe("public repository paid workflow security", () => {
   });
 
   it("isolates private archive trust from workflows that execute target-branch code", async () => {
-    const workflows = path.join(repositoryRoot, ".github/workflows");
+    const workflows = path.join(repositoryRoot, "crewroom/upstream-workflows");
     const source = await readFile(path.join(workflows, "runner-full-stack-e2e.yml"), "utf8");
     const trust = await readFile(path.join(repositoryRoot, ".github/infra/runner-e2e-private-history.yml"), "utf8");
     const environments = ["runner-e2e-private-paid", "runner-e2e-private-history"];
@@ -906,7 +906,7 @@ describe("public repository paid workflow security", () => {
 
   it("uses environment-scoped OIDC for a no-delete history publisher", async () => {
     const workflow = await readFile(
-      path.join(repositoryRoot, ".github/workflows/runner-full-stack-e2e.yml"),
+      path.join(repositoryRoot, "crewroom/upstream-workflows/runner-full-stack-e2e.yml"),
       "utf8",
     );
     const publisher = workflow.slice(workflow.indexOf("  publish_history:"));
@@ -944,7 +944,7 @@ describe("public repository paid workflow security", () => {
   });
 
   it("does not restore dependency caches or run install scripts in OIDC-authorized jobs", async () => {
-    const workflow = await readFile(path.join(repositoryRoot, ".github/workflows/runner-full-stack-e2e.yml"), "utf8");
+    const workflow = await readFile(path.join(repositoryRoot, "crewroom/upstream-workflows/runner-full-stack-e2e.yml"), "utf8");
     const jobs = workflow.split(/\n(?=  [a-z_]+:)/u);
     const paidSteps = workflow.split("steps: &paid_test_steps")[1]!.split("\n  test_recurring:")[0]!;
     const oidcJobs = jobs.filter(job => job.includes("id-token: write"));
@@ -967,7 +967,7 @@ describe("public repository paid workflow security", () => {
 });
 
 it("keeps dependency resolution and shared caches out of Runner protocol archive jobs", async () => {
-  const workflow = await readFile(path.join(repositoryRoot, ".github/workflows/runner-protocol-live-evals.yml"), "utf8");
+  const workflow = await readFile(path.join(repositoryRoot, "crewroom/upstream-workflows/runner-protocol-live-evals.yml"), "utf8");
   const jobs = workflow.split(/\n(?=  [A-Za-z0-9_]+:)/u);
   const privileged = jobs.filter(job => job.includes("id-token: write"));
   expect(privileged.length).toBeGreaterThanOrEqual(4);

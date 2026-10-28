@@ -27,7 +27,7 @@ describe("Codex CI sandbox trust boundary", () => {
 
   it("keeps trusted CI provisioning in sync with every catalog cell", async () => {
     const workflow = await readFile(
-      path.join(root, ".github/workflows/runner-full-stack-e2e.yml"),
+      path.join(root, "crewroom/upstream-workflows/runner-full-stack-e2e.yml"),
       "utf8",
     );
     const condition = workflow.match(
@@ -71,7 +71,7 @@ describe("Codex CI sandbox trust boundary", () => {
 
   it("provisions the exact executable in trusted CI before provider credentials", async () => {
     const workflow = await readFile(
-      path.join(root, ".github/workflows/runner-full-stack-e2e.yml"),
+      path.join(root, "crewroom/upstream-workflows/runner-full-stack-e2e.yml"),
       "utf8",
     );
     const setup = workflow.indexOf(
@@ -97,7 +97,7 @@ describe("Codex CI sandbox trust boundary", () => {
 });
 
 it("prepares the artifact oracle for exactly the stories that execute downloads", async () => {
-  const workflow = await readFile(path.join(root, ".github/workflows/runner-full-stack-e2e.yml"), "utf8");
+  const workflow = await readFile(path.join(root, "crewroom/upstream-workflows/runner-full-stack-e2e.yml"), "utf8");
   const condition = workflow.match(/- name: Prepare pinned Python artifact oracle image\n\s+if: ([^\n]+)/)?.[1];
   expect(condition).toContain("matrix.suiteId == 'everyday-workflows'");
   const cases = new Set([...condition!.matchAll(/matrix\.caseId == '([^']+)'/g)].map((match) => match[1]));

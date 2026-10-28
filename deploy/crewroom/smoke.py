@@ -31,9 +31,12 @@ class Client:
         return self.call('POST', '/api/auth/sign-in/email', account)
 
 admin, viewer = Client(), Client()
+health = admin.call('GET', '/api/health')
+if health.get('status') != 'ok':
+    raise RuntimeError('Application has not reached public readiness')
 expected_commit = os.environ.get('EXPECTED_COMMIT')
 if expected_commit:
-    assert admin.call('GET', '/api/health').get('commit') == expected_commit, 'Served image commit does not match the requested source'
+    assert health.get('commit') == expected_commit, 'Served image commit does not match the requested source'
 if args.phase == 'seed':
     if state_path.exists():
         raise SystemExit('Smoke state exists; refusing to create duplicate accounts')

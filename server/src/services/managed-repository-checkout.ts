@@ -9,6 +9,7 @@ import { describeGitAuthFailure, scrubGitCredentialText, type GitRemoteAuthProvi
 import { classifyGitCloneFailure, GitConnectionFailureError, readGitConnectionFailure } from "./git-connection-failure.js";
 import { isWorkspaceGitScanError, WorkspaceGitScanError } from "./workspace-git-operation-scheduler.js";
 import { measureRunPhase, recordRepositoryObjectCacheDetail } from "./execution-preparation-timing.js";
+import { isGitNotRepositoryDiagnostic } from "./git-not-repository-diagnostic.js";
 import { resolveRepositoryObjectCache, readRepositoryObjectCache, publishRepositoryObjectCache } from "./repository-object-cache.js";
 
 const execFile = promisify(execFileCallback);
@@ -175,7 +176,7 @@ export async function ensureManagedRepositoriesIgnored(cwd: string, options: { p
   } catch (error) {
     const failure = error as { code?: unknown; signal?: unknown; stderr?: unknown };
     if (options.plainTaskDirectory && failure.code === 128 && failure.signal == null &&
-        failure.stderr === "fatal: not a git repository (or any of the parent directories): .git\n" &&
+        isGitNotRepositoryDiagnostic(failure.stderr) &&
         !process.env.GIT_DIR && !process.env.GIT_WORK_TREE && !process.env.GIT_COMMON_DIR) return;
     throw error;
   }

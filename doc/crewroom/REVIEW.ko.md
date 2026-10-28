@@ -45,13 +45,13 @@
 
 [아키텍처 13절](ARCHITECTURE.ko.md#13-대화를-주-진입으로-삼는-업무-계약)의 소유자는 기존 Agent Chat, native/HTTP task creation, issue service와 `chat-completion-delivery`다. 명확한 Standard 실행 요청을 최소 task로 인계하고 질문·아이디어는 대화로 답한다. 사용자가 계획만 요청했거나 Ask/Plan 모드 또는 명시적 승인 조건이 있으면 기존 gate를 지킨다. 생성 후 대화는 task 링크를 답하고 종료하며 별도 polling이나 Crewroom queue를 만들지 않는다.
 
-업무별 의견·재요청은 기존 issue comment와 완료 업무의 `reopen` 흐름을 재사용한다. task/result를 확인하고 같은 업무의 산출물 revision을 이어간다. 단순 감사·평가를 재실행 요청으로 해석하지 않는다. 원 대화의 완료 알림은 새 작업의 허가가 아니다. UI의 ‘고마워’와 명시적 수정 요청을 구별하는 component 회귀는 통과했지만, 아래 R4 때문에 이 시점의 end-to-end 의견 저장은 아직 수용하지 않는다. 이 directive는 사용자 의도를 모델에 안내하는 정책이며 한국어 의도 인식의 실제 품질을 입증한 결과가 아니다.
+업무별 의견·재요청은 기존 issue comment와 완료 업무의 `reopen` 흐름을 재사용한다. task/result를 확인하고 같은 업무의 산출물 revision을 이어간다. 단순 감사·평가를 재실행 요청으로 해석하지 않는다. 원 대화의 완료 알림은 새 작업의 허가가 아니다. 아래 R4 수정 후 실제 기본 UI/API에서 ‘고마워’는 같은 업무의 완료 상태를 유지하고, 명시적 수정 요청은 같은 업무를 다시 여는 것을 확인했다. 이 directive는 사용자 의도를 모델에 안내하는 정책이며 한국어 의도 인식의 실제 품질을 입증한 결과가 아니다.
 
 ### R4 · P1 · 의견만 저장하는 선택과 서버의 암묵적 재실행
 
 active composer의 체크박스를 끈 채 `reopen`을 생략해도 서버 `shouldImplicitlyMoveCommentedIssueToTodo`가 human+closed+agent 조건으로 업무를 다시 연다. POST comment와 PATCH comment 경로에 모두 존재하며 기존 route 테스트도 이를 명시한다. 따라서 UI mock에서 `reopen:undefined`를 확인하는 것만으로 ‘의견만 저장’ 동작을 증명할 수 없다.
 
-좁은 수정 계약은 명시적인 `reopen:false`가 암묵적 재실행보다 우선하도록 하고, 필드가 없는 기존 client 동작은 유지하는 것이다. UI·API client·PATCH/POST 두 경로를 동기화한다. 완료·취소 업무에 의견을 남겼을 때 comment는 저장되고 status와 wake는 변하지 않아야 하며, 실행 의도가 없는 의견 저장 때문에 닫힌 workspace를 복구하지 않아야 한다. 체크한 수정 요청은 기존 권한·pause·workspace 복구 gate를 따른다. 현재 상태: **수정 요청 및 실제 route 회귀 검증 대기**. 아래 기존 248/128 통과 수는 R4 서버 수정 전 증거다.
+좁은 수정 계약은 명시적인 `reopen:false`가 암묵적 재실행보다 우선하도록 하고, 필드가 없는 기존 client 동작은 유지하는 것이다. UI·API client·PATCH/POST 두 경로를 동기화한다. 완료·취소 업무에 의견을 남겼을 때 comment는 저장되고 status와 wake는 변하지 않아야 하며, 실행 의도가 없는 의견 저장 때문에 닫힌 workspace를 복구하지 않아야 한다. 체크한 수정 요청은 기존 권한·pause·workspace 복구 gate를 따른다. 현재 상태: **서버·MCP·두 composer 수정 및 집중 회귀 통과, 실제 기본 UI/API 상태 전이 확인**. 서버 278개 중 실제 PostgreSQL/API 12개가 완료·취소, POST/PATCH, false/true/생략을 검증하며 별도 MCP 16개가 false 직렬화를 포함한다. 기본 `TaskChatThread → TaskChatComposer`와 classic `IssueChatThread` 모두 수정했다. [브라우저 검증](UI-VERIFICATION.ko.md)에서는 false가 같은 task의 done을 유지하고 true가 같은 task를 todo로 바꾸며 live run은 0개였다. 브라우저 결과만으로 wake 횟수나 모델 재작업 성공을 주장하지 않는다.
 
 private source 보호는 기존 `issueService.create`의 run provenance 상속으로 확인했다. native/HTTP task 생성에 visibility 필드가 없다는 사실만으로 공개 유출이라고 판단해서는 안 된다. source run으로 찾은 issue가 private이면 top-level task여도 private root와 access edge를 상속한다. public project 선택과 structural parent 제거는 이 보호를 해제하지 않는다. 신규 회귀는 실제 PostgreSQL에서 두 생성 경로의 owner/source/privacy 유지, 비허용 사용자 읽기 거부, 재시도 중복 방지를 검증한다. 모델 호출·실제 dispatch·전체 private 데이터 경로 수용과는 별도 증거다.
 
@@ -69,24 +69,51 @@ private source 보호는 기존 `issueService.create`의 run provenance 상속�
 
 현 upstream local CLI adapter는 app container 내부 실행이다. 별도 DB container는 job별 filesystem/process/credential 격리의 증거가 아니다. 분리 runner service를 Compose에 선언하기만 해서는 실제 execution transport가 연결되지 않는다. Docker socket이나 privileged mode로 우회하지 않는다.
 
-현재 상태: **배포 파일 구현, local Docker build 메모리 실패; 별도 CI 검증 대기**. Rust runner와 UI 빌드 뒤 server `tsc` 단계가 exit `137`과 `ResourceExhausted: cannot allocate memory`로 종료됐다. 해당 실행은 Docker VM 8 GiB, Node heap 상한 3072 MiB였다. heap 2048 MiB로 제한한 한 번의 재시도도 같은 단계에서 137로 종료돼 로컬 반복을 멈췄다. 완성된 production image의 health/auth/persistence 검증으로 이어지지 못했다. typecheck를 생략하지 않고 별도 GitHub production-image workflow에 build와 authenticated privacy/restart/snapshot/restore 검증을 연결했으며 실제 결과는 아직 없다. EC2 계정, 실제 domain/TLS, live provider/GitLab 계정이 없는 상태에서 EC2 배포나 실제 업무 실행 성공을 주장하지 않는다.
+현재 상태: **첫 원격 image build·CLI identity·typecheck 통과, health 계약 수정 완료, 새 후보 image CI 대기**. image CI `40703906634`는 unhealthy에서 멈춰 authenticated privacy/restart/snapshot/restore를 실행하지 못했다. 익명 authenticated `/api/health`가 내부 `startupRecovery`를 숨기는 기존 정책을 보존하고 Compose probe가 공개된 `status:ok`를 확인하도록 수정했다. `CREWROOM_PUBLIC_URL` 한 값이 공개 URL과 단일 trusted origin에 동일하게 적용된다. 배포 관련 Node 9개·Python 4개 offline 검사는 통과했지만 실제 이미지의 인증·재시작·복원 증거를 대신하지 않는다.
+
+이전 로컬 실패는 유지한다. Docker VM 8 GiB에서 Rust runner와 UI 빌드 뒤 server `tsc`가 exit `137`/`ResourceExhausted`로 종료됐고, Node heap 3072→2048 MiB 재시도도 실패했다. 이후 설치된 TypeScript 7 launcher가 native Go compiler를 실행한다는 것을 확인해 build stage에만 `GOMAXPROCS=2`, soft GC target `GOMEMLIMIT=3GiB`를 적용했다. full typecheck는 유지했다. EC2 계정, 실제 domain/TLS, live provider/GitLab 계정이 없는 상태에서 EC2 배포나 실제 업무 실행 성공을 주장하지 않는다.
 
 ## 검증 기록과 남은 완료 조건
+
+2026-10-29 후속 검증 기준이다. 첫 full CI `40703906698`는 21개 job 중 12개 성공·9개 실패로 종료됐다. 기존 native runner shard는 4 files·107 통과·13 skip이며 새 R5 bwrap bridge 수정의 통과 증거가 아니다. R5 bridge 17개 집중 검사와 아래 수정을 반영한 새 후보 전체 CI를 기다린다. skip을 실행 증거로 세지 않는다.
 
 | 증거 | 현재 확인 수준 |
 |---|---|
 | frozen install | foundation 기록에 36 workspaces 설치 성공. 이 리뷰에서 재실행하지 않음 |
-| Backend focused suites | 7 files, 248/248, exit 0, worker 1, 35.41초. 대화 43개·capability 6개 포함. native/HTTP private handoff 2개는 disposable PostgreSQL에서 owner/source/privacy와 비허용 읽기·중복 방지 검증. 전체 묶음은 DB와 mocks 혼합 |
+| Backend focused suites | R4 최종 8 files, 278/278, exit 0, worker 1, 37.21초. 실제 PostgreSQL/API 의견 계약 12개와 기존 native/HTTP private handoff를 포함. 별도 MCP transport 16/16. 전체 묶음은 DB와 mocks 혼합 |
+| 최종 backend 후속 검증 | R5·OpenAPI·Git portability 관련 5 files, 241 통과·Linux 조건 8개 skip. full server `tsc --noEmit` exit 0. 별도 CLI telemetry는 상위 opt-out=1 환경에서 4/4 통과. 플랫폼 skip은 통과로 세지 않음 |
 | Claude probe fixture | foundation 기록에 27/27. 실제 custom endpoint inference 증거가 아님 |
 | isolated source startup | foundation 기록에 loopback 3117 API/UI health 및 새 PostgreSQL 55447. public deploy나 authenticated 다중 사용자 증거가 아님 |
-| UI focused suites | 7 files, 128/128, worker 1. IssueChatThread 101개와 Crewroom·navigation·breadcrumb 회귀. token/module 검사 통과. 실제 모델·브라우저 E2E와 별도 |
-| 전체 typecheck/build/test | 최종 후속 변경 전 `pnpm -r typecheck` exit 0 기록. 이전 build는 ui/server/cli 완료 로그가 있으나 전체 종료 receipt 없음. 전체 test:run은 중단돼 최종 결과 없음. 최종 revision 전체 검사/CI는 대기 |
+| UI focused suites | 10 files, 552/552, worker 1. 기본 native 및 classic composer, TaskChatThread, Crewroom·Avatar·navigation·breadcrumb 회귀. token/module 검사 통과. [별도 UI 기록](UI-VERIFICATION.ko.md) 참조 |
+| 전체 typecheck/build/test | 첫 CI의 fixture·R5·Git 진단·명세·보존 경로 문제를 수정하고 로컬 집중 재검증. 최종 backend·UI 소스 동결, UI 후속 3개 파일 38/38 및 전체 UI typecheck exit 0. 새 main 후보의 전체 회귀 CI 결과 대기. 전체 통과로 판정하지 않음 |
 | 신규 capability 및 R1–R3 회귀 | 위 focused 결과로 해당 수정 확인. live event 및 다중 로그인 전체 경로는 별도 |
-| 현재 UI visual review | `media/team-1440.png`, `media/workroom.png`, `media/mimi-scenes-preview.png` 1차 캡처를 확인. 원본 캐릭터·대화 CTA·실제 paused 상태·명시적 scene preview를 확인. 최종 반응형/권한/오류 상태 시각 리뷰는 별도 |
-| Docker build/auth/restart/data persistence | build의 server tsc에서 exit 137/메모리 할당 실패. image 완료·auth/restart/persistence 검증 전 |
+| 현재 UI visual review | 원본 캐릭터·대화 CTA·실제 paused 상태·명시적 scene preview를 확인. 최신 `media/team-1440x900.png`, `private-chat.png`, `task-opinion.png`, `task-revision.png`와 receipt가 실제 로컬 화면을 기록. 오류·빈 데이터·read-only 대체 응답은 `*.fixture.png`로 구분. [최종 시각 리뷰](UI-REVIEW.ko.md) 참조 |
+| Docker build/auth/restart/data persistence | 첫 image build 통과·health 실패 이력 보존. health/trusted-origin 수정 및 offline 검사 완료. 새 후보 image CI의 auth/restart/restore 결과 대기 |
 | 실제 model/tool/resume/stop, GitLab, EC2 | 미검증 |
 
 이전 실패도 유지한다. 잘못된 cwd의 최초 Vitest 호출은 tests를 찾지 못했다. 처음 privacy 회귀 assertion은 기존 403과 404 계약을 혼동했고 수정됐다. 초기 optional Copilot materialization은 실패 후 공식 installer로 회복됐지만 중단 원인은 확정되지 않았다. 최종 통과 일부만으로 이 이력을 지우지 않는다.
+
+R4 첫 확장 서버 실행의 270 통과·8 실패는 테스트 spy가 heartbeat factory 대신 Storage 인자로 전달되고 auth-user fixture가 빠진 문제였다. fixture 수정 후 18개 단독 검사와 278개 전체 집중 검사가 통과했다. MCP 첫 15 통과·1 실패는 기존 create-task 기대값의 schema default 두 필드 누락이었으며 수정 후 16개가 통과했다. 새 false 전달 검사는 두 실행 모두 통과했다. 이 실패 이력과 실제 변경된 제품 오류를 혼동하지 않는다.
+
+첫 full CI의 CLI telemetry 1개 실패는 테스트가 CI 환경 변수만 지우고 상위 `PAPERCLIP_TELEMETRY_DISABLED=1`을 유지한 fixture 격리 문제다. opt-out에 따라 client를 만들지 않는 제품 동작은 올바르다. 수정 소스는 전역 CI 설정을 유지하고, 해당 테스트 안에서 mocked fetch를 먼저 설치한 뒤 `.invalid` endpoint와 opt-out 환경을 격리한다. 두 명시적 opt-out의 client/state/fetch 비생성 검사와 원래 환경·임시 root 복구도 포함한다. 소스 검토와 상위 opt-out=1 환경의 4개 집중 검사를 통과했다.
+
+OpenAPI의 Crewroom capability 명세 누락은 mounted-route manifest와 board-only operation 등록으로 보완했다. optional assignee UUID, 실제 응답 필드·nullable reasonCodes, 400/401/403/404, 힌트의 no-store 및 실제 mutation 재인가 설명이 route 소스와 일치한다. 보안·schema 회귀를 추가했으며 이 명세 추가가 별도 실행 권한을 부여하지 않는다. 소스 검토는 수용한다.
+
+### R5 · P1 · Linux workspace command의 자식 프로세스 종료 확인
+
+원격 general shard에서 detached descendant revocation 검사가 command 반환 직후 읽은 `ticks.txt` 값과 150ms 후 값을 다르게 관찰했다. `runner-bridge-tools.ts`는 바깥 bwrap process group에 SIGKILL을 보낸 뒤 Node `close`를 전체 자식 종료로 취급하여 workspace lane을 해제한다. 그러나 bwrap의 outer monitor는 초기 앱의 종료 정보를 보고 먼저 종료할 수 있다. 따라서 이 경로에는 권한 철회 뒤 쓰기와 다음 명령이 겹치지 않는다는 증명이 없다. 단순 파일 관찰 지연이나 검사 생략으로 수용하지 않는다. [bubblewrap 구현](https://github.com/containers/bubblewrap/blob/main/bubblewrap.c)의 `monitor_child`와 [PID namespace 설명](https://man7.org/linux/man-pages/man7/pid_namespaces.7.html)을 근거로 소유한 자식들의 종료 확인이 필요하다.
+
+현재 상태: **production 소스 조건부 수용, 제한 Linux helper proof 통과, 실제 bwrap bridge 회귀 대기**. 명령별 subreaper가 자기 자식만 종료·회수하고 `ECHILD`를 확인한 뒤 완료를 알리는 구현이다. Node는 유효한 확인과 helper 종료를 함께 검증하며, 늦게 끝난 authorization callback이 종료한 PID에 신호를 보내지 못하게 한다. 확인 실패는 workspace를 현재 controller 안에서 격리하고, 이미 기다리던 후속 명령도 진입 시 거부한다. controller의 제어 pipe가 닫히면 helper가 자식을 정리한다. 5초 응답 한도를 넘겨도 helper를 먼저 죽여 자식을 버리지 않는다. controller 재시작 이후까지 영구 격리를 제공한다는 뜻은 아니다.
+
+최종 제한 Linux container에서 실제 fork·setsid writer의 정상 완료·timeout·권한 철회를 각각 3회 실행해 ACK 이후 descendant PID 부재와 같은 파일의 후속 쓰기 보존을 확인했고, Node controller 강제 종료 후 EOF cleanup도 통과했다. 최종 harness의 시작 handshake와 실패 시 소유 프로세스 정리도 반영해 다시 통과했으며 container는 정상 종료·제거했다. 이 proof는 helper의 process lifecycle 검사이며 bwrap namespace/filesystem 격리 검사가 아니다. 실제 bwrap 실행과 ACK 누락·늦은 authorization 실패를 포함하는 Linux 조건 8개는 macOS에서 skip됐으며 새 GitHub Ubuntu 결과를 기다린다. 첫 실패와 수정 후 증거를 따로 보존한다.
+
+같은 suite의 denied-write `exit 2` 대 `exit 1` 실패는 별개다. shell별 실패 코드의 차이는 허용하되 실제 nonzero 종료, 원본 파일 불변, 비밀 내용 미노출을 모두 확인해야 한다. 기존 원격 실패는 수정 후 통과와 함께 보존한다. 이 Linux 검사는 실제 모델 연결 성공 증거가 아니다.
+
+### R6 · P2 · Git의 filesystem-boundary 진단 형식
+
+원격 CI의 workspace-session과 workspace-preparation 실패 두 개는 같은 upstream 구현 결함을 드러냈다. `probeGitWorktreeBase`와 `ensureManagedRepositoriesIgnored`가 non-repository 오류의 고전적인 한 줄 형식만 허용한다. Git이 mount 경계에서 내는 두 줄 형식은 [공식 Git 구현](https://github.com/git/git/blob/master/setup.c)의 별도 정상 진단이다. 이 차이 때문에 실제 non-Git local path의 owner configuration 분류가 누락되고, 명시된 plain task directory의 inert metadata를 허용하는 repository preparation도 실패했다.
+
+현재 상태: **수정 소스 수용·로컬 집중 검사 통과, 새 Linux CI 대기**. 공유 classifier는 정확한 두 메시지 형식만 판별하며 추가 stderr와 불완전한 문구를 거부한다. 두 caller의 code 128·signal 없음·C locale·Git 환경 변수 부재 조건을 유지하고, 첫 경로의 조상 metadata 부재 검사도 보존했다. 두 번째 경로의 예외는 기존 provenance가 확인한 `plainTaskDirectory`에만 적용하며 symlink 검사를 유지한다. 전역 `GIT_DISCOVERY_ACROSS_FILESYSTEM` 변경이나 모든 non-repository 오류를 삼키는 우회는 없다. 두 형식·CRLF·공백/괄호 경로 및 잘못된 형식의 classifier 회귀가 추가됐다.
 
 ## 공개 소스 점검 범위
 
@@ -113,12 +140,12 @@ private source 보호는 기존 `issueService.create`의 run provenance 상속�
 
 | 사용자 흐름 | 현재 구현과 재사용 | 현재 수용 한계 |
 |---|---|---|
-| 팀원을 찾고 누구에게 요청할지 선택 | Crewroom 팀 명부·부서 표시·기본 비서, 기존 agent 상태·capability, 원본 캐릭터와 실제 run 기반 모션 | 좁은 UI 회귀 통과. 최신 브라우저 화면 검토 대기 |
+| 팀원을 찾고 누구에게 요청할지 선택 | Crewroom 팀 명부·부서 표시·기본 비서, 기존 agent 상태·capability, 원본 캐릭터와 실제 run 기반 모션 | 집중 UI 회귀 및 최신 로컬 브라우저 캡처 확인. paused 표시와 장면 샘플을 실제 실행 증거로 해석하지 않음 |
 | 비서에게 질문하거나 일을 요청 | 기존 Agent Chat·private issue·사용자 comment·normal wake, 명확 실행 요청과 질문을 구분하는 directive | 모델 미연결 상태에서는 응답·의도 판단·도구 실행 완료를 수용할 수 없음 |
 | 대화에서 업무를 나누고 결과를 받기 | native/MCP/HTTP task creation, initial plan, source provenance, idempotency, 기존 assignment/wake와 chat completion delivery가 존재 | 신규 회귀는 생성·비공개·중복 방지 경계. 실제 모델을 통한 생성→실행→산출물→원 대화 결과 회신은 별도 E2E 증거 필요 |
-| 업무별 의견·수정·재요청 | 기존 task comment·queued steering·interrupt·reopen·workspace 복구와 문서 revision을 재사용. Crewroom 업무 링크로 진입 | 의견만 저장 UI는 component 회귀 통과했지만 서버 암묵적 reopen과 충돌하는 R4 해결 전 수용 불가. 실제 agent 재수정 결과도 미검증 |
+| 업무별 의견·수정·재요청 | 기존 task comment·queued steering·interrupt·reopen·workspace 복구와 문서 revision을 재사용. Crewroom 업무 링크로 진입 | R4 서버/API/MCP 및 기본·classic UI 회귀 통과. 실제 기본 UI의 same-task 의견 저장·재개 상태 전이 확인. 실제 agent 재수정 산출물은 미검증 |
 | 여러 사용자가 권한 안에서 협업 | authenticated mode·membership·grant·private task ACL은 core 기능. Crewroom은 개인 대화 creation/admission과 capability projection을 보강 | disposable DB 검증과 실제 서로 다른 로그인 세션의 전체 데이터 경로 검증은 구별 |
-| EC2에서 지속 운영하고 복구 | production Docker target, 앱/DB 지속 볼륨, 최초 인증, quiesced DB+파일 snapshot 및 새 프로젝트 restore 도구 구현 | Docker build/기동/인증/재시작/복원 결과와 실제 EC2·TLS 운영 증거 대기 |
+| EC2에서 지속 운영하고 복구 | production Docker target, 앱/DB 지속 볼륨, 최초 인증, quiesced DB+파일 snapshot 및 새 프로젝트 restore 도구 구현 | 첫 image build 통과·health 실패. health/trusted-origin 수정 후 offline 검사 통과. 새 image CI의 auth/restart/restore 및 실제 EC2·TLS 운영 증거 대기 |
 | 재사용 스킬로 업무 시작 | 기존 skill catalog/version/assignment를 사용하고 Crewroom 요청에 선택한 skill/version을 기록 | 이번 UI 선택이 실제 실행 시 immutable snapshot으로 적용됐다는 증거는 아직 없음 |
 
 별도 설계 목표 중 **추가 구현이 필요한 것**은 사용자별 독립 비서 identity/home/memory binding, Crewroom 부서 ACL, source revision 철회에 따른 누적 context 폐기, exact proposal 승인에 묶인 GitLab publisher다. 기존 core의 task/workspace lease·session·approval·versioned skill 기능이 없다는 뜻이 아니다. 현재 배포의 local CLI가 앱과 같은 컨테이너에서 실행되므로 신뢰할 수 없는 작업의 OS/process/credential 격리는 이 배포만으로 제공하지 않는다. 모델 endpoint·GitLab·EC2의 실제 자격증명과 운영 대상이 없는 항목은 **실연결 미검증**이며, 단순 UI 완료로 그 증거를 대신하지 않는다.

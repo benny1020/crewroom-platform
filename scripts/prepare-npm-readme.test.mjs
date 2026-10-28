@@ -30,8 +30,8 @@ test("rewrites repository-relative image sources for npm", () => {
   );
 });
 
-test("prepares the repository README without package-relative image sources", () => {
-  const readme = readFileSync(new URL("../README.md", import.meta.url), "utf8");
+test("prepares the preserved upstream README without package-relative image sources", () => {
+  const readme = readFileSync(new URL("../crewroom/UPSTREAM-README.md", import.meta.url), "utf8");
   const npmReadme = prepareNpmReadme(readme, "master");
 
   assert.doesNotMatch(

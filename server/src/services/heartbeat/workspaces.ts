@@ -1,4 +1,5 @@
 import { effectiveProjectWorkspacePolicy } from "../project-workspace-provider.js";
+import { isGitNotRepositoryDiagnostic } from "../git-not-repository-diagnostic.js";
 import { canonicalRepositoryRoot } from "../execution-workspace-source-roots.js";
 import { assertTaskWorkspaceExecutionAccess } from "../task-workspace-access.js";
 import { selectRestoredProjectRepositories, type GitWorkspaceContents } from "../git-workspace-contents.js";
@@ -852,8 +853,7 @@ async function probeGitWorktreeBase(cwd: string) {
     // the same message. Verify its absence too. Missing Git, permission errors,
     // corruption and I/O failures must remain reportable in Sentry.
     const notRepository = failure.code === 128 && failure.signal == null &&
-      typeof failure.stderr === "string" &&
-      /^fatal: not a git repository \(or any of the parent directories\): \.git\r?\n?$/.test(failure.stderr) &&
+      isGitNotRepositoryDiagnostic(failure.stderr) &&
       !process.env.GIT_DIR && !process.env.GIT_WORK_TREE && !process.env.GIT_COMMON_DIR &&
       await hasNoGitMetadataInWorkspaceAncestors(cwd);
     return { isCheckout: false, notRepository };

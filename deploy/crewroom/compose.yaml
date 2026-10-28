@@ -42,6 +42,7 @@ services:
       PAPERCLIP_DEPLOYMENT_MODE: authenticated
       PAPERCLIP_DEPLOYMENT_EXPOSURE: ${CREWROOM_EXPOSURE:-private}
       PAPERCLIP_PUBLIC_URL: ${CREWROOM_PUBLIC_URL:-http://localhost:3118}
+      BETTER_AUTH_TRUSTED_ORIGINS: ${CREWROOM_PUBLIC_URL:-http://localhost:3118}
       PAPERCLIP_AUTH_BASE_URL_MODE: explicit
       PAPERCLIP_AUTH_DISABLE_SIGN_UP: ${CREWROOM_DISABLE_SIGN_UP:-false}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Run setup.py first}
@@ -56,7 +57,7 @@ services:
       - appdata:/paperclip
     networks: [database, outbound]
     healthcheck:
-      test: [CMD, node, -e, "fetch('http://127.0.0.1:3100/api/health').then(r=>{if(!r.ok)process.exit(1);return r.json()}).then(j=>process.exit(j.startupRecovery?.phase==='ready'?0:1)).catch(()=>process.exit(1))"]
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3100/api/health').then(r=>{if(!r.ok)process.exit(1);return r.json()}).then(j=>process.exit(j.status==='ok'?0:1)).catch(()=>process.exit(1))"]
       interval: 15s
       timeout: 5s
       start_period: 120s

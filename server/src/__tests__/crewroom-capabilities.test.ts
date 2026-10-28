@@ -2,14 +2,16 @@ import express from "express";
 import request from "supertest";
 import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { agents, companies, companyMemberships, createDb, principalPermissionGrants, issues, issueComments, agentWakeupRequests, issueAccessGrants } from "@paperclipai/db";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { agents, authUsers, companies, companyMemberships, createDb, principalPermissionGrants, issues, issueComments, agentWakeupRequests, issueAccessGrants } from "@paperclipai/db";
 import { getEmbeddedPostgresTestSupport, startEmbeddedPostgresTestDatabase } from "./helpers/embedded-postgres.js";
 import { crewroomRoutes } from "../routes/crewroom.js";
 import { issueRoutes } from "../routes/issues.js";
 import { instanceSettingsService } from "../services/instance-settings.js";
 import { errorHandler } from "../middleware/index.js";
 import { issueService } from "../services/issues.js";
+import * as services from "../services/index.js";
+import { heartbeatService } from "../services/heartbeat.js";
 
 const support = await getEmbeddedPostgresTestSupport();
 (support.supported ? describe : describe.skip)("Crewroom capability projection", () => {
@@ -34,12 +36,17 @@ const support = await getEmbeddedPostgresTestSupport();
     ]);
   }, 90000);
   afterAll(async () => { await db?.$client.end({ timeout: 0 }); await database?.cleanup(); });
+  afterEach(() => { vi.restoreAllMocks(); });
 
   async function appFor(role: "operator" | "viewer", source: "session" | "local_implicit" = "session") {
     const userId = randomUUID();
+    await db.insert(authUsers).values({ id: userId, name: "Capability verifier", email: `${userId}@example.test`, createdAt: new Date(), updatedAt: new Date() });
     await db.insert(companyMemberships).values({ companyId, principalType: "user", principalId: userId, membershipRole: role, status: "active" });
     const app = express();
     const wakeup = vi.fn(async () => null);
+    // Keep the real routes, policy and DB while observing the actual dispatch
+    // boundary. issueRoutes' second argument is file storage, not heartbeat.
+    vi.spyOn(services, "heartbeatService").mockImplementation((...args) => ({ ...heartbeatService(...args), wakeup }));
     app.use(express.json());
     app.use(async (req, _res, next) => {
       const rows = await db.select().from(companyMemberships).where(and(eq(companyMemberships.principalId, userId), eq(companyMemberships.status, "active")));
@@ -47,7 +54,7 @@ const support = await getEmbeddedPostgresTestSupport();
       next();
     });
     app.use("/api", crewroomRoutes(db));
-    app.use("/api", issueRoutes(db, { wakeup } as never));
+    app.use("/api", issueRoutes(db, {} as never));
     app.use(errorHandler);
     return { app, userId, wakeup };
   }

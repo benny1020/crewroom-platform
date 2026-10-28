@@ -2,9 +2,9 @@
 
 Crewroom은 [Paperclip](https://github.com/paperclipai/paperclip) 전체 소스를 기반으로 만든 한국어 팀 에이전트 작업 공간입니다. 팀 명부, 개인 대화, 업무, 실행 기록, 승인, 파일과 스킬은 하나의 Paperclip 실행 체계를 사용합니다.
 
-![Crewroom 팀 공간](doc/crewroom/media/team-1440.png)
+![Crewroom 팀 공간](doc/crewroom/media/team-1440x900.png)
 
-격리된 로컬 API를 읽은 실제 화면입니다. 초기 동료는 연결 준비를 위해 일시 정지한 상태이며 실제 모델 실행 결과가 아닙니다. [작업방](doc/crewroom/media/workroom.png) · [내 기본 비서](doc/crewroom/media/personal.png) · [스킬](doc/crewroom/media/skills.png) · [화면·샘플 구분과 캡처 기록](doc/crewroom/MEDIA.ko.md)
+격리된 로컬 API를 읽은 실제 화면입니다. 초기 동료는 연결 준비를 위해 일시 정지한 상태이며 실제 모델 실행 결과가 아닙니다. [작업방](doc/crewroom/media/workroom.png) · [개인 대화](doc/crewroom/media/private-chat.png) · [내 기본 비서](doc/crewroom/media/personal.png) · [스킬](doc/crewroom/media/skills.png) · [화면·샘플 구분과 캡처 기록](doc/crewroom/MEDIA.ko.md)
 
 [아키텍처와 구현 경계](doc/crewroom/ARCHITECTURE.ko.md) · [리뷰 및 검증 기록](doc/crewroom/REVIEW.ko.md) · [EC2 배포 안내](doc/crewroom/DEPLOYMENT.ko.md)
 
@@ -12,7 +12,7 @@ Crewroom은 [Paperclip](https://github.com/paperclipai/paperclip) 전체 소스�
 
 - 팀장·개발·운영·QA 명부에서 담당자를 찾고, 실제 업무와 실행 상태를 확인합니다.
 - 팀장 보기와 팀원 보기, 사용자별 기본 비서를 선택합니다. 이 선택은 화면과 개인 선호이며 권한을 부여하지 않습니다.
-- 같은 에이전트와 대화를 이어갑니다. 대화 지침은 명확한 실행 요청을 기존 담당 업무로 인계하고, 질문과 아이디어는 대화로 다루도록 구성합니다. 실제 모델의 의도 해석·실행 품질은 연결 후 별도로 검증해야 합니다.
+- 같은 에이전트와 대화를 이어갑니다. 대화 지침은 명확한 실행 요청에 일반 업무를 생성·배정하고, 질문과 아이디어는 대화로 다루도록 구성합니다. 실제 모델의 의도 해석·실행 품질은 연결 후 별도로 검증해야 합니다.
 - 업무별 댓글과 작업방에서 결과 확인·피드백·수정 요청을 이어갑니다. 완료한 업무는 의견만 저장하거나 같은 업무에 수정을 요청하는 흐름으로 구분합니다.
 - 업무·파일·팀 스킬을 기존 API로 조회하고, 권한이 허용된 담당자에게 업무를 생성·배정합니다. 스킬 요청은 일반 업무와 버전 참조를 남깁니다.
 - 12종 캐릭터와 상태별 작업 모션, 동작 감소 설정을 제공합니다. 실행 애니메이션은 관측된 실제 실행 상태를 따릅니다.
