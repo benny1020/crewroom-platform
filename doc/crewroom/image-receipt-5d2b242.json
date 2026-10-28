@@ -1,0 +1,42 @@
+{
+  "sourceRevision": "5d2b242658efe63c10c495bf526b329db2f2f064",
+  "runId": 40744488774,
+  "runAttempt": 1,
+  "runUrl": "https://github.com/benny1020/crewroom-platform/actions/runs/40744488774",
+  "conclusion": "success",
+  "imageId": "sha256:b301362c35325205371c41e0db6e34685433fede535a1f4943bb1dbe1e41b328",
+  "globalCliPackages": {
+    "@anthropic-ai/claude-code": "2.1.312",
+    "@google/gemini-cli": "0.66.0",
+    "@moonshot-ai/kimi-code": "2.4.0",
+    "@openai/codex": "0.165.0",
+    "corepack": "0.36.0",
+    "npm": "11.19.1",
+    "opencode-ai": "1.19.5"
+  },
+  "verifiedChecks": [
+    "production image build with full typechecking",
+    "served commit and image identity",
+    "authenticated first administrator and local viewer invitation",
+    "private conversation and attachment ACL with distinct user sessions",
+    "attachment checksum",
+    "restart persistence",
+    "quiesced database, application files and deployment environment snapshot",
+    "restore into a fresh project and empty volumes",
+    "original and restored instance checks"
+  ],
+  "notVerified": [
+    "live model inference or actual adapter CLI execution",
+    "email delivery",
+    "GitLab publication",
+    "EC2 deployment",
+    "real domain and TLS",
+    "untrusted job isolation"
+  ],
+  "evidenceSha256": {
+    "image-id.txt": "9f334fd86eea3d620a73c6865d5724bb06ae802fb4dd746887fe5dd61c9587ab",
+    "cli-versions.json": "853e016ce8c4d7fad0e6e99f1d167e4420358bf96770c02f09d93f47ca43a48f",
+    "image-smoke-summary.txt": "48422e2c03092ff82e0fe3941ba07f9f5a0aa02796f9750a465ef1a139fd77fc"
+  },
+  "identityLimit": "Global CLI package versions identify the built image; they do not prove which runtime an adapter selected or successful provider execution."
+}

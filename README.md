@@ -79,15 +79,17 @@ pnpm build
 
 최신 통과 수·실패 이력·미검증 범위는 [리뷰 기록](doc/crewroom/REVIEW.ko.md)과 [foundation receipt](doc/plans/2026-10-28-crewroom-paperclip-foundation.md)에 구분해 남깁니다. fixture와 로컬 DB 검사는 실제 Claude custom endpoint의 추론·도구·중단·재개 품질 증거가 아닙니다. [Claude endpoint 안내](crewroom/CLAUDE-ENDPOINT.md)를 따라 실제 연결을 별도로 확인합니다.
 
-2026-10-29 기준, 제품 소스 [`13e79d1`](https://github.com/benny1020/crewroom-platform/commit/13e79d1a419ce1930b641edb8d587a23555dc535)의 검증 결과입니다. 이후 문서·검증 helper만 바뀐 commit과 제품 revision은 구분합니다.
+2026-10-29 기준, 제품 소스 [`5d2b242`](https://github.com/benny1020/crewroom-platform/commit/5d2b242658efe63c10c495bf526b329db2f2f064)의 검증 결과입니다. 이후 문서·검증 helper만 바뀐 commit과 제품 revision은 구분합니다.
 
 | 검사 | 결과와 근거 |
 | --- | --- |
-| 기본 CI | [3개 작업 통과: 구조·집중 회귀·전체 타입 검사와 빌드](https://github.com/benny1020/crewroom-platform/actions/runs/40730054272) |
-| 전체 회귀 | [21개 작업·43개 Vitest 호출 완료, 실제 테스트 45,760개 통과·실패 0](https://github.com/benny1020/crewroom-platform/actions/runs/40730055102). 조건부 skip 100개는 별도입니다. [집계 증거](doc/crewroom/regression-receipt.json) |
-| production Docker 이미지 | [인증·초대·개인 대화/파일 권한·재시작·일관된 snapshot·새 프로젝트 복원 통과](https://github.com/benny1020/crewroom-platform/actions/runs/40730054313) |
-| 추가 실행 복구 검사 | 실제 프로세스 8개 통과. 원격 연속성 5개는 [실패 원인 확인 중](doc/crewroom/RUNTIME-QUALIFICATION.ko.md)입니다. 고정 테스트 provider를 사용합니다. |
+| 기본 CI | [3개 작업 통과: 구조·집중 회귀·전체 타입 검사와 빌드](https://github.com/benny1020/crewroom-platform/actions/runs/40744488533) |
+| 전체 회귀 | [21개 작업·43개 Vitest 호출 완료, 실제 테스트 45,761개 통과·실패 0·재시도 0](https://github.com/benny1020/crewroom-platform/actions/runs/40744488638). 조건부 skip 100개는 별도입니다. [집계 증거](doc/crewroom/regression-receipt-5d2b242.json) |
+| production Docker 이미지 | [인증·초대·개인 대화/파일 권한·재시작·일관된 snapshot·새 프로젝트 복원 통과](https://github.com/benny1020/crewroom-platform/actions/runs/40744488774). [이미지 식별자·CLI 버전·검증 증거](doc/crewroom/image-receipt-5d2b242.json) |
+| 추가 실행 복구 검사 | 실제 프로세스 8개 통과. 원격 연속성 5개는 완료 사례 보고서가 없어 미완료로 판정했습니다. [기록 도구를 보강한 재검증](https://github.com/benny1020/crewroom-platform/actions/runs/40752013695)과 [검증 범위](doc/crewroom/RUNTIME-QUALIFICATION.ko.md)를 구분합니다. 고정 테스트 provider를 사용합니다. |
 | 실제 외부 연결 | Claude custom endpoint 추론, GitLab 발행, EC2와 실제 도메인/TLS는 미검증입니다. |
+
+이전 제품 `13e79d1`의 45,760개 통과 기록은 [별도 영수증](doc/crewroom/regression-receipt.json)에 보존합니다. 다른 소스의 통과 수를 최신 제품에 합산하지 않습니다.
 
 보안 의존성 패치와 기존 계정·세션을 보존하는 인증 마이그레이션을 포함합니다. 업데이트 전에는 [계정 이전과 snapshot 절차](doc/crewroom/DEPLOYMENT.ko.md)를 확인합니다. 감사 수치, 실제 설치·회귀 증거와 MSAL·Zod v3의 남은 경계는 [의존성 보안 기록](doc/crewroom/DEPENDENCY-SECURITY.ko.md)에 설명합니다. 별도의 [Linux 프로세스·원격 연속성 검증](doc/crewroom/RUNTIME-QUALIFICATION.ko.md)은 실제 모델 대신 고정된 테스트 provider를 사용합니다.
 

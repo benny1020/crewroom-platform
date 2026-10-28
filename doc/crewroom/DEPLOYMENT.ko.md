@@ -12,7 +12,7 @@ Linux EC2에 Docker Engine과 Compose v2, Python 3, Git을 준비한다. 전체 
 
 같은 로컬 VM의 2048 MiB 재시도도 같은 단계에서 exit 137로 중단됐다. 새 compiler 근거에 따라 build stage에만 `BUILD_GOMAXPROCS=2`, `BUILD_GOMEMLIMIT=3GiB`를 추가했다. 이 값은 [Go runtime](https://pkg.go.dev/runtime#hdr-Environment_Variables)의 병렬 실행과 soft GC memory target을 조정하며 hard RAM 한도를 보장하지 않는다. runtime app 환경에는 적용하지 않는다. 이 변경 후의 검증은 아래 기록과 CI 실행 결과로 구분한다. `Crewroom production image` workflow가 native Ubuntu runner에서 4096 MiB heap과 전체 타입 검사를 사용해 이미지를 만들고 아래 authenticated 스모크를 수행한다. 이 CI가 통과하기 전에는 이미지 빌드·Docker 기동·복구가 검증됐다고 보지 않는다. CI 컨테이너 검증과 EC2/domain/TLS 실배포는 다른 증거다.
 
-2026-10-29 제품 `13e79d1a419ce1930b641edb8d587a23555dc535`의 [production image CI](https://github.com/benny1020/crewroom-platform/actions/runs/40730054313)는 전체 빌드·최초 관리자와 초대받은 viewer 인증·개인 대화/파일 ACL·재시작·DB+파일+환경 snapshot·빈 새 프로젝트 복원 및 원본/복원 환경 재검사를 통과했다. 이는 해당 소스의 CI Docker 검증이며 실제 EC2·도메인·모델 연결의 완료를 뜻하지 않는다. 이후 제품 변경은 해당 revision의 검증 결과를 별도로 확인한다.
+2026-10-29 제품 `5d2b242658efe63c10c495bf526b329db2f2f064`의 [production image CI](https://github.com/benny1020/crewroom-platform/actions/runs/40744488774)는 전체 빌드·최초 관리자와 초대받은 viewer 인증·개인 대화/파일 ACL·재시작·DB+파일+환경 snapshot·빈 새 프로젝트 복원 및 원본/복원 환경 재검사를 통과했다. [이미지 식별자·CLI 버전·검증 증거](image-receipt-5d2b242.json)를 함께 기록한다. 이는 해당 소스의 CI Docker 검증이며 실제 EC2·도메인·모델 연결의 완료를 뜻하지 않는다. 이후 제품 변경은 해당 revision의 검증 결과를 별도로 확인한다.
 
 저장소 루트에서 실행한다.
 

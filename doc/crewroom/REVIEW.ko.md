@@ -2,7 +2,7 @@
 
 2026-10-28 · Astra 설계·코드 리뷰 · Sol 제품 구현
 
-**2026-10-29 현재 판정: 제품 13e의 기본 CI 3개 job, 전체 회귀 21개 job 및 production 이미지의 인증·private ACL·재시작·백업·새 환경 복원 검증을 수용한다. 추가 runtime qualification의 remote 5개와 cleanup 실패는 미해결이다.** 검증한 제품 SHA는 `13e79d1a419ce1930b641edb8d587a23555dc535`다. 전체 Crewroom 확장 요구의 완료, 실제 모델·GitLab 연결이나 EC2 운영 배포 승인을 뜻하지 않는다. 아래에는 수정 전 실패와 수정 후 증거를 함께 보존한다.
+**2026-10-29 현재 판정: 새 제품 5d2b242의 기본 CI 3개 job·전체 CI 21개 job·production 이미지 인증/ACL/재시작/복원을 수용한다. 추가 runtime qualification의 remote 단계는 실패 원인 미확정으로 남는다.** 제품 SHA는 `5d2b242658efe63c10c495bf526b329db2f2f064`다. 이전 기준선 `13e79d1a419ce1930b641edb8d587a23555dc535`의 45,760개 통과 수는 별도 역사적 증거이며 새 SHA로 승계하지 않는다. [새 집계 영수증](regression-receipt-5d2b242.json)은 실제 고유 사례 45,761개 통과·실패 0·retry 0, 조건부 skip 100개를 확인한다. 전체 Crewroom 확장 요구의 완료, 실제 모델·GitLab 연결이나 EC2 운영 배포 승인을 뜻하지 않는다. 아래에는 수정 전 실패와 수정 후 증거를 함께 보존한다.
 
 ## 검토 대상과 유지한 경계
 
@@ -69,6 +69,8 @@ private source 보호는 기존 `issueService.create`의 run provenance 상속�
 
 현 upstream local CLI adapter는 app container 내부 실행이다. 별도 DB container는 job별 filesystem/process/credential 격리의 증거가 아니다. 분리 runner service를 Compose에 선언하기만 해서는 실제 execution transport가 연결되지 않는다. Docker socket이나 privileged mode로 우회하지 않는다.
 
+최신 5d2b242 image CI `40744488774`도 인증·초대·private 대화/첨부 ACL·재시작·DB/파일/환경 snapshot·새 프로젝트 복원을 통과했다. [이미지 영수증](image-receipt-5d2b242.json)을 따른다. 다음 문단은 이전 13e 기준선의 성공 이력이다.
+
 현재 상태: **제품 13e image CI `40730054313`의 build·인증·private ACL·재시작·일관된 snapshot·새 환경 복원 검증 통과**. 이미지 ID는 `sha256:99ec1bbf9ae413186563563d245780fc9ddafb741480d19fdfc0d05da5e41b18`이다. 최초 admin·가입·viewer 초대와 실제 서로 다른 로그인 세션의 private 대화/첨부 접근 차단을 검사했다. DB·파일·환경 설정의 일관된 snapshot을 별도 프로젝트와 포트 3119에 복원한 뒤 원본과 복원 환경의 인증·ACL·파일 보존을 확인했다. 이는 CI Docker 환경에서의 배포·복구 증거이며 EC2 실운영 증거는 아니다.
 
 수정 전 실패도 보존한다. 첫 image CI `40703906634`는 unhealthy에서 멈췄다. 익명 authenticated `/api/health`가 내부 `startupRecovery`를 숨기는 정책을 보존하고 Compose probe가 공개된 `status:ok`를 확인하도록 수정했다. `CREWROOM_PUBLIC_URL` 한 값이 공개 URL과 단일 trusted origin에 동일하게 적용된다. 이후 723 후보 image CI `40713387606`는 build와 최초 admin·signup을 통과했지만, 정상 human invite 수락의 HTTP 202를 smoke가 200/201로 기대해 중단됐다. 수정 harness는 202 receipt의 company·human identity·상태를 확인하고 pending인 경우만 같은 request ID를 승인한 뒤 실제 active viewer membership을 검사한다. private 읽기 404와 쓰기 capability false 검사를 유지했으며, offline Node 9개·Python 12개뿐 아니라 위 13e 이미지 CI에서도 실행했다.
@@ -76,6 +78,8 @@ private source 보호는 기존 `issueService.create`의 run provenance 상속�
 이전 로컬 실패는 유지한다. Docker VM 8 GiB에서 Rust runner와 UI 빌드 뒤 server `tsc`가 exit `137`/`ResourceExhausted`로 종료됐고, Node heap 3072→2048 MiB 재시도도 실패했다. 이후 설치된 TypeScript 7 launcher가 native Go compiler를 실행한다는 것을 확인해 build stage에만 `GOMAXPROCS=2`, soft GC target `GOMEMLIMIT=3GiB`를 적용했다. full typecheck는 유지했다. EC2 계정, 실제 domain/TLS, live provider/GitLab 계정이 없는 상태에서 EC2 배포나 실제 업무 실행 성공을 주장하지 않는다.
 
 ## 검증 기록과 남은 완료 조건
+
+새 제품 5d2b242의 기본 CI `40744488533`는 3/3 job, 전체 CI `40744488638`는 21/21 job, image CI `40744488774`는 인증·private ACL·재시작·일관된 snapshot·새 프로젝트 복원을 통과했다. [이미지 영수증](image-receipt-5d2b242.json)의 image ID는 `sha256:b301362c35325205371c41e0db6e34685433fede535a1f4943bb1dbe1e41b328`이며 원본 artifact의 해시·CLI 버전과 일치한다. [새 전체 회귀 영수증](regression-receipt-5d2b242.json)은 21개 공식 artifact digest 일치와 43/43 Vitest 호출 완료, 고유 실행 사례 45,761개 통과·실패 0·retry 0을 확인한다. 조건부 skip 100개에는 전체 skip 파일 12개가 포함되며, chat shard 필터 skip 11,123건은 다른 shard에서 실행된 사례의 반복 제외다. 신규 archive ownership 회귀 1개가 기본 경로에서 실제 통과했으며 별도 opt-in Docker proof를 이 수에 합산하지 않는다. qualification `40744500551`은 local 8/8·remote 준비 통과 뒤 remote 단계 실패로 종료됐고, 완료 JSON의 사례별 결과가 없어 실패 수나 timeout을 확정하지 않는다. 최초 소유 프로세스·컨테이너 정리는 통과했지만 private fixture 삭제 완료는 당시 receipt로 확인되지 않았다.
 
 2026-10-29 후속 검증 기준이다. 제품 13e의 기본 CI `40730054272`는 3/3 job, 전체 CI `40730055102`는 21/21 job, image CI `40730054313`는 전체 절차를 통과했다. [집계 영수증](regression-receipt.json)은 21개 job·43개 Vitest 호출 완료, 중복을 제거한 실제 실행 45,760개 통과·실패 0·retry 0을 확인한다. 조건부 skip 100개(전체 skip 파일 12개 포함)는 통과로 세지 않는다. 별도 chat shard의 필터 skip 11,123건은 다른 shard에서 실행된 같은 사례의 반복 제외이며 미실행 테스트 수가 아니다. 별도 qualification `40736309647`는 실제 로컬 프로세스 8/8·skip 0, remote 0/5 통과·5개 실패·skip 0 및 cleanup 실패다. 추가 관측 helper `02314ddbf158b302c73f96942abf10671d2faaa8`를 사용한 같은 제품의 재실행 `40738818450`도 local 8/8·remote 0/5 통과로 종료됐다. 정제된 nested cause는 일반 Error로 남아 remote 다섯 실패의 공통 원인을 확정하지 못했다. cleanup은 stop exit 0 뒤 remove exit 1로 최초 실패했으며, 후속 recovery에서 소유 컨테이너 부재를 확인했다. 초기 실패는 지우지 않는다.
 
@@ -95,7 +99,8 @@ private source 보호는 기존 `issueService.create`의 run provenance 상속�
 | 신규 capability 및 R1–R3 회귀 | 위 focused 결과로 해당 수정 확인. live event 및 다중 로그인 전체 경로는 별도 |
 | 현재 UI visual review | 원본 캐릭터·대화 CTA·실제 paused 상태·명시적 scene preview를 확인. 최신 `media/team-1440x900.png`, `private-chat.png`, `task-opinion.png`, `task-revision.png`와 receipt가 실제 로컬 화면을 기록. 오류·빈 데이터·read-only 대체 응답은 `*.fixture.png`로 구분. [최종 시각 리뷰](UI-REVIEW.ko.md) 참조 |
 | Docker build/auth/restart/data persistence | 13e image CI 전체 통과: 실제 admin/viewer 인증·private 대화/첨부 ACL·재시작·DB/파일/환경 snapshot·새 프로젝트 복원·원본/복원 재검사. 첫 health 및 초대 202 harness 실패 이력은 보존 |
-| 추가 runtime qualification | 13e local 8/8·skip 0, remote 5개 모두 실패·skip 0, cleanup 실패. 관측 재실행도 remote 5개 실패. nested 일반 Error만으로 원인 미확정. 최초 cleanup stop 0·remove 1 뒤 recovery에서 소유 컨테이너 부재 확인. 실제 모델 검사가 아님 |
+| 새 5d2b242 전체 CI·이미지 | 기본 3/3·전체 21/21 job 및 이미지 인증·ACL·재시작·복원 통과. [새 영수증](regression-receipt-5d2b242.json): 실제 고유 사례 45,761개 통과·실패 0·retry 0, 조건부 skip 100개, 43/43 Vitest 호출 완료. 13e 수치를 승계하지 않음 |
+| 추가 runtime qualification | 최신 5d2b242 local 8/8·remote 준비 통과 후 remote 단계 실패. 사례별 완료 JSON이 없어 timeout·사례별 실패 수 미확정. 최초 프로세스·컨테이너 정리 통과, private fixture 삭제는 미확인. 실제 모델 검사가 아님 |
 | 실제 model/tool/resume/stop, GitLab, EC2 | 미검증 |
 
 이전 실패도 유지한다. 잘못된 cwd의 최초 Vitest 호출은 tests를 찾지 못했다. 처음 privacy 회귀 assertion은 기존 403과 404 계약을 혼동했고 수정됐다. 초기 optional Copilot materialization은 실패 후 공식 installer로 회복됐지만 중단 원인은 확정되지 않았다. 최종 통과 일부만으로 이 이력을 지우지 않는다.
@@ -142,7 +147,7 @@ Better Auth 1.7.7 설치 후 실제 PostgreSQL 가입 검사가 500으로 실패
 
 후속 remote 준비 실패는 capability 없는 root가 복사된 바이너리를 chmod하는 단계에서 발생했다. 작은 Linux proof에서 호스트 UID 501·mode 0700을 유지한 복사본에 같은 실패를 재현했다. 이 UID는 로컬 proof 값이며 CI의 실제 UID로 주장하지 않는다. 원제품 바이너리의 mode/hash를 보존하고 private staging copy만 0555로 만든 뒤 실제 실행 UID의 읽기·실행 권한과 원본·복사본·컨테이너 SHA를 확인하도록 수정했다. capability나 privileged 실행은 추가하지 않았다. 234 control `40733514766`과 유효 제품 13e의 `40736309647`에서 local 8개와 remote 준비가 통과했다. 그러나 13e에서도 remote 5개 모두 실행 후 실패했고 cleanup도 실패했다. stock Vitest JSON은 fixture가 감싼 Error의 cause를 생략하므로 wrapper 위치만으로 제품 결함의 원인을 확정할 수 없다.
 
-**현재 열린 수용 조건은 제품 13e의 remote 5개 및 소유 프로세스·컨테이너 cleanup 성공이다.** 추가 helper `02314dd`는 공식 Vitest reporter API로 최대 8단계 cause를 읽되 고정 title·오류 분류·fixture 위치·제한된 primitive만 기록한다. private 0600 sidecar를 Python에서 다시 검증하며 stock JSON의 검사 수·skip·실패 gate를 바꾸지 않는다. 초기 cleanup과 재시도 cleanup을 별도 기록하고 소유·ID·단계·종료 코드만 공개한다. Python 35개·Node 5개 및 작은 실제 Vitest의 단독/병용 실패 보존 검사를 통과했다. 제품·fixture·timeout 변경 없이 같은 13e를 검사한 `40738818450`에서도 local 8개 통과·remote 5개 실패가 유지됐다. nested 일반 Error를 보존했지만 remote 실패 원인을 특정하지 못했다. 초기 cleanup의 stop exit 0·remove exit 1과 recovery의 소유 컨테이너 부재를 구분해 기록했다. 후속 CI helper는 자동 제거 경합을 없애기 위해 `--rm` 제거를 준비하며 소유 확인과 명시적 제거·최종 부재 검증은 유지한다. 별도로 실제 staging 소유 함수를 사용한 tar 소유권 결함의 before/after 재현이 진행 중이다. 이 독립 후보 결함을 다섯 실패의 원인이나 완료된 제품 수정으로 주장하지 않는다.
+**현재 열린 수용 조건은 후속 제품 SHA의 remote 5개 및 소유 프로세스·컨테이너 cleanup 성공이다.** 추가 helper `02314dd`는 공식 Vitest reporter API로 최대 8단계 cause를 읽되 고정 title·오류 분류·fixture 위치·제한된 primitive만 기록한다. private 0600 sidecar를 Python에서 다시 검증하며 stock JSON의 검사 수·skip·실패 gate를 바꾸지 않는다. 초기 cleanup과 재시도 cleanup을 별도 기록하고 소유·ID·단계·종료 코드만 공개한다. Python 35개·Node 5개 및 작은 실제 Vitest의 단독/병용 실패 보존 검사를 통과했다. 제품·fixture·timeout 변경 없이 같은 13e를 검사한 `40738818450`에서도 local 8개 통과·remote 5개 실패가 유지됐다. nested 일반 Error를 보존했지만 remote 실패 원인을 특정하지 못했다. 초기 cleanup의 stop exit 0·remove exit 1과 recovery의 소유 컨테이너 부재를 구분해 기록했다. 후속 CI helper는 자동 제거 경합을 없애기 위해 `--rm`을 제거했으며 소유 확인과 명시적 제거·최종 부재 검증은 유지한다. 별도 실제 staging 함수로 재현한 소유권 결함은 아래 R9에서 수리했다. 이를 기존 다섯 실패의 확정 원인이나 remote qualification 완료로 주장하지 않는다.
 
 ### R8 · P2 · Zod 보안 패치 뒤 댓글 길이 계약
 
@@ -151,6 +156,24 @@ Better Auth 1.7.7 설치 후 실제 PostgreSQL 가입 검사가 500으로 실패
 현재 상태: **수정 소스 수용, shared·실제 PostgreSQL integration 2 files·32개 및 OpenAPI 28개·shared typecheck 통과**. surrogate pair·ASCII·혼합 문자열의 경계와 초과를 검사하고, HTTP의 기존/새 idempotency key 및 native 경로에서 초과 본문이 prior retry 조회보다 먼저 거절되는 것을 확인했다. 이후 13e 원격 전체 CI 21개 job도 통과했다. 이 수정의 범위는 agent commentary이며 다른 문자열 정책을 함께 변경한 것으로 해석하지 않는다.
 
 뒤따른 metadata 검사에서 도구 description에 연결된 generated JSON 갱신 누락도 보완했다. 공식 generator가 두 description, seeded catalog hash, fixture manifest hash의 세 파일을 재생성했고 관련 10개 check가 통과했다. source diff도 해당 설명·hash 연결만 바뀐 것을 확인했으며 Rust 실행이나 runtime 동작 변경의 증거로 세지 않는다.
+
+### R9 · P2 · 원격 archive staging의 호스트 소유권 복원
+
+`stageRemoteRunnerDirectory`의 command fallback은 호스트 archive의 UID/GID까지 복원하려 했다. 실제 exported 함수를 외래 UID/GID의 inert flat payload와 capability 없는 root 컨테이너에서 실행해 수정 전 `runner_remote_directory_staging_failed`를 재현했다. 공통 tar 인수에 `--no-same-owner`를 추가한 뒤 같은 함수·행렬이 통과했다. staging은 실행 사용자 소유로 파일을 만들며 GNU `--delay-directory-restore`, archive 내용, 기존 root/non-root mode·umask 정책, exclude·syncIn·symlink guard와 immutable 비교는 유지한다. 제품 변경은 이 인수 한 줄이다.
+
+현재 상태: **소스·실제 owner의 수정 전 실패→수정 후 성공 및 5d2b242 기본/전체/이미지 CI 수용**. 추가 runtime qualification은 아래 별도 미해결 기록을 따른다. 최신 실제 GNU proof는 9.62초에 통과했고 flat mutable/immutable cold·dedup·변조·symlink·원본 hash/mode 보존을 검사했다. 변조 뒤 결과는 내용 변경 없는 `open(r+)`/close를 먼저 측정해 쓰기 불가면 거부·변조 보존, 기존 privileged writer이면 repair·원내용 복원을 기대한다. 결과를 본 뒤 둘 중 하나를 허용하는 검사가 아니다. 로컬 BSD 관련 선택 4/4, Python helper 35개, Node 진단 7개, 실제 Vitest cause API smoke 및 full server typecheck도 통과했다. 실제 remote recovery 13개의 fixture·root UID·cap-drop·timeout·성공 gate는 바꾸지 않았다.
+
+GNU tar를 capability 없는 UID 0으로 실행할 때 중첩 read-only directory 안에 파일을 만들지 못하는 별도 제한은 해결하지 않았다. 해당 경로는 명시적 음성 회귀로 실패와 파일 미생성을 확인했고, 기존 BSD/non-root 회귀와 보조 GNU UID 1000의 nested cold·dedup은 통과했다. 보조 UID는 inert proof에만 적용했다. 새 extractor·recursive chmod/chown·`-p`·`--no-same-permissions`·capability 확대는 없다. 이 독립 소유권 수리를 기존 remote 5개 실패 전체의 원인이나 해결 증거로 확대하지 않는다.
+
+동일 후보의 CI helper는 자동 `--rm`만 제거하고 owner label/full ID 확인·stop·명시적 remove·최종 부재 확인을 유지한다. 진단은 기존 fixture 외 정확한 owner 소스 두 파일의 위치와 고정 error-code enum만 추가하며 임의 suffix·오류 원문을 공개하지 않는다. 이 관측 보강도 stock JSON의 검사 수·skip·실패 판정을 완화하지 않는다.
+
+### 5d2b242 후속 qualification 관측과 private fixture 정리
+
+`40744500551`의 remote receipt에는 사례별 완료 결과가 없다. 약 1200초의 경과만으로 `TimeoutExpired`라고 판정하지 않으며 현재는 원인 미확정 단계 실패다. 소유 label/full ID 확인·stop exit 0·remove exit 0·최종 컨테이너 부재와 ECHILD 정리는 통과했다. 그러나 private fixture 삭제는 별도 검증하지 않았고 always cleanup도 실패했으므로 모든 정리가 완료됐다고 주장하지 않는다.
+
+독립적인 non-root read-only fixture에서는 기존 `shutil.rmtree`의 PermissionError를 재현했다. 후속 CI-only helper는 프로세스·컨테이너 종료 확인 후에만 정확한 임시 경로를 FD/O_NOFOLLOW로 열고, root와 부모 및 하위 디렉터리의 소유 UID·device·mount identity를 확인한다. 소유한 디렉터리만 owner 권한을 보완하며 symlink는 대상에 접근하지 않고 link만 제거한다. owner marker는 마지막에 정리하고 `privateCleanup` 성공/실패를 receipt에 남긴다. 이 재현은 별도 helper 결함의 증거이며 원래 remote 단계 실패의 원인이라는 뜻은 아니다.
+
+같은 helper는 공식 Vitest start/end·case·hook 이벤트마다 private 0600 atomic snapshot을 저장한다. 실행 중 중단한 작은 실제 Vitest에서 첫 사례 완료·둘째 실행 중·셋째 미시작을 보존했고 stock JSON의 실패 수는 바꾸지 않았다. Python이 필드를 다시 제한하며 부분 결과는 진단 전용으로만 사용한다. 누락된 stock report를 통과 사례 수로 대신하지 않으며 13개 gate·1200초 제한·제품 fixture는 유지한다. 다음 실행은 고정된 stage failure enum으로 host timeout·누락/잘못된 report·그 밖의 실패를 구분한다. Python 43개·Node 8개·실제 cause/partial API smoke·YAML·diff 검사를 통과해 helper 소스를 수용했다. helper `4dceaa4432b3c9802befb20e8a0818c688f50626`로 정확히 같은 제품 5d2b242를 검사하는 재실행 `40752013695`는 진행 중이다. 완료 결과가 필요하며, 이 CI-only 수정 때문에 제품 소스가 바뀐 것은 아니다.
 
 ## 공개 소스 점검 범위
 
