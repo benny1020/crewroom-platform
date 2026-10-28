@@ -181,6 +181,10 @@ CI 전용 helper `cf0b624`의 opt-in phase overlay를 소스 검토했다. Pytho
 
 후속 inspector helper `7393040`의 첫 실행 `40767981367`은 제품 checkout·Rust build·DB·컨테이너 실행 전에 offline fixture 검사에서 실패했다. 선택적 binary export 환경값이 mock pipeline에 상속되어 50개 중 5개에서 예상한 후속 stage가 만들어지지 않았다. 제품의 remote 실패로 합산하지 않으며, 미생성 fixture에 대한 always cleanup/export 실패도 실제 자원 정리 실패의 증거로 해석하지 않는다. 기본 fixture 환경을 명시적으로 격리하고 별도 diagnostic/export 경로는 inert 두 파일로 실제 export owner를 실행하도록 수정했다. 기본 환경과 동일한 job 입력 1/1에서 각각 53/53 검사가 통과했다. 13개 mock 결과가 모두 통과해도 진단 실행은 비성공·diagnostic-only로 유지하는 검사를 포함하며, 실제 제품 13개 통과 증거로 합산하지 않는다.
 
+helper `0e2b7311aafbc45a33a04648ac3367e6aa86d5e2`의 [진단 실행 `40768558880`](https://github.com/benny1020/crewroom-platform/actions/runs/40768558880)은 local 8/8과 원격 준비를 통과했으나 첫 warm 종료에서 다시 host 1,200초 제한에 도달했다. 세 번째 실행은 약 18.9초에 반환했고 첫 `close_idle`은 약 19.1초에 진입해 반환하지 않았다. inspector는 `capture_unconfirmed`, `paused:false`, `resumeConfirmed:false`, `disconnectConfirmed:true`, frame 0으로 확인되지 않았다. CPU 반복·native 대기·500ms 관측 budget 중 원인을 이 결과만으로 확정하지 않는다. 최초/복구 프로세스·컨테이너·private 정리는 모두 통과했다.
+
+선택적으로 보존한 공개 테스트 실행파일 두 개는 공식 artifact ZIP digest, manifest SHA, 제품/helper revision, toolchain, Cargo.lock, 원본/복사 SHA, Linux amd64 ELF 형식 및 MIT·제3자 고지를 확인한 뒤에만 로컬 재현에 사용했다. 재컴파일이나 모델 호출은 하지 않았다. Mac Node 24.14.0 controller·독립 Mac PostgreSQL·동일 Linux 실행파일을 사용한 제한 컨테이너에서 원본 warm 한 사례는 진단 overlay를 켰을 때 실제 1개 통과·50개 필터 제외로 정상 종료했다. 이어 overlay 없는 stock 한 사례는 90초 로컬 관측 제한으로 중단되어 완료 결과가 없었다. 같은 시점의 소유 Vitest worker CPU 100%는 관측했지만 구체적인 반복 위치를 증명하지 않는다. 두 실행 모두 전체 소유 프로세스/그룹·PG·컨테이너·임시 파일 정리를 통과했다. 따라서 Linux에만 발생하는 문제라고 단정하지 않으며, 이 로컬 비교를 원본 Linux 13개 qualification 통과로 세지 않는다.
+
 공식 upstream `25f1070fbdabd96b26cdf199e624a77905f3ca37`의 canonical checkpoint bootstrap 수정은 조사 후보이며 적용하지 않았다. `820c458465fa40137c81fe510f3e6dc573b4f895`의 remote per-turn 복원과 `a2fbce9305c48f5242e6bafb19d049d29edc1d72`의 plugin task/directory 재사용도 채택하지 않았다. 기본 Claude `runner:auto`는 지원 호스트에서 ACPX Claude·per-turn으로 정규화되지만 환경 미설정 시 local이므로 두 수정의 원격/plugin 조건과 다르다. 새 실행 증거 없이 이 커밋들을 현재 정지의 원인이나 해결책으로 단정하지 않는다.
 
 ## 공개 소스 점검 범위

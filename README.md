@@ -86,7 +86,7 @@ pnpm build
 | 기본 CI | [3개 작업 통과: 구조·집중 회귀·전체 타입 검사와 빌드](https://github.com/benny1020/crewroom-platform/actions/runs/40744488533) |
 | 전체 회귀 | [21개 작업·43개 Vitest 호출 완료, 실제 테스트 45,761개 통과·실패 0·재시도 0](https://github.com/benny1020/crewroom-platform/actions/runs/40744488638). 조건부 skip 100개는 별도입니다. [집계 증거](doc/crewroom/regression-receipt-5d2b242.json) |
 | production Docker 이미지 | [인증·초대·개인 대화/파일 권한·재시작·일관된 snapshot·새 프로젝트 복원 통과](https://github.com/benny1020/crewroom-platform/actions/runs/40744488774). [이미지 식별자·CLI 버전·검증 증거](doc/crewroom/image-receipt-5d2b242.json) |
-| 추가 실행 복구 검사 | 실제 프로세스 8개 통과. [원격 검사](https://github.com/benny1020/crewroom-platform/actions/runs/40752013695)는 첫 warm 사례가 끝나지 않아 1200초 제한으로 실패했고, 나머지 네 사례는 시작되지 않았습니다. 프로세스·컨테이너·임시 파일 정리는 통과했습니다. [본문 단계 진단](https://github.com/benny1020/crewroom-platform/actions/runs/40759000007)은 원인 확인용이며 최종 통과로 세지 않습니다. [검증 범위](doc/crewroom/RUNTIME-QUALIFICATION.ko.md) |
+| 추가 실행 복구 검사 | 실제 프로세스 8개 통과. [최신 원격 진단](https://github.com/benny1020/crewroom-platform/actions/runs/40768558880)은 세 턴 이후 첫 warm 종료가 끝나지 않아 1200초 제한으로 실패했고, 나머지 네 사례는 시작되지 않았습니다. 스택 수집은 미확인이며 프로세스·컨테이너·임시 파일 정리는 통과했습니다. 진단은 최종 통과로 세지 않습니다. [검증 범위](doc/crewroom/RUNTIME-QUALIFICATION.ko.md) |
 | 실제 외부 연결 | Claude custom endpoint 추론, GitLab 발행, EC2와 실제 도메인/TLS는 미검증입니다. |
 
 이전 제품 `13e79d1`의 45,760개 통과 기록은 [별도 영수증](doc/crewroom/regression-receipt.json)에 보존합니다. 다른 소스의 통과 수를 최신 제품에 합산하지 않습니다.
