@@ -133,11 +133,15 @@ Better Auth 1.7.7 설치 후 실제 PostgreSQL 가입 검사가 500으로 실패
 
 첫 실제 1afaaed 후보 qualification `40721425314`는 로컬 8개 중 **5개 통과·3개 실패**, remote 5개는 미수행, cleanup은 통과했다. 기존 공개 receipt만으로 세 실패의 원인은 확정하지 못했으며 제품 runtime이 수정됐다고 주장하지 않는다. 후속 CI helper는 고정된 사례 이름·상태, 고정 error-class enum, 허용된 회귀 파일 하나의 줄·열, 제한된 boolean/정수 또는 collection 길이 비교값만 공개한다. 문자열·객체 내용, 임의 경로와 원문 stack은 내보내지 않는다. 로컬 선택 사례가 모두 진입했고 소유 프로세스 정리가 확인된 경우에는 독립 remote 검사도 수행하되 로컬 실패는 최종 실패로 유지한다. 준비 실패·누락·skip·정리 불확실은 후속 실행을 막는다. 공개 Rust dependency cache는 제품 binary·DB/session/TLS fixture를 포함하지 않는다. 이 helper 수정은 **소스 검토 및 offline 19개 검사 통과**, 같은 새 후보 SHA의 실제 재실행은 대기다.
 
+234 후보 재실행도 5개 통과·3개 실패였으며 세 실패는 모두 provider 종료 대기에서 발생했다. CI helper가 subreaper로 입양한 종료 자식을 suite가 끝날 때까지 회수하지 않아 좀비도 `kill(pid, 0)`에 살아 있다고 응답하는 조건을 작은 Linux fixture에서 재현했다. CI 전용 수정은 각 Popen 생성 후 해당 PID를 보호한 회수 thread를 시작해 자기 자식만 개별 nonblocking wait로 회수하고, 다음 spawn·최종 cleanup 전에 thread 종료를 확인한다. 살아 있는 자식에는 신호를 보내지 않는다. 256 MiB·1 CPU·네트워크 없는 실제 Linux proof에서 좀비 소멸, 직접 명령 exit 7 보존, 살아 있는 입양 자식과 다른 worker의 sibling 보존, 정상·예외 경로의 join·cleanup을 확인했고 offline 검사는 24개 통과했다. 원격 준비 실패는 아직 확정되지 않았으며 고정 operation·exit code·도구 누락 여부만 추가 기록한다. 고정 Node 이미지의 필수 도구 5개는 실제 확인했으므로 이미지 교체나 timeout·skip 완화는 하지 않았다. 이 CI 소스 수정은 수용하되, 동일 제품 234를 새 helper로 검사해 기존 실패가 해소되는지 확인한 뒤 새 제품 SHA의 13개도 검증해야 한다. 이미지 CI는 측정된 cache export 지연 때문에 `cache-to`만 제거하고 `cache-from`과 기능 검사를 유지한다.
+
 ### R8 · P2 · Zod 보안 패치 뒤 댓글 길이 계약
 
 1afaaed 후보의 전체 CI에서 `agent-commentary`의 초과 본문 요청이 기존 400 대신 idempotency 충돌 409에 도달했다. Zod 4.6의 문자열 `max`가 Unicode code point를 세면서 기존 API·runner의 JavaScript UTF-16 길이 제한과 달라진 것이 원인이다. 공유 schema에 명시적인 `body.length` 검사를 추가하고 기존 `too_big` 오류 metadata와 OpenAPI `maxLength`를 보존했다. 동일 오류를 중복 추가하지 않으며 idempotency 정책은 바꾸지 않는다.
 
 현재 상태: **수정 소스 수용, shared·실제 PostgreSQL integration 2 files·32개 및 OpenAPI 28개·shared typecheck 통과**. surrogate pair·ASCII·혼합 문자열의 경계와 초과를 검사하고, HTTP의 기존/새 idempotency key 및 native 경로에서 초과 본문이 prior retry 조회보다 먼저 거절되는 것을 확인했다. 같은 새 후보의 원격 전체 회귀는 대기다. 이 수정의 범위는 agent commentary이며 다른 문자열 정책을 함께 변경한 것으로 해석하지 않는다.
+
+뒤따른 metadata 검사에서 도구 description에 연결된 generated JSON 갱신 누락도 보완했다. 공식 generator가 두 description, seeded catalog hash, fixture manifest hash의 세 파일을 재생성했고 관련 10개 check가 통과했다. source diff도 해당 설명·hash 연결만 바뀐 것을 확인했으며 Rust 실행이나 runtime 동작 변경의 증거로 세지 않는다.
 
 ## 공개 소스 점검 범위
 

@@ -8,7 +8,7 @@ import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, call, patch
 
 spec = importlib.util.spec_from_file_location("qualification", Path(__file__).with_name("crewroom-runtime-qualification.py"))
 qualification = importlib.util.module_from_spec(spec)
@@ -124,6 +124,39 @@ class SafeDiagnosticsTests(unittest.TestCase):
         self.assertFalse(qualification.selected_cases_entered(report(qualification.LOCAL_CASES + [qualification.LOCAL_CASES[0]]), qualification.LOCAL_CASES))
 
 
+class AdoptedReaperTests(unittest.TestCase):
+    def test_protected_direct_child_is_never_waited_and_live_adopted_child_is_not_killed(self):
+        reaper = qualification.AdoptedZombieReaper(42)
+        def wait_one(pid, _flags):
+            return (43, 0) if pid == 43 else (0, 0)
+        with patch.object(Path, "read_text", return_value="42 43 44"), \
+             patch.object(qualification.os, "waitpid", side_effect=wait_one) as waitpid, \
+             patch.object(qualification.os, "kill") as kill, \
+             patch.object(reaper.done, "wait", side_effect=lambda _timeout: reaper.done.set()):
+            reaper._loop()
+        self.assertEqual(waitpid.call_args_list, [call(43, os.WNOHANG), call(44, os.WNOHANG)])
+        self.assertEqual(reaper.reaped, 1)
+        self.assertFalse(reaper.error)
+        kill.assert_not_called()
+
+    def test_reaper_read_error_is_reported_to_main_after_join(self):
+        reaper = qualification.AdoptedZombieReaper(42)
+        with patch.object(Path, "read_text", side_effect=OSError("synthetic private detail")):
+            reaper._loop()
+        self.assertTrue(reaper.error)
+        reaper.thread = SimpleNamespace(join=Mock(), is_alive=lambda: False)
+        with self.assertRaisesRegex(qualification.QualificationFailure, "^adopted_reaper_failed$"):
+            reaper.stop()
+        self.assertTrue(reaper.joined)
+
+    def test_unconfirmed_join_cannot_report_a_stopped_thread(self):
+        reaper = qualification.AdoptedZombieReaper(42)
+        reaper.thread = SimpleNamespace(join=Mock(), is_alive=lambda: True)
+        with self.assertRaisesRegex(qualification.QualificationFailure, "^adopted_reaper_join_unconfirmed$"):
+            reaper.stop()
+        self.assertFalse(reaper.joined)
+
+
 class PipelineControlTests(unittest.TestCase):
     def run_mock_pipeline(self, mode="assertion_failure"):
         # Exercise the actual helper orchestration without starting commands,
@@ -140,13 +173,38 @@ class PipelineControlTests(unittest.TestCase):
             output = root / "public"
             commands = []
             cleanup_calls = []
+            active_reapers = []
+
+            class FakeReaper:
+                def __init__(self, protected_pid):
+                    self.protected_pid = protected_pid
+                    self.joined = False
+                    self.reaped = 0
+
+                def start(self):
+                    active_reapers.append(self)
+
+                def stop(self):
+                    active_reapers.remove(self)
+                    self.joined = True
+                    if mode == "reaper_error":
+                        raise qualification.QualificationFailure("adopted_reaper_failed")
+                    if mode == "reaper_join_failure":
+                        self.joined = False
+                        active_reapers.append(self)
+                        raise qualification.QualificationFailure("adopted_reaper_join_unconfirmed")
 
             def cleanup_children():
+                if active_reapers:
+                    raise AssertionError("cleanup raced a command reaper")
                 cleanup_calls.append(True)
                 return not (mode == "cleanup_failure" and len(cleanup_calls) == 1)
 
             class FakeProcess:
                 def __init__(self, command, **_kwargs):
+                    if active_reapers:
+                        raise AssertionError("next spawn raced a command reaper")
+                    self.pid = 12345
                     commands.append(command)
                     self.returncode = 0
                     self.stdout = b""
@@ -168,6 +226,10 @@ class PipelineControlTests(unittest.TestCase):
                         self.stdout = b"owned-container-id"
                     elif command[:2] == ["docker", "inspect"]:
                         self.stdout = b'[{"HostConfig":{"Binds":null,"Privileged":false}}]'
+                    elif command[:2] == ["docker", "pull"] and mode == "image_pull_failure":
+                        self.returncode = 125
+                    elif command[:2] == ["docker", "exec"] and command[-1] == "setsid" and mode == "missing_tool":
+                        self.returncode = 127
                     elif command[:2] == ["docker", "port"]:
                         self.stdout = b"127.0.0.1:43210"
                     elif command[:2] == ["docker", "exec"] and command[-2:] == ["node", "--version"]:
@@ -200,6 +262,7 @@ class PipelineControlTests(unittest.TestCase):
                      patch.object(qualification.sys, "platform", "linux"), \
                      patch.object(qualification.ctypes, "CDLL", return_value=SimpleNamespace(prctl=lambda *_args: 0)), \
                      patch.object(qualification.subprocess, "Popen", FakeProcess), \
+                     patch.object(qualification, "AdoptedZombieReaper", FakeReaper), \
                      patch.object(qualification.subprocess, "run", return_value=SimpleNamespace(stdout="b" * 40)), \
                      patch.object(qualification, "owned_children_cleanup", side_effect=cleanup_children), \
                      patch.object(qualification, "container_cleanup", return_value=True), \
@@ -219,6 +282,23 @@ class PipelineControlTests(unittest.TestCase):
         self.assertEqual(receipt["stages"]["remote_continuity"]["passed"], 5)
         self.assertEqual(receipt["stages"]["cleanup"]["status"], "passed")
         self.assertEqual(sum("vitest" in command for command in commands), 2)
+
+    def test_remote_preparation_reports_only_fixed_operation_exit_and_missing_tool(self):
+        code, receipt, _commands = self.run_mock_pipeline("image_pull_failure")
+        self.assertEqual(code, 1)
+        self.assertEqual(receipt["stages"]["remote_container"]["operations"], [{"operation": "image_pull", "status": "failed", "exitCode": 125}])
+        code, receipt, _commands = self.run_mock_pipeline("missing_tool")
+        self.assertEqual(code, 1)
+        self.assertEqual(receipt["stages"]["remote_container"]["missingTools"], {"node": False, "ps": False, "setsid": True, "tar": False, "base64": False})
+        self.assertNotIn("remote_continuity", receipt["stages"])
+
+    def test_thread_failure_fails_closed_and_unconfirmed_join_blocks_general_cleanup(self):
+        for mode in ["reaper_error", "reaper_join_failure"]:
+            code, receipt, commands = self.run_mock_pipeline(mode)
+            self.assertEqual(code, 1)
+            self.assertEqual(receipt["stages"]["adopted_child_reaping"]["status"], "failed")
+            self.assertEqual(receipt["stages"]["cleanup"]["status"], "failed" if mode == "reaper_join_failure" else "passed")
+            self.assertEqual(len(commands), 1)
 
     def test_preparation_or_unconfirmed_cleanup_never_starts_remote(self):
         for mode in ["preparation_failure", "cleanup_failure"]:

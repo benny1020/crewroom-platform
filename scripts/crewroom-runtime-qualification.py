@@ -13,6 +13,7 @@ import signal
 import subprocess
 import sys
 import time
+import threading
 
 RECOVERY_FILE = "server/src/services/native-runtime/native-runner-restart-recovery.integration.test.ts"
 RUNNER = "packages/paperclip-runner/runner/target/debug/paperclip-runnerd"
@@ -171,6 +172,54 @@ def report_diagnostics(report, expected, source):
     return cases
 
 
+class AdoptedZombieReaper:
+    """One command's adopted children; never consume its Popen wait status.
+
+    Construct/start only after Popen has returned its immutable protected PID.
+    Stop/join before a next spawn, direct subprocess.run or final broad cleanup.
+    """
+    def __init__(self, protected_pid):
+        self.protected_pid = protected_pid
+        self.parent_pid = os.getpid()
+        self.done = threading.Event()
+        self.thread = threading.Thread(target=self._loop, name="qualification-adopted-reaper", daemon=True)
+        self.error = False
+        self.reaped = 0
+        self.joined = False
+
+    def start(self):
+        self.thread.start()
+
+    def _loop(self):
+        try:
+            children = Path(f"/proc/self/task/{self.parent_pid}/children")
+            while not self.done.is_set():
+                for value in children.read_text().split():
+                    pid = int(value)
+                    if pid == self.protected_pid:
+                        continue
+                    # Kernel child ownership is rechecked by waitpid. WNOHANG
+                    # never signals or stops a still-live adopted child. The
+                    # protected direct Popen child is never passed to waitpid.
+                    try:
+                        reaped, _status = os.waitpid(pid, os.WNOHANG)
+                        self.reaped += int(reaped != 0)
+                    except ChildProcessError:
+                        pass
+                self.done.wait(0.02)
+        except Exception:
+            self.error = True
+
+    def stop(self):
+        self.done.set()
+        self.thread.join(timeout=5)
+        self.joined = not self.thread.is_alive()
+        if not self.joined:
+            raise QualificationFailure("adopted_reaper_join_unconfirmed")
+        if self.error:
+            raise QualificationFailure("adopted_reaper_failed")
+
+
 def owned_children_cleanup():
     # This helper is a subreaper. Only its own unreaped direct children are
     # signalled; no process-name scan, borrowed PID or unrelated service is used.
@@ -250,6 +299,9 @@ def run_qualification(source, output):
     stage = "preflight"
     qualification_passed = True
     current = None
+    active_reaper = None
+    reaped_children = 0
+    reaper_failed = False
     # Build/test children receive no ambient provider/account credentials.
     allowed = ["PATH", "HOME", "USER", "LOGNAME", "SHELL", "LANG", "LC_ALL", "RUSTUP_HOME", "CARGO_HOME", "PNPM_HOME", "COREPACK_HOME"]
     child_env = {name: os.environ[name] for name in allowed if name in os.environ}
@@ -258,14 +310,21 @@ def run_qualification(source, output):
                      PAPERCLIP_TELEMETRY_DISABLED="1", PAPERCLIP_ANNOUNCEMENTS_ENABLED="false", HEARTBEAT_SCHEDULER_ENABLED="false",
                      PAPERCLIP_TEST_CONTROLLER_OUTAGE_MS="1000", TMPDIR=str(private))
 
-    def run(command, timeout=600, capture=False, env=None, allow_failure=False):
-        nonlocal current
+    def run(command, timeout=600, capture=False, env=None, allow_failure=False, diagnostic=None):
+        nonlocal current, active_reaper, reaped_children, reaper_failed
         log = private / (stage + ".log")
         with log.open("ab") as stream:
             current = subprocess.Popen(command, cwd=source, env=env or child_env, start_new_session=True,
                                        stdout=subprocess.PIPE if capture else stream, stderr=stream)
             try:
+                # Spawn registration is complete before this command-scoped
+                # reaper can run. No other direct subprocess is created until
+                # it has stopped and joined in finally.
+                active_reaper = AdoptedZombieReaper(current.pid)
+                active_reaper.start()
                 stdout, _ = current.communicate(timeout=timeout)
+                if diagnostic is not None:
+                    diagnostic["exitCode"] = current.returncode
                 if current.returncode and not allow_failure:
                     raise QualificationFailure("command_failed")
                 return stdout.decode().strip() if capture else current.returncode
@@ -279,7 +338,17 @@ def run_qualification(source, output):
                         current.wait()
                 raise
             finally:
-                current = None
+                try:
+                    if active_reaper is not None:
+                        active_reaper.stop()
+                except Exception:
+                    reaper_failed = True
+                    raise
+                finally:
+                    if active_reaper is not None and active_reaper.joined:
+                        reaped_children += active_reaper.reaped
+                        active_reaper = None
+                    current = None
 
     try:
         if platform.machine() != "x86_64":
@@ -343,34 +412,61 @@ def run_qualification(source, output):
             raise QualificationFailure("local_process_cleanup_unconfirmed")
         receipt["stages"][stage] = {"status": "passed"}
         stage = "remote_container"
+        remote_details = {"status": "running", "operations": [], "missingTools": {}}
+        receipt["stages"][stage] = remote_details
+
+        def prepare(operation, command, *, tool=None, **options):
+            allowed_operations = {"image_pull", "container_start", "isolation_probe", "required_tool", "node_version",
+                                  "provider_directory", "provider_copy", "provider_permissions", "port_probe", "tls_fixture"}
+            if operation not in allowed_operations or (tool is not None and tool not in ["node", "ps", "setsid", "tar", "base64"]):
+                raise QualificationFailure("preparation_operation_invalid")
+            detail = {"operation": operation, "status": "running"}
+            if tool is not None:
+                detail["tool"] = tool
+            remote_details["operations"].append(detail)
+            try:
+                result = run(command, diagnostic=detail, **options)
+                detail["status"] = "passed" if detail.get("exitCode") == 0 else "failed"
+                return result
+            except BaseException:
+                detail["status"] = "failed"
+                raise
+
         name = "crewroom-qualification-" + os.environ["GITHUB_RUN_ID"] + "-" + os.environ["GITHUB_RUN_ATTEMPT"]
         state["container"] = name
         state_path.write_text(json.dumps(state))
-        run(["docker", "pull", IMAGE], timeout=300)
-        container_id = run(["docker", "run", "-d", "--rm", "--init", "--name", name, "--label", OWNER_LABEL + "=" + state["owner"],
+        prepare("image_pull", ["docker", "pull", IMAGE], timeout=300)
+        container_id = prepare("container_start", ["docker", "run", "-d", "--rm", "--init", "--name", name, "--label", OWNER_LABEL + "=" + state["owner"],
                             "--memory", "2g", "--cpus", "2", "--pids-limit", "256", "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
                             "--publish", "127.0.0.1::43127", "--entrypoint", "/bin/sh", IMAGE, "-c", "exec sleep infinity"], capture=True)
         state["containerId"] = container_id
         state_path.write_text(json.dumps(state))
-        inspection = json.loads(run(["docker", "inspect", container_id], capture=True))[0]
-        if inspection["HostConfig"].get("Binds") or inspection["HostConfig"].get("Privileged"):
+        inspection = json.loads(prepare("isolation_probe", ["docker", "inspect", container_id], capture=True))[0]
+        remote_details["isolationValid"] = not (inspection["HostConfig"].get("Binds") or inspection["HostConfig"].get("Privileged"))
+        if not remote_details["isolationValid"]:
             raise QualificationFailure("container_isolation_mismatch")
-        run(["docker", "exec", name, "sh", "-c", "command -v node && command -v ps && command -v setsid && command -v tar && command -v base64"])
-        if run(["docker", "exec", name, "node", "--version"], capture=True) != "v24.14.0":
+        for tool in ["node", "ps", "setsid", "tar", "base64"]:
+            tool_code = prepare("required_tool", ["docker", "exec", name, "sh", "-c", 'command -v "$1" >/dev/null 2>&1', "qualification-tool", tool], tool=tool, allow_failure=True)
+            remote_details["missingTools"][tool] = tool_code != 0
+        if any(remote_details["missingTools"].values()):
+            raise QualificationFailure("container_required_tool_missing")
+        remote_details["nodeVersionMatches"] = prepare("node_version", ["docker", "exec", name, "node", "--version"], capture=True) == "v24.14.0"
+        if not remote_details["nodeVersionMatches"]:
             raise QualificationFailure("container_node_mismatch")
-        run(["docker", "exec", "-u", "root", name, "mkdir", "-p", "/opt/continuity"])
-        run(["docker", "cp", str(provider), name + ":/opt/continuity/fake-codex-app-server"])
-        run(["docker", "exec", "-u", "root", name, "chmod", "755", "/opt/continuity/fake-codex-app-server"])
-        port = run(["docker", "port", name, "43127/tcp"], capture=True)
-        if not re.fullmatch(r"127\.0\.0\.1:[0-9]+", port):
+        prepare("provider_directory", ["docker", "exec", "-u", "root", name, "mkdir", "-p", "/opt/continuity"])
+        prepare("provider_copy", ["docker", "cp", str(provider), name + ":/opt/continuity/fake-codex-app-server"])
+        prepare("provider_permissions", ["docker", "exec", "-u", "root", name, "chmod", "755", "/opt/continuity/fake-codex-app-server"])
+        port = prepare("port_probe", ["docker", "port", name, "43127/tcp"], capture=True)
+        remote_details["portLoopbackValid"] = re.fullmatch(r"127\.0\.0\.1:[0-9]+", port) is not None
+        if not remote_details["portLoopbackValid"]:
             raise QualificationFailure("published_port_not_loopback")
         key, cert = private / "continuity.key", private / "continuity.crt"
-        run(["openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", str(key), "-out", str(cert),
+        prepare("tls_fixture", ["openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", str(key), "-out", str(cert),
              "-days", "1", "-subj", "/CN=localhost", "-addext", "subjectAltName=IP:127.0.0.1,DNS:localhost"])
         wrapper = private / "fake-codex"
         wrapper.write_text('#!/bin/sh\nif [ "$1" = "--version" ]; then\n  echo "codex-cli 0.999.0"\n  exit 0\nfi\nexec /opt/continuity/fake-codex-app-server --state-file-in-codex-home --durable-turn-ids --record-process-start --call-log "$PWD/provider-calls.log" "$@"\n')
         wrapper.chmod(0o700)
-        receipt["stages"][stage] = {"status": "passed"}
+        remote_details["status"] = "passed"
         stage = "remote_continuity"
         remote_report = private / "remote-report.json"
         remote_env = {**child_env, "NODE_EXTRA_CA_CERTS": str(cert), "PAPERCLIP_TEST_RUNNER_TLS_KEY": str(key),
@@ -397,12 +493,19 @@ def run_qualification(source, output):
     finally:
         for event in [signal.SIGINT, signal.SIGTERM]:
             signal.signal(event, signal.SIG_IGN)
+        # A reaper that did not join must not race a new Docker Popen or the
+        # final waitpid(-1) cleanup. Keep the owner state for always() recovery.
+        reaper_joined = active_reaper is None
         container_ok = False
-        try:
-            container_ok = container_cleanup(state)
-        except Exception:
-            pass
-        cleanup_ok = owned_children_cleanup() and container_ok
+        children_ok = False
+        if reaper_joined:
+            try:
+                container_ok = container_cleanup(state)
+            except Exception:
+                pass
+            children_ok = owned_children_cleanup()
+        cleanup_ok = reaper_joined and children_ok and container_ok
+        receipt["stages"]["adopted_child_reaping"] = {"status": "passed" if reaper_joined and not reaper_failed else "failed", "reaped": reaped_children}
         receipt["stages"]["cleanup"] = {"status": "passed" if cleanup_ok else "failed"}
         if not cleanup_ok:
             receipt["status"] = "failed"

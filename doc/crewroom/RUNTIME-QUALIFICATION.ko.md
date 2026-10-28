@@ -10,7 +10,7 @@ Ubuntu 24.04 x64에서 Node 24.14.0, pnpm 9.15.4, Rust 1.97.1을 사용한다. F
 
 1. Recovery 파일을 실행하고 `realProcessIt`의 확장된 이름 8개가 각각 정확히 한 번 `passed`인지 확인한다. 실제 PostgreSQL checkpoint 쓰기, controller 파일 유실, hot/hard restart, prompt 호환성, 격리된 이전 journal 복구를 다룬다.
 2. 자격증명 없는 fake provider를 담은 disposable Node 24.14.0 trixie amd64 container에서 remote `warm`, `hard`, `legacy`, `changed`, `same-server` 5개를 실행한다. 이미지 digest를 고정하고 localhost에 자동 할당한 포트만 게시한다. 테스트용 TLS 인증서와 키는 임시 생성한다.
-3. 선택한 사례가 누락·중복·실패·skip되면 실패한다. 로컬 8개가 모두 실제 진입했고 assertion 실패만 있는 경우에는 소유 프로세스 정리를 확인한 뒤 독립 원격 5개도 실행해 결과를 수집한다. 준비 실패·누락·skip 또는 정리 불확실이면 후속 검사를 시작하지 않는다. 로컬 실패는 원격 성공으로 덮어쓰지 않는다. 두 번째 `-t` 실행에서 선택하지 않아 pending인 다른 사례는 `unselectedSkipped`로 별도 기록하며 13개 qualification 성공에 포함하지 않는다.
+3. 선택한 사례가 누락·중복·실패·skip되면 실패한다. 로컬 8개가 모두 실제 진입했고 개별 검사 실패가 있는 경우에는 소유 프로세스 정리를 확인한 뒤 독립 원격 5개도 실행해 결과를 수집한다. 준비 실패·누락·skip 또는 정리 불확실이면 후속 검사를 시작하지 않는다. 로컬 실패는 원격 성공으로 덮어쓰지 않는다. 두 번째 `-t` 실행에서 선택하지 않아 pending인 다른 사례는 `unselectedSkipped`로 별도 기록하며 13개 qualification 성공에 포함하지 않는다.
 
 컨테이너는 2 GiB/2 CPU/256 PID 제한, `--init`, capability 전체 제거와 `no-new-privileges`를 사용한다. 호스트 디렉터리나 Docker socket을 mount하지 않고 privileged 실행이나 호스트 sysctl 변경도 하지 않는다. Docker 제어는 호스트의 기존 테스트 helper가 수행한다. 임시 fake provider, TLS 키, PostgreSQL, 세션 상태와 원문 Vitest JSON은 공개 artifact에 넣지 않는다.
 
@@ -19,3 +19,10 @@ Ubuntu 24.04 x64에서 Node 24.14.0, pnpm 9.15.4, Rust 1.97.1을 사용한다. F
 Rust 재실행은 기존 SHA로 고정된 rust-cache action으로 공개 dependency cache를 재사용한다. Workspace crate·제품 실행 binary·테스트 상태·TLS/DB/session fixture는 캐시 대상에서 제외한다. 테스트 실패 뒤에도 dependency cache만 저장할 수 있으며 테스트 통과 판정에는 영향을 주지 않는다.
 
 로컬에서는 이 CI를 대신하는 무거운 실행을 하지 않았다. Python gate/cleanup의 offline 검사와 workflow 구문 검사는 런타임 13개 통과 증거가 아니며, 실제 결과는 해당 제품 SHA의 GitHub Actions receipt로 확인한다.
+
+
+명령별 자식 회수 helper는 `Popen` 생성이 끝난 뒤 그 PID를 보호한 thread를 시작한다. 명령이 실행 중일 때 helper에 입양된 종료 자식만 `waitpid(pid, WNOHANG)`으로 회수하므로, 실제 종료한 provider를 좀비 상태로 남겨 `kill(pid, 0)` 검사가 살아 있다고 오인하는 것을 막는다. 살아 있는 자식에게 신호를 보내지 않으며 직접 `Popen`의 종료 코드를 소비하지 않는다. 다음 명령·전체 정리 전에 thread stop/join을 확인하고, thread 오류나 종료 불확실은 실패 처리한다. 전역 SIGCHLD handler나 실행 중의 `waitpid(-1)` 회수는 사용하지 않는다.
+
+작은 Linux proof는 회수 전 좀비 재현, 명령 실행 중 소멸, 직접 종료 코드 7 보존, 살아 있는 입양 자식 보존, 예외 정리·thread join, worker 밖 sibling 보존을 검사한다. 원격 준비 receipt는 고정 operation과 exit code, 필요한 다섯 tool의 missing boolean만 남겨 image pull·컨테이너 시작·tool·TLS 준비 중 실패한 지점을 구분한다. Docker 원문 출력이나 준비용 비밀 파일은 공개하지 않는다.
+
+로컬의 작은 Linux 컨테이너 검증은 1 CPU·256 MiB·network none에서 위 child-reaper proof 전체를 통과했다. 최대 개별 child RSS는 18,860 KiB였으며 합산 peak 메모리 측정값은 아니다. 예외·worker 실패 시 외부 proof owner도 자신의 입양 자식을 정리한 뒤 임시 fixture를 제거한다. 고정된 공식 Node 이미지 digest의 별도 동일 제한 probe에서는 Node v24.14.0과 `node`·`ps`·`setsid`·`tar`·`base64` 존재를 확인했다. 이것은 CI의 원격 준비 실패 원인을 확정한 결과가 아니므로 이미지나 package를 바꾸지 않았다. 제품의 8+5 qualification 통과 여부는 수정된 helper로 같은 제품 SHA를 다시 실행한 receipt가 필요하다.
