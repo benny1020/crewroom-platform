@@ -61,6 +61,23 @@ def digest(path):
     return sha.hexdigest()
 
 
+def stage_public_provider(provider, private, expected_sha256):
+    """Normalize only a private copy of the public build artifact, not source.
+
+    Docker cp can retain the host UID. With all capabilities dropped, container
+    root cannot chmod another UID's 0700 file. A readable/executable copy avoids
+    any container privilege or ownership change.
+    """
+    if not provider.is_file() or provider.stat().st_uid != os.getuid() or digest(provider) != expected_sha256:
+        raise QualificationFailure("provider_source_artifact_mismatch")
+    staged = private / "remote-fake-codex-app-server"
+    shutil.copyfile(provider, staged)
+    staged.chmod(0o555)
+    if digest(staged) != expected_sha256 or digest(provider) != expected_sha256:
+        raise QualificationFailure("provider_staged_artifact_mismatch")
+    return staged
+
+
 def report_counts(report, expected, only_selected=False):
     assertions = [case for suite in report.get("testResults", []) for case in suite.get("assertionResults", [])]
     selected = [case for case in assertions if case.get("title") in expected]
@@ -417,7 +434,7 @@ def run_qualification(source, output):
 
         def prepare(operation, command, *, tool=None, **options):
             allowed_operations = {"image_pull", "container_start", "isolation_probe", "required_tool", "node_version",
-                                  "provider_directory", "provider_copy", "provider_permissions", "port_probe", "tls_fixture"}
+                                  "provider_directory", "provider_copy", "provider_permissions", "provider_hash", "port_probe", "tls_fixture"}
             if operation not in allowed_operations or (tool is not None and tool not in ["node", "ps", "setsid", "tar", "base64"]):
                 raise QualificationFailure("preparation_operation_invalid")
             detail = {"operation": operation, "status": "running"}
@@ -453,9 +470,20 @@ def run_qualification(source, output):
         remote_details["nodeVersionMatches"] = prepare("node_version", ["docker", "exec", name, "node", "--version"], capture=True) == "v24.14.0"
         if not remote_details["nodeVersionMatches"]:
             raise QualificationFailure("container_node_mismatch")
+        remote_details["providerStagingValid"] = False
+        staged_provider = stage_public_provider(provider, private, receipt["binaries"]["fakeProvider"]["sha256"])
+        remote_details["providerStagingValid"] = True
         prepare("provider_directory", ["docker", "exec", "-u", "root", name, "mkdir", "-p", "/opt/continuity"])
-        prepare("provider_copy", ["docker", "cp", str(provider), name + ":/opt/continuity/fake-codex-app-server"])
-        prepare("provider_permissions", ["docker", "exec", "-u", "root", name, "chmod", "755", "/opt/continuity/fake-codex-app-server"])
+        prepare("provider_copy", ["docker", "cp", str(staged_provider), name + ":/opt/continuity/fake-codex-app-server"])
+        # Match the existing Docker command runner's execution UID. Capability
+        # set stays empty; check permissions rather than trying to change them.
+        prepare("provider_permissions", ["docker", "exec", "-u", "root", name, "sh", "-c",
+                'test -r /opt/continuity && test -x /opt/continuity && test -r /opt/continuity/fake-codex-app-server && test -x /opt/continuity/fake-codex-app-server'])
+        container_hash = prepare("provider_hash", ["docker", "exec", "-u", "root", name, "node", "-e",
+                'const fs=require("node:fs"),crypto=require("node:crypto");process.stdout.write(crypto.createHash("sha256").update(fs.readFileSync("/opt/continuity/fake-codex-app-server")).digest("hex"));'], capture=True)
+        remote_details["providerHashMatches"] = container_hash == receipt["binaries"]["fakeProvider"]["sha256"]
+        if not remote_details["providerHashMatches"]:
+            raise QualificationFailure("container_provider_artifact_mismatch")
         port = prepare("port_probe", ["docker", "port", name, "43127/tcp"], capture=True)
         remote_details["portLoopbackValid"] = re.fullmatch(r"127\.0\.0\.1:[0-9]+", port) is not None
         if not remote_details["portLoopbackValid"]:

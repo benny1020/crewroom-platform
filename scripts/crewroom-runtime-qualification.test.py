@@ -124,6 +124,33 @@ class SafeDiagnosticsTests(unittest.TestCase):
         self.assertFalse(qualification.selected_cases_entered(report(qualification.LOCAL_CASES + [qualification.LOCAL_CASES[0]]), qualification.LOCAL_CASES))
 
 
+class PublicArtifactStagingTests(unittest.TestCase):
+    def test_normalizes_only_copy_and_preserves_original_bytes_and_mode(self):
+        with tempfile.TemporaryDirectory(prefix="provider-staging-offline-") as directory:
+            root = Path(directory)
+            provider = root / "built-provider"
+            provider.write_bytes(b"synthetic public compiled artifact")
+            provider.chmod(0o700)
+            expected = qualification.digest(provider)
+            staged = qualification.stage_public_provider(provider, root, expected)
+            self.assertNotEqual(staged, provider)
+            self.assertEqual(staged.stat().st_mode & 0o777, 0o555)
+            self.assertEqual(provider.stat().st_mode & 0o777, 0o700)
+            self.assertEqual(qualification.digest(staged), expected)
+            self.assertEqual(qualification.digest(provider), expected)
+
+    def test_rejects_source_or_staged_hash_mismatch(self):
+        with tempfile.TemporaryDirectory(prefix="provider-staging-offline-") as directory:
+            root = Path(directory)
+            provider = root / "built-provider"
+            provider.write_bytes(b"synthetic public compiled artifact")
+            with self.assertRaisesRegex(qualification.QualificationFailure, "^provider_source_artifact_mismatch$"):
+                qualification.stage_public_provider(provider, root, "0" * 64)
+            with patch.object(qualification.shutil, "copyfile", side_effect=lambda _source, destination: destination.write_bytes(b"changed bytes")):
+                with self.assertRaisesRegex(qualification.QualificationFailure, "^provider_staged_artifact_mismatch$"):
+                    qualification.stage_public_provider(provider, root, qualification.digest(provider))
+
+
 class AdoptedReaperTests(unittest.TestCase):
     def test_protected_direct_child_is_never_waited_and_live_adopted_child_is_not_killed(self):
         reaper = qualification.AdoptedZombieReaper(42)
@@ -230,6 +257,10 @@ class PipelineControlTests(unittest.TestCase):
                         self.returncode = 125
                     elif command[:2] == ["docker", "exec"] and command[-1] == "setsid" and mode == "missing_tool":
                         self.returncode = 127
+                    elif command[:2] == ["docker", "exec"] and "node" in command and "-e" in command:
+                        self.stdout = ("0" * 64 if mode == "provider_hash_failure" else qualification.digest(source / qualification.PROVIDER)).encode()
+                    elif command[:2] == ["docker", "exec"] and command[-1].startswith("test -r /opt/continuity") and mode == "provider_permissions_failure":
+                        self.returncode = 1
                     elif command[:2] == ["docker", "port"]:
                         self.stdout = b"127.0.0.1:43210"
                     elif command[:2] == ["docker", "exec"] and command[-2:] == ["node", "--version"]:
@@ -291,6 +322,25 @@ class PipelineControlTests(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertEqual(receipt["stages"]["remote_container"]["missingTools"], {"node": False, "ps": False, "setsid": True, "tar": False, "base64": False})
         self.assertNotIn("remote_continuity", receipt["stages"])
+
+    def test_provider_preparation_uses_normalized_copy_and_hash_without_chmod_or_extra_capabilities(self):
+        code, receipt, commands = self.run_mock_pipeline()
+        self.assertEqual(code, 1)  # Local assertion failures still keep the job failed.
+        self.assertTrue(receipt["stages"]["remote_container"]["providerStagingValid"])
+        self.assertTrue(receipt["stages"]["remote_container"]["providerHashMatches"])
+        self.assertFalse(any(command[:2] == ["docker", "exec"] and "chmod" in command for command in commands))
+        self.assertFalse(any("--cap-add" in command or "--privileged" in command for command in commands))
+        copied = next(command for command in commands if command[:2] == ["docker", "cp"])
+        self.assertTrue(copied[2].endswith("/private/remote-fake-codex-app-server"))
+
+    def test_provider_permission_or_hash_failure_stops_before_remote_tests(self):
+        for mode in ["provider_permissions_failure", "provider_hash_failure"]:
+            code, receipt, _commands = self.run_mock_pipeline(mode)
+            self.assertEqual(code, 1)
+            self.assertNotIn("remote_continuity", receipt["stages"])
+            self.assertEqual(receipt["stages"]["remote_container"]["status"], "failed")
+            if mode == "provider_hash_failure":
+                self.assertFalse(receipt["stages"]["remote_container"]["providerHashMatches"])
 
     def test_thread_failure_fails_closed_and_unconfirmed_join_blocks_general_cleanup(self):
         for mode in ["reaper_error", "reaper_join_failure"]:
