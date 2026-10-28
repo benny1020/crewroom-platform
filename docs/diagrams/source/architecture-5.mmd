@@ -1,8 +1,0 @@
-flowchart TB
-    PUSH["main push 또는 PR"] --> INSTALL["Node 24 / npm ci --ignore-scripts"]
-    INSTALL --> CHECK["문법 / 문서 링크 / 미디어 해시 / 도메인 13건 / Vite build"]
-    CHECK --> E2E["Chromium 시나리오 23건"]
-    E2E --> MAIN{"main push인가"}
-    MAIN -->|"예"| UPLOAD["dist 업로드"]
-    UPLOAD --> DEPLOY["GitHub Pages 배포"]
-    MAIN -->|"PR"| STOP["검증 완료"]

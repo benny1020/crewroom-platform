@@ -1,8 +1,0 @@
-FROM node:24-alpine
-# The job image has no credentials or Docker socket. Custom images may extend
-# this pinned image with build tools and offline dependencies.
-WORKDIR /opt/crewroom
-COPY runner/archive.mjs ./archive.mjs
-COPY runner/job ./job
-USER node
-CMD ["node","/opt/crewroom/job/idle.mjs"]

@@ -1,7 +1,0 @@
-# Copy/edit the profile locally; version checks and dependency hashes in the configured project repository.
-services:
-  runner:
-    environment:
-      RUNNER_CHECKS_FILE: /run/crewroom/profile.json
-    volumes:
-      - ./deploy/runner-profile.example.json:/run/crewroom/profile.json:ro

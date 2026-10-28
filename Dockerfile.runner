@@ -1,8 +1,0 @@
-FROM docker:29-cli AS dockercli
-FROM node:24-alpine
-RUN apk add --no-cache git
-COPY --from=dockercli /usr/local/bin/docker /usr/local/bin/docker
-WORKDIR /app
-COPY runner ./runner
-ENV HOST=0.0.0.0 PORT=4191 RUNNER_STATE_DIR=/state
-CMD ["node","runner/server.mjs"]

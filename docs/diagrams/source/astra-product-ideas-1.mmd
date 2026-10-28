@@ -1,9 +1,0 @@
-flowchart TB
-    INPUT["PR 링크 · 원하는 결과"] --> SCOPE["대상 버전 · 공개 범위 확인"]
-    SCOPE --> FIND{"접근 가능한<br/>관련 업무가 있는가"}
-    FIND -->|"있음"| CHOICE["기존 업무 참여 / 별도 업무 선택"]
-    FIND -->|"없음"| NEW["기본 담당 · 스킬 · 완료 기준"]
-    CHOICE --> ROOM["공유 업무방"]
-    NEW --> ROOM
-    ROOM --> BRIEF["현재 업무 요약 · 근거 · 다음 행동"]
-    BRIEF --> HANDOFF["다른 팀원과 Agent가 이어받기"]
