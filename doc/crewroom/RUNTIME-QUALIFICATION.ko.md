@@ -29,3 +29,10 @@ Rust 재실행은 기존 SHA로 고정된 rust-cache action으로 공개 depende
 
 
 원격 fake provider는 제품의 build artifact 자체를 chmod하지 않고 helper의 private staging copy만 `0555`로 만든 뒤 복사한다. Docker copy가 호스트 UID를 유지하면 capability 없는 컨테이너 root는 다른 UID의 `0700` 파일을 chmod할 수 없다. 동일한 고정 이미지·1 CPU·256 MiB·network none의 dummy artifact probe에서 이 상태를 재현했다(호스트/복사 파일 UID 501, 실행 UID 0, CapEff 0, 기존 chmod exit 1). 정규화한 staging copy는 UID가 달라도 directory/file read+execute, 원본·staged·컨테이너 SHA-256 일치와 dummy 실행 exit 0을 확인했다. 원본 artifact의 mode·hash는 바꾸지 않았으며, 컨테이너 capability 추가·privileged 실행도 사용하지 않았다. 실제 remote 5개는 다음 qualification receipt가 필요하다.
+
+
+원문을 보존하지 않는 infrastructure cause reporter를 stock JSON reporter와 병용한다. 공식 `onTestCaseResult` API의 `result().errors[].cause`를 최대 8단계·cycle guard로 읽어 root wrapper와 nested cause를 구분한다. 수집 파일도 private `0600`이며 고정 13개 title, enum class, 정확한 회귀 fixture의 상대 경로·줄·열과 제한된 primitive 비교만 저장한다. Python helper가 공개 receipt에 넣기 전에 이 필드를 다시 검증한다. 임의 message·stack·diff·객체·문자열 값·환경 변수는 저장하거나 공개하지 않는다. 파일이 없거나 reporter 수집이 실패하면 `causeDiagnosticsStatus: unavailable`로 표시하며, 기존 stock JSON의 검사 수·결과·성공 gate를 바꾸지 않는다.
+
+별도의 작은 synthetic fixture로 실제 Vitest 5에서 stock JSON 단독/병용 모두 2개 실패를 유지하면서 두 단계 cause·소스 frame·boolean/정수 비교가 정제되는지 확인했다. 실제 제품 recovery fixture·timeout·8+5 gate는 이 smoke에서 실행하거나 수정하지 않는다.
+
+정리 진단은 `initialCleanup`의 `reaperJoined`·`childrenCleanup`·`containerCleanup`을 구분한다. 컨테이너는 inventory·inspect·owner/ID 확인·stop·후속 inventory·remove·최종 inventory의 고정 operation, exit code, 상태 enum과 boolean만 기록한다. 자식 정리는 ECHILD·deadline·read/wait/signal error의 고정 이유와 제한된 수만 기록한다. `always()` 재시도는 `recoveryCleanup`으로 별도 기록해 최초 실패를 덮어쓰지 않는다. 이전 helper의 자식 종료가 확인되지 않았다면 새 정리 프로세스는 그 사실을 성공으로 바꾸거나 private fixture를 삭제하지 않는다.

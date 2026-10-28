@@ -149,7 +149,7 @@ def safe_failure(failure, source):
                 locations.append(location)
     if locations:
         result["locations"] = locations[:3]
-    primitive = r"(true|false|-?(?:0|[1-9]\d{0,6}))"
+    primitive = r"(true|false|[+-]?(?:0|[1-9]\d{0,6}))"
     comparison = re.fullmatch(r"AssertionError: expected " + primitive + r" to (be|equal|deeply equal|be greater than|be less than|be greater than or equal to|be less than or equal to) " + primitive + r"(?: // Object\.is equality)?", first)
     if comparison:
         def value(raw):
@@ -187,6 +187,61 @@ def report_diagnostics(report, expected, source):
                     case["declaration"] = {"file": RECOVERY_FILE, "line": line, "column": column}
         cases.append(case)
     return cases
+
+
+def attach_cause_diagnostics(counts, filename, expected):
+    # Treat the infrastructure reporter as another private input boundary.
+    # Reconstruct only enum/int/bool/constant-path fields, never copy objects.
+    error_classes = {"assertion", "type_error", "range_error", "reference_error", "syntax_error", "timeout", "error", "unknown"}
+    operators = {"equal", "greater_than", "less_than", "greater_or_equal", "less_or_equal", "length_equal"}
+    counts["causeDiagnosticsStatus"] = "unavailable"
+    try:
+        if filename.stat().st_size > 1_000_000:
+            return
+        report = json.loads(filename.read_text())
+        if report.get("version") != 1 or report.get("status") != "available" or not isinstance(report.get("cases"), list):
+            return
+        by_title = {}
+        for case in report["cases"]:
+            title = case.get("title")
+            if title not in expected:
+                continue
+            if title in by_title or not isinstance(case.get("chains"), list):
+                return
+            chains = []
+            for chain in case["chains"][:3]:
+                state = chain.get("chainState")
+                entries = chain.get("entries")
+                if state not in ["absent", "complete", "cycle", "truncated"] or not isinstance(entries, list) or not (1 <= len(entries) <= 8):
+                    return
+                safe_entries = []
+                for depth, entry in enumerate(entries):
+                    if entry.get("depth") != depth or entry.get("relation") != ("root" if depth == 0 else "cause") or entry.get("errorClass") not in error_classes:
+                        return
+                    safe = {"depth": depth, "relation": "root" if depth == 0 else "cause", "errorClass": entry["errorClass"]}
+                    locations = []
+                    for location in entry.get("locations", [])[:3]:
+                        line, column = location.get("line"), location.get("column")
+                        if location.get("file") == RECOVERY_FILE and type(line) is int and type(column) is int and 0 < line <= 1_000_000 and 0 < column <= 100_000:
+                            locations.append({"file": RECOVERY_FILE, "line": line, "column": column})
+                    if locations:
+                        safe["locations"] = locations
+                    comparison = entry.get("comparison")
+                    if isinstance(comparison, dict) and comparison.get("operator") in operators:
+                        actual, wanted = comparison.get("actual"), comparison.get("expected")
+                        if all(type(value) is bool or (type(value) is int and abs(value) <= 9_999_999) for value in [actual, wanted]):
+                            safe["comparison"] = {"operator": comparison["operator"], "expected": wanted, "actual": actual}
+                    safe_entries.append(safe)
+                chains.append({"chainState": state, "entries": safe_entries})
+            by_title[title] = chains
+        for case in counts["cases"]:
+            if case["status"] == "failed":
+                case["causeDiagnosticsStatus"] = "available" if case["title"] in by_title else "unavailable"
+                if case["title"] in by_title:
+                    case["causeChains"] = by_title[case["title"]]
+        counts["causeDiagnosticsStatus"] = "available"
+    except (OSError, ValueError, TypeError, AttributeError):
+        return
 
 
 class AdoptedZombieReaper:
@@ -237,65 +292,125 @@ class AdoptedZombieReaper:
             raise QualificationFailure("adopted_reaper_failed")
 
 
-def owned_children_cleanup():
-    # This helper is a subreaper. Only its own unreaped direct children are
-    # signalled; no process-name scan, borrowed PID or unrelated service is used.
+def owned_children_cleanup(diagnostic=None):
+    detail = diagnostic if diagnostic is not None else {}
+    detail.update(reason="running", reaped=0, signals=0)
     deadline = time.monotonic() + 20
     children_file = Path(f"/proc/self/task/{os.getpid()}/children")
     while time.monotonic() < deadline:
         try:
             while os.waitpid(-1, os.WNOHANG)[0]:
-                pass
+                detail["reaped"] = min(detail["reaped"] + 1, 1_000_000)
         except ChildProcessError:
+            detail["reason"] = "echild"
             return True
-        for child in children_file.read_text().split():
+        except OSError:
+            detail["reason"] = "wait_error"
+            return False
+        try:
+            children = children_file.read_text().split()
+        except OSError:
+            detail["reason"] = "read_error"
+            return False
+        for child in children:
             try:
                 os.kill(int(child), signal.SIGKILL)
+                detail["signals"] = min(detail["signals"] + 1, 1_000_000)
             except ProcessLookupError:
                 pass
+            except (OSError, ValueError):
+                detail["reason"] = "signal_error"
+                return False
         time.sleep(0.02)
+    detail["reason"] = "deadline"
     return False
 
 
-def container_cleanup(state):
+def container_cleanup(state, diagnostic=None):
+    detail = diagnostic if diagnostic is not None else {}
+    detail.update(status="running", operations=[])
+
+    def check(operation, command):
+        result = {"operation": operation, "status": "running"}
+        detail["operations"].append(result)
+        try:
+            process = subprocess.run(command, capture_output=True, text=True, timeout=30)
+            if type(process.returncode) is int and -255 <= process.returncode <= 65535:
+                result["exitCode"] = process.returncode
+            result["status"] = "passed" if process.returncode == 0 else "failed"
+            return process
+        except subprocess.TimeoutExpired:
+            result.update(status="failed", errorClass="timeout")
+        except OSError:
+            result.update(status="failed", errorClass="os_error")
+        return None
+
+    def finish(ok):
+        detail["status"] = "passed" if ok else "failed"
+        return ok
+
     name = state.get("container")
     if not name:
-        return True
-    inventory = subprocess.run(["docker", "ps", "-a", "--filter", "label=" + OWNER_LABEL + "=" + state["owner"], "--format", "{{.ID}}"], capture_output=True, text=True, timeout=30)
-    if inventory.returncode:
-        return False
+        detail["containerRequested"] = False
+        return finish(True)
+    detail["containerRequested"] = True
+    inventory_args = ["docker", "ps", "-a", "--filter", "label=" + OWNER_LABEL + "=" + state["owner"], "--format", "{{.ID}}"]
+    inventory = check("inventory", inventory_args)
+    if inventory is None or inventory.returncode:
+        return finish(False)
     owned = inventory.stdout.split()
+    detail["ownedCount"] = min(len(owned), 1_000_000)
     if not owned:
-        return True  # Confirmed absent, including an already-removed container.
+        detail["confirmedAbsent"] = True
+        return finish(True)
     if len(owned) != 1:
-        return False
-    inspection = subprocess.run(["docker", "inspect", owned[0]], capture_output=True, text=True, timeout=30)
-    if inspection.returncode:
-        return False
-    records = json.loads(inspection.stdout)
-    if len(records) != 1 or records[0].get("Config", {}).get("Labels", {}).get(OWNER_LABEL) != state.get("owner"):
-        return False
-    container_id = records[0]["Id"]
-    if state.get("containerId") and state["containerId"] != container_id:
-        return False
-    stopped = subprocess.run(["docker", "stop", "--timeout", "20", container_id], capture_output=True, timeout=30)
-    if stopped.returncode:
-        return False
-    # --rm may already have removed the stopped container. Only a successful
-    # inventory, not an inspect error or an unavailable daemon, proves absence.
-    remaining = subprocess.run(["docker", "ps", "-a", "--filter", "label=" + OWNER_LABEL + "=" + state["owner"], "--format", "{{.ID}}"], capture_output=True, text=True, timeout=30)
-    if remaining.returncode:
-        return False
+        return finish(False)
+    inspection = check("inspect", ["docker", "inspect", owned[0]])
+    if inspection is None or inspection.returncode:
+        return finish(False)
+    try:
+        records = json.loads(inspection.stdout)
+        if not isinstance(records, list) or len(records) != 1 or not isinstance(records[0], dict):
+            raise ValueError()
+        config = records[0].get("Config", {})
+        labels = config.get("Labels", {})
+        state_record = records[0].get("State", {})
+        if not isinstance(state_record, dict):
+            raise ValueError()
+        container_id = records[0]["Id"]
+        if not isinstance(labels, dict) or not isinstance(container_id, str) or not container_id:
+            raise ValueError()
+    except (ValueError, TypeError, AttributeError, KeyError):
+        detail["operations"].append({"operation": "inspect_shape", "status": "failed", "errorClass": "json_shape"})
+        return finish(False)
+    status = state_record.get("Status")
+    detail["containerState"] = status if status in ["created", "running", "paused", "restarting", "removing", "exited", "dead"] else "unknown"
+    detail["ownerMatches"] = labels.get(OWNER_LABEL) == state.get("owner")
+    detail["operations"].append({"operation": "owner_check", "status": "passed" if detail["ownerMatches"] else "failed"})
+    if not detail["ownerMatches"]:
+        return finish(False)
+    detail["idMatches"] = not state.get("containerId") or state["containerId"] == container_id
+    detail["operations"].append({"operation": "id_check", "status": "passed" if detail["idMatches"] else "failed"})
+    if not detail["idMatches"]:
+        return finish(False)
+    stopped = check("stop", ["docker", "stop", "--timeout", "20", container_id])
+    if stopped is None or stopped.returncode:
+        return finish(False)
+    remaining = check("post_stop_inventory", inventory_args)
+    if remaining is None or remaining.returncode:
+        return finish(False)
     if not remaining.stdout.split():
-        return True
-    if remaining.stdout.split() != [container_id[:12]] and remaining.stdout.split() != [container_id]:
-        return False
-    removed = subprocess.run(["docker", "rm", container_id], capture_output=True, timeout=30)
-    if removed.returncode:
-        return False
-    verified = subprocess.run(["docker", "ps", "-a", "--filter", "label=" + OWNER_LABEL + "=" + state["owner"], "--format", "{{.ID}}"], capture_output=True, text=True, timeout=30)
-    return verified.returncode == 0 and not verified.stdout.split()
-
+        detail["confirmedAbsent"] = True
+        return finish(True)
+    detail["remainingIdMatches"] = remaining.stdout.split() in [[container_id[:12]], [container_id]]
+    if not detail["remainingIdMatches"]:
+        return finish(False)
+    removed = check("remove", ["docker", "rm", container_id])
+    if removed is None or removed.returncode:
+        return finish(False)
+    verified = check("final_inventory", inventory_args)
+    detail["confirmedAbsent"] = verified is not None and verified.returncode == 0 and not verified.stdout.split()
+    return finish(detail["confirmedAbsent"])
 
 
 def write_receipt(output, receipt):
@@ -394,6 +509,10 @@ def run_qualification(source, output):
         run(["pnpm", "preflight:workspace-links"])
         run(["pnpm", "--filter", "@paperclipai/plugin-sdk", "ensure-build-deps"])
         receipt["stages"][stage] = {"status": "passed"}
+        stage = "reporter_smoke"
+        run(["node", str(Path(__file__).resolve().with_name("crewroom-runtime-cause-reporter-smoke.mjs"))],
+            env={**child_env, "CREWROOM_QUALIFICATION_DEPENDENCY_ROOT": str(source)})
+        receipt["stages"][stage] = {"status": "passed"}
         stage = "debug_binaries"
         run(["cargo", "build", "--manifest-path", "packages/paperclip-runner/runner/Cargo.toml", "--locked", "-j", "2",
              "-p", "paperclip-runner-core", "--bin", "paperclip-runnerd", "--bin", "fake-codex-app-server"], timeout=2400)
@@ -409,11 +528,15 @@ def run_qualification(source, output):
         receipt["stages"][stage] = {"status": "passed"}
         stage = "local_real_processes"
         local_report = private / "local-report.json"
+        local_causes = private / "local-causes.json"
+        cause_reporter = str(Path(__file__).resolve().with_name("crewroom-runtime-cause-reporter.mjs"))
+        local_env = {**child_env, "CREWROOM_QUALIFICATION_SOURCE_ROOT": str(source), "CREWROOM_QUALIFICATION_CAUSE_OUTPUT": str(local_causes)}
         code = run(["pnpm", "exec", "vitest", "run", "--project", "@paperclipai/server", RECOVERY_FILE,
-                    "--maxWorkers=1", "--includeTaskLocation", "--reporter=json", "--outputFile=" + str(local_report)], timeout=1200, allow_failure=True)
+                    "--maxWorkers=1", "--includeTaskLocation", "--reporter=json", "--reporter=" + cause_reporter, "--outputFile=" + str(local_report)], timeout=1200, allow_failure=True, env=local_env)
         report = json.loads(local_report.read_text())
         counts = report_counts(report, LOCAL_CASES)
         counts["cases"] = report_diagnostics(report, LOCAL_CASES, source)
+        attach_cause_diagnostics(counts, local_causes, LOCAL_CASES)
         counts["exitCode"] = code
         if code != 0:
             counts["status"] = "failed"
@@ -425,9 +548,11 @@ def run_qualification(source, output):
         if not selected_cases_entered(report, LOCAL_CASES):
             raise QualificationFailure("local_cases_not_entered")
         stage = "local_process_cleanup"
-        if not owned_children_cleanup():
+        child_detail = {}
+        child_ok = owned_children_cleanup(child_detail)
+        receipt["stages"][stage] = {"status": "passed" if child_ok else "failed", "children": child_detail}
+        if not child_ok:
             raise QualificationFailure("local_process_cleanup_unconfirmed")
-        receipt["stages"][stage] = {"status": "passed"}
         stage = "remote_container"
         remote_details = {"status": "running", "operations": [], "missingTools": {}}
         receipt["stages"][stage] = remote_details
@@ -497,15 +622,17 @@ def run_qualification(source, output):
         remote_details["status"] = "passed"
         stage = "remote_continuity"
         remote_report = private / "remote-report.json"
-        remote_env = {**child_env, "NODE_EXTRA_CA_CERTS": str(cert), "PAPERCLIP_TEST_RUNNER_TLS_KEY": str(key),
+        remote_causes = private / "remote-causes.json"
+        remote_env = {**child_env, "CREWROOM_QUALIFICATION_SOURCE_ROOT": str(source), "CREWROOM_QUALIFICATION_CAUSE_OUTPUT": str(remote_causes), "NODE_EXTRA_CA_CERTS": str(cert), "PAPERCLIP_TEST_RUNNER_TLS_KEY": str(key),
                       "PAPERCLIP_TEST_RUNNER_CONTAINER": name, "PAPERCLIP_TEST_RUNNER_PORT": port.rsplit(":", 1)[1],
                       "PAPERCLIP_TEST_LINUX_RUNNER_BINARY": str(runner), "PAPERCLIP_TEST_FAKE_CODEX_WRAPPER": str(wrapper)}
         code = run(["pnpm", "exec", "vitest", "run", "--project", "@paperclipai/server", RECOVERY_FILE,
-                    "-t", "preserves remote warm continuity across completed turns:", "--maxWorkers=1", "--includeTaskLocation", "--reporter=json", "--outputFile=" + str(remote_report)],
+                    "-t", "preserves remote warm continuity across completed turns:", "--maxWorkers=1", "--includeTaskLocation", "--reporter=json", "--reporter=" + cause_reporter, "--outputFile=" + str(remote_report)],
                    timeout=1200, env=remote_env, allow_failure=True)
         report = json.loads(remote_report.read_text())
         counts = report_counts(report, REMOTE_CASES, only_selected=True)
         counts["cases"] = report_diagnostics(report, REMOTE_CASES, source)
+        attach_cause_diagnostics(counts, remote_causes, REMOTE_CASES)
         counts["exitCode"] = code
         if code != 0:
             counts["status"] = "failed"
@@ -526,13 +653,17 @@ def run_qualification(source, output):
         reaper_joined = active_reaper is None
         container_ok = False
         children_ok = False
+        container_detail = {}
+        children_detail = {}
         if reaper_joined:
             try:
-                container_ok = container_cleanup(state)
+                container_ok = container_cleanup(state, container_detail)
             except Exception:
-                pass
-            children_ok = owned_children_cleanup()
+                container_detail.update(status="failed", errorClass="unexpected_error")
+            children_ok = owned_children_cleanup(children_detail)
         cleanup_ok = reaper_joined and children_ok and container_ok
+        receipt["stages"]["initialCleanup"] = {"status": "passed" if cleanup_ok else "failed", "reaperJoined": reaper_joined,
+            "containerCleanup": container_ok, "childrenCleanup": children_ok, "container": container_detail, "children": children_detail}
         receipt["stages"]["adopted_child_reaping"] = {"status": "passed" if reaper_joined and not reaper_failed else "failed", "reaped": reaped_children}
         receipt["stages"]["cleanup"] = {"status": "passed" if cleanup_ok else "failed"}
         if not cleanup_ok:
@@ -549,16 +680,28 @@ def cleanup_only(output):
     if not private.exists():
         return 0
     state = json.loads((private / "owner.json").read_text())
-    ok = container_cleanup(state)
-    if ok:
+    path = output / "receipt.json"
+    receipt = json.loads(path.read_text()) if path.exists() else {"status": "failed", "stages": {}}
+    container_detail = {}
+    try:
+        ok = container_cleanup(state, container_detail)
+    except Exception:
+        ok = False
+        container_detail.update(status="failed", errorClass="unexpected_error")
+    # A new process cannot prove the old helper's children settled. Retain
+    # private fixtures if that part of initial cleanup was unconfirmed.
+    initial = receipt["stages"].get("initialCleanup", {})
+    children_confirmed = initial.get("childrenCleanup") is True and initial.get("reaperJoined") is True
+    recovered = ok and children_confirmed
+    receipt["stages"]["recoveryCleanup"] = {"status": "passed" if recovered else "failed", "containerCleanup": ok,
+        "initialChildrenConfirmed": children_confirmed, "container": container_detail}
+    if recovered:
         shutil.rmtree(private)
     else:
-        path = output / "receipt.json"
-        receipt = json.loads(path.read_text()) if path.exists() else {"status": "failed", "stages": {}}
         receipt["status"] = "failed"
-        receipt["stages"]["cleanup"] = {"status": "failed"}
-        write_receipt(output, receipt)
-    return 0 if ok else 1
+    # Initial failure/test failure is historical evidence and is never erased.
+    write_receipt(output, receipt)
+    return 0 if recovered else 1
 
 
 def main():

@@ -53,6 +53,8 @@ jobs:
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 24.14.0
+      - name: Check cause reporter sanitization
+        run: node --test qualification-infra/scripts/crewroom-runtime-cause-reporter.test.mjs
       - name: Install the product-owned Rust toolchain
         run: rustup toolchain install 1.97.1 --profile minimal --component rustfmt
       - name: Cache public Rust dependencies

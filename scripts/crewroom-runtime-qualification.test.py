@@ -124,6 +124,38 @@ class SafeDiagnosticsTests(unittest.TestCase):
         self.assertFalse(qualification.selected_cases_entered(report(qualification.LOCAL_CASES + [qualification.LOCAL_CASES[0]]), qualification.LOCAL_CASES))
 
 
+class CauseBoundaryTests(unittest.TestCase):
+    def test_reporter_and_stock_gate_whitelists_stay_identical(self):
+        source = Path(__file__).with_name("crewroom-runtime-cause-reporter.mjs").read_text()
+        match = qualification.re.search(r"export const EXPECTED_CASES = (\[.*?\]);", source, qualification.re.S)
+        self.assertIsNotNone(match)
+        self.assertEqual(json.loads(match[1]), qualification.LOCAL_CASES + qualification.REMOTE_CASES)
+
+    def test_double_sanitization_preserves_nested_classes_only_and_does_not_change_gate(self):
+        with tempfile.TemporaryDirectory(prefix="cause-boundary-offline-") as directory:
+            filename = Path(directory) / "causes.json"
+            fixture = qualification.RECOVERY_FILE
+            title = qualification.LOCAL_CASES[0]
+            filename.write_text(json.dumps({"version": 1, "status": "available", "cases": [{"title": title, "chains": [{"chainState": "complete", "entries": [
+                {"depth": 0, "relation": "root", "errorClass": "error", "message": "SYNTHETIC_SECRET"},
+                {"depth": 1, "relation": "cause", "errorClass": "assertion", "locations": [{"file": fixture, "line": 444, "column": 3}, {"file": "/private/SYNTHETIC_SECRET.key", "line": 1, "column": 1}], "comparison": {"operator": "equal", "expected": True, "actual": False}, "stack": "SYNTHETIC_SECRET"}]}]}]}))
+            value = report(qualification.LOCAL_CASES)
+            value["testResults"][0]["assertionResults"][0]["status"] = "failed"
+            value.update(success=False, numFailedTests=1)
+            counts = qualification.report_counts(value, qualification.LOCAL_CASES)
+            counts["cases"] = qualification.report_diagnostics(value, qualification.LOCAL_CASES, Path("/synthetic/product"))
+            qualification.attach_cause_diagnostics(counts, filename, qualification.LOCAL_CASES)
+            self.assertEqual(counts["status"], "failed")
+            self.assertEqual(counts["causeDiagnosticsStatus"], "available")
+            self.assertEqual(counts["cases"][0]["causeChains"][0]["entries"][1]["locations"], [{"file": fixture, "line": 444, "column": 3}])
+            self.assertNotIn("SYNTHETIC_SECRET", json.dumps(counts))
+
+    def test_missing_report_is_unavailable_and_never_changes_failed_gate(self):
+        counts = {"status": "failed", "cases": []}
+        qualification.attach_cause_diagnostics(counts, Path("/missing/causes.json"), qualification.LOCAL_CASES)
+        self.assertEqual(counts, {"status": "failed", "cases": [], "causeDiagnosticsStatus": "unavailable"})
+
+
 class PublicArtifactStagingTests(unittest.TestCase):
     def test_normalizes_only_copy_and_preserves_original_bytes_and_mode(self):
         with tempfile.TemporaryDirectory(prefix="provider-staging-offline-") as directory:
@@ -221,7 +253,7 @@ class PipelineControlTests(unittest.TestCase):
                         active_reapers.append(self)
                         raise qualification.QualificationFailure("adopted_reaper_join_unconfirmed")
 
-            def cleanup_children():
+            def cleanup_children(_diagnostic=None):
                 if active_reapers:
                     raise AssertionError("cleanup raced a command reaper")
                 cleanup_calls.append(True)
@@ -379,6 +411,56 @@ class CleanupTests(unittest.TestCase):
         with patch.object(qualification.subprocess, "run", side_effect=responses) as run:
             self.assertFalse(qualification.container_cleanup({"container": "owned-name", "owner": "owner"}))
             self.assertEqual(run.call_args_list[2].args[0], ["docker", "stop", "--timeout", "20", "abcdef123456"])
+
+
+class CleanupDiagnosticsTests(unittest.TestCase):
+    def test_stop_failure_preserves_fixed_exit_and_no_owner_identifier(self):
+        owner = "SYNTHETIC_PRIVATE_OWNER"
+        responses = [SimpleNamespace(returncode=0, stdout="private-container-id\n"),
+                     SimpleNamespace(returncode=0, stdout=json.dumps([{"Id":"private-container-id", "State":{"Status":"running"}, "Config":{"Labels":{qualification.OWNER_LABEL:owner}}}])),
+                     SimpleNamespace(returncode=1, stdout="SYNTHETIC_PRIVATE_DAEMON_OUTPUT")]
+        detail = {}
+        with patch.object(qualification.subprocess, "run", side_effect=responses):
+            self.assertFalse(qualification.container_cleanup({"container":"private-name", "owner":owner, "containerId":"private-container-id"}, detail))
+        self.assertEqual(detail["operations"][-1], {"operation":"stop", "status":"failed", "exitCode":1})
+        self.assertTrue(detail["ownerMatches"])
+        self.assertTrue(detail["idMatches"])
+        self.assertEqual(detail["containerState"], "running")
+        self.assertNotIn("SYNTHETIC_PRIVATE", json.dumps(detail))
+        self.assertNotIn("private-container", json.dumps(detail))
+
+    def test_cleanup_timeout_and_invalid_shape_use_fixed_classes(self):
+        detail = {}
+        with patch.object(qualification.subprocess, "run", side_effect=qualification.subprocess.TimeoutExpired(["private"], 30)):
+            self.assertFalse(qualification.container_cleanup({"container":"name", "owner":"owner"}, detail))
+        self.assertEqual(detail["operations"][-1]["errorClass"], "timeout")
+        responses = [SimpleNamespace(returncode=0, stdout="id"), SimpleNamespace(returncode=0, stdout="{}")]
+        with patch.object(qualification.subprocess, "run", side_effect=responses):
+            self.assertFalse(qualification.container_cleanup({"container":"name", "owner":"owner"}, detail))
+        self.assertEqual(detail["operations"][-1]["errorClass"], "json_shape")
+
+    def test_children_cleanup_distinguishes_settlement_and_read_failure(self):
+        detail = {}
+        with patch.object(qualification.os, "waitpid", side_effect=ChildProcessError()):
+            self.assertTrue(qualification.owned_children_cleanup(detail))
+        self.assertEqual(detail["reason"], "echild")
+        with patch.object(qualification.os, "waitpid", return_value=(0,0)), patch.object(Path, "read_text", side_effect=OSError("private")):
+            self.assertFalse(qualification.owned_children_cleanup(detail))
+        self.assertEqual(detail["reason"], "read_error")
+
+    def test_recovery_cannot_erase_initial_failure_or_unconfirmed_children(self):
+        for children_confirmed in [True, False]:
+            with tempfile.TemporaryDirectory(prefix="cleanup-recovery-offline-") as directory:
+                root = Path(directory); private=root/"private"; private.mkdir(); output=root/"public";output.mkdir()
+                (private/"owner.json").write_text(json.dumps({"container":"name", "owner":"owner"}))
+                initial={"status":"failed", "childrenCleanup":children_confirmed, "reaperJoined":True}
+                (output/"receipt.json").write_text(json.dumps({"status":"failed", "stages":{"initialCleanup":initial, "cleanup":{"status":"failed"}}}))
+                with patch.object(qualification, "state_directory", return_value=private), patch.object(qualification, "container_cleanup", return_value=True):
+                    self.assertEqual(qualification.cleanup_only(output), 0 if children_confirmed else 1)
+                receipt=json.loads((output/"receipt.json").read_text())
+                self.assertEqual(receipt["stages"]["initialCleanup"], initial)
+                self.assertEqual(receipt["status"], "failed")
+                self.assertEqual(private.exists(), not children_confirmed)
 
 
 if __name__ == "__main__":
