@@ -2741,7 +2741,7 @@ describe("IssueChatThread", () => {
         enableLiveTranscriptPolling={false}
       /></MemoryRouter>));
       const labels = [...container.querySelectorAll("button")].map((button) => button.textContent);
-      expect(labels.includes("Interrupt")).toBe(!paused);
+      expect(labels.includes("현재 작업에 반영")).toBe(!paused);
       expect(labels.includes("Cancel")).toBe(!paused);
       expect(container.textContent).toContain("Keep this queued message");
     }
@@ -2759,7 +2759,7 @@ describe("IssueChatThread", () => {
       onAdd={async () => {}} onInterruptQueued={onInterruptQueued} showComposer={false}
       enableLiveTranscriptPolling={false}
     /></MemoryRouter>));
-    const interrupt = [...container.querySelectorAll("button")].find(button => button.textContent === "Interrupt");
+    const interrupt = [...container.querySelectorAll("button")].find(button => button.textContent === "현재 작업에 반영");
     expect(interrupt).toBeDefined();
     act(() => interrupt!.click());
     expect(onInterruptQueued).toHaveBeenCalledWith(null);
@@ -2936,7 +2936,7 @@ describe("IssueChatThread", () => {
         Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")!.set!.call(editor(), value);
         editor().dispatchEvent(new Event("input", { bubbles: true }));
       });
-      const send = () => Array.from(container.querySelectorAll("button")).find(button => button.textContent === "Send") as HTMLButtonElement;
+      const send = () => Array.from(container.querySelectorAll("button")).find(button => button.textContent === "보내기") as HTMLButtonElement;
       try {
         await act(async () => root.render(element()));
         type("Earlier message");
@@ -3074,7 +3074,7 @@ describe("IssueChatThread", () => {
     try {
       await act(async () => root.render(element(a)));
       expect(editor().value).toBe("My recovered message");
-      await act(async () => (Array.from(container.querySelectorAll("button")).find(button => button.textContent === "Send") as HTMLButtonElement).click());
+      await act(async () => (Array.from(container.querySelectorAll("button")).find(button => button.textContent === "보내기") as HTMLButtonElement).click());
       expect(onAdd.mock.calls[0]![0]).toBe("My recovered message");
       expect(editor().value).toBe("");
       await act(async () => root.render(element(b)));
@@ -3098,7 +3098,7 @@ describe("IssueChatThread", () => {
       'textarea[aria-label="Issue chat editor"]',
     ) as HTMLTextAreaElement | null;
     expect(editor).not.toBeNull();
-    expect(editor?.placeholder).toBe("Reply");
+    expect(editor?.placeholder).toBe("의견이나 수정할 내용을 남겨주세요");
 
     act(() => {
       const valueSetter = Object.getOwnPropertyDescriptor(
@@ -3305,7 +3305,7 @@ describe("IssueChatThread", () => {
     )!;
     const send = () =>
       Array.from(container.querySelectorAll("button")).find(
-        (element) => element.textContent === "Send",
+        (element) => element.textContent === "보내기",
       ) as HTMLButtonElement;
     act(() => {
       Object.getOwnPropertyDescriptor(
@@ -3379,7 +3379,7 @@ describe("IssueChatThread", () => {
       });
       await act(async () =>
         Array.from(container.querySelectorAll("button"))
-          .find((button) => button.textContent === "Send")!
+          .find((button) => button.textContent === "보내기")!
           .click(),
       );
       const newer = {
@@ -3440,7 +3440,7 @@ describe("IssueChatThread", () => {
       });
       await act(async () => root.render(element()));
       type("Earlier message");
-      await act(async () => Array.from(container.querySelectorAll("button")).find(button => button.textContent === "Send")!.click());
+      await act(async () => Array.from(container.querySelectorAll("button")).find(button => button.textContent === "보내기")!.click());
       const requestId = onAdd.mock.calls[0]![4] as string;
       type("Newer unsent draft");
       await act(async () => container.querySelector('[data-testid="issue-chat-composer"]')!
@@ -3495,7 +3495,7 @@ describe("IssueChatThread", () => {
     });
     await act(async () =>
       Array.from(container.querySelectorAll("button"))
-        .find((button) => button.textContent === "Send")!
+        .find((button) => button.textContent === "보내기")!
         .click(),
     );
     expect(onAdd).toHaveBeenCalledWith("Please review the result", undefined, {
@@ -3503,7 +3503,7 @@ describe("IssueChatThread", () => {
       assigneeUserId: "reviewer",
     }, undefined, expect.any(String));
     expect(appendMock).not.toHaveBeenCalled();
-    expect(container.textContent).toContain("Posting...");
+    expect(container.textContent).toContain("보내는 중…");
     expect(localStorage.getItem("legacy-awaited-reassignment")).toBe(
       "Please review the result",
     );
@@ -3649,7 +3649,7 @@ describe("IssueChatThread", () => {
     });
   });
 
-  it("hides the reopen control and infers reopen for closed agent-assigned issue replies", async () => {
+  it.each([false, true])("requires an explicit revision choice before reopening a closed task (%s)", async requestRevision => {
     const root = createRoot(container);
     const onAdd = vi.fn().mockResolvedValue(undefined);
 
@@ -3667,7 +3667,7 @@ describe("IssueChatThread", () => {
       'textarea[aria-label="Issue chat editor"]',
     ) as HTMLTextAreaElement | null;
     const submitButton = Array.from(container.querySelectorAll("button")).find(
-      (element) => element.textContent === "Send",
+      (element) => element.textContent === "보내기",
     ) as HTMLButtonElement | undefined;
     expect(editor).not.toBeNull();
     expect(submitButton).toBeDefined();
@@ -3677,15 +3677,18 @@ describe("IssueChatThread", () => {
         window.HTMLTextAreaElement.prototype,
         "value",
       )?.set;
-      valueSetter?.call(editor, "Please pick this back up");
+      valueSetter?.call(editor, requestRevision ? "Please pick this back up" : "고마워");
       editor?.dispatchEvent(new Event("input", { bubbles: true }));
     });
 
+    if (requestRevision) {
+      await act(async () => (container.querySelector('[role="checkbox"]') as HTMLButtonElement).click());
+    }
     await act(async () => {
       submitButton?.click();
     });
 
-    expect(onAdd).toHaveBeenCalledWith("Please pick this back up", true, undefined, undefined, expect.any(String));
+    expect(onAdd).toHaveBeenCalledWith(requestRevision ? "Please pick this back up" : "고마워", requestRevision, undefined, undefined, expect.any(String));
 
     act(() => {
       root.unmount();
@@ -3713,7 +3716,7 @@ describe("IssueChatThread", () => {
       'textarea[aria-label="Issue chat editor"]',
     ) as HTMLTextAreaElement | null;
     const submitButton = Array.from(container.querySelectorAll("button")).find(
-      (element) => element.textContent === "Send",
+      (element) => element.textContent === "보내기",
     ) as HTMLButtonElement | undefined;
     expect(editor).not.toBeNull();
     expect(submitButton).toBeDefined();
@@ -3780,7 +3783,7 @@ describe("IssueChatThread", () => {
       'textarea[aria-label="Issue chat editor"]',
     ) as HTMLTextAreaElement | null;
     const submitButton = Array.from(container.querySelectorAll("button")).find(
-      (element) => element.textContent === "Send",
+      (element) => element.textContent === "보내기",
     ) as HTMLButtonElement | undefined;
 
     act(() => {
@@ -3845,7 +3848,7 @@ describe("IssueChatThread", () => {
       'textarea[aria-label="Issue chat editor"]',
     ) as HTMLTextAreaElement | null;
     const submitButton = Array.from(container.querySelectorAll("button")).find(
-      (element) => element.textContent === "Send",
+      (element) => element.textContent === "보내기",
     ) as HTMLButtonElement | undefined;
 
     act(() => {

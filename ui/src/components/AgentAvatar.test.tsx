@@ -25,3 +25,17 @@ it("shows the uploaded image in small and animated-character surfaces, then retu
     expect(container.querySelector("img")?.getAttribute("src")).toContain("/api/agent-avatars/cap-v1/deep-tide/");
   } finally { await act(async () => root.unmount()); }
 });
+
+it("keeps Crewroom identity in chat and task avatars while preserving uploaded custom portraits", async () => {
+  const container = document.createElement("div");
+  const root = createRoot(container);
+  const agent = { id: "helper", name: "Renamed helper", metadata: { crewroom: { schemaVersion: 1, characterId: "fennec" } } };
+  try {
+    await act(async () => root.render(<AgentAvatar agent={agent} />));
+    expect(container.querySelector('[data-crewroom-portrait="fennec"]')).not.toBeNull();
+    expect(container.querySelector('img[src*="cap-v1"]')).toBeNull();
+    await act(async () => root.render(<AgentAvatar agent={{ ...agent, appearance: { ...appearanceForPalette("deep-tide"), customAvatarAssetId: "22222222-2222-4222-8222-222222222222" } }} />));
+    expect(container.querySelector('[data-crewroom-portrait]')).toBeNull();
+    expect(container.querySelector("img")?.getAttribute("src")).toContain("/api/assets/");
+  } finally { await act(async () => root.unmount()); }
+});

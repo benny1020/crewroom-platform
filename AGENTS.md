@@ -1,5 +1,9 @@
 # AGENTS.md
 
+## Crewroom migration constraints
+
+This product is a Paperclip derivative. Preserve upstream MIT attribution and the source receipt in `crewroom/UPSTREAM.json`. Read `doc/plans/2026-10-28-crewroom-paperclip-foundation.md` before foundation changes. Astra performs design/review; GPT-6.1 Sol writes application code. Use isolated runtime paths and ports for development and tests, and preserve existing services, databases and Docker volumes. Original Crewroom assets in `crewroom/legacy-assets/` retain their scoped 0BSD license and third-party notices. Departments and primary-agent preferences are not ACLs. Extend ordinary Agent Chat, issue comments and wake queues through their existing owners; do not introduce a parallel orchestration engine.
+
 Guidance for human and AI contributors working in this repository.
 
 ## 1. Purpose

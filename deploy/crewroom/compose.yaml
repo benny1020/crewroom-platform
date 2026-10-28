@@ -1,0 +1,97 @@
+name: ${CREWROOM_COMPOSE_PROJECT:-crewroom-next}
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: crewroom
+      POSTGRES_DB: crewroom
+      POSTGRES_PASSWORD: ${CREWROOM_DB_PASSWORD:?Run setup.py first}
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    networks: [database]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U crewroom -d crewroom"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    pids_limit: 256
+    stop_grace_period: 90s
+
+  app:
+    image: ${CREWROOM_IMAGE:-crewroom-next:local}
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      target: production
+      args:
+        PAPERCLIP_BUILD_COMMIT: ${PAPERCLIP_BUILD_COMMIT:-}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${CREWROOM_BIND_ADDRESS:-127.0.0.1}:${CREWROOM_PORT:-3118}:3100"
+    environment:
+      DATABASE_URL: postgres://crewroom:${CREWROOM_DB_PASSWORD:?Run setup.py first}@db:5432/crewroom
+      HOST: 0.0.0.0
+      PORT: "3100"
+      SERVE_UI: "true"
+      PAPERCLIP_HOME: /paperclip
+      PAPERCLIP_DEPLOYMENT_MODE: authenticated
+      PAPERCLIP_DEPLOYMENT_EXPOSURE: ${CREWROOM_EXPOSURE:-private}
+      PAPERCLIP_PUBLIC_URL: ${CREWROOM_PUBLIC_URL:-http://localhost:3118}
+      PAPERCLIP_AUTH_BASE_URL_MODE: explicit
+      PAPERCLIP_AUTH_DISABLE_SIGN_UP: ${CREWROOM_DISABLE_SIGN_UP:-false}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Run setup.py first}
+      PAPERCLIP_AGENT_JWT_SECRET: ${PAPERCLIP_AGENT_JWT_SECRET:?Run setup.py first}
+      PAPERCLIP_TOOL_ACTION_SIGNING_SECRET: ${PAPERCLIP_TOOL_ACTION_SIGNING_SECRET:?Run setup.py first}
+      PAPERCLIP_TELEMETRY_DISABLED: "1"
+      PAPERCLIP_ANNOUNCEMENTS_ENABLED: "false"
+      PAPERCLIP_ISSUE_PRIVACY_MODE: enforce
+      PAPERCLIP_MIGRATION_AUTO_APPLY: "true"
+      PAPERCLIP_DB_BACKUP_ENABLED: "false"
+    volumes:
+      - appdata:/paperclip
+    networks: [database, outbound]
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3100/api/health').then(r=>{if(!r.ok)process.exit(1);return r.json()}).then(j=>process.exit(j.startupRecovery?.phase==='ready'?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      start_period: 120s
+      retries: 10
+    pids_limit: 2048
+    stop_grace_period: 90s
+
+  caddy:
+    image: caddy:2-alpine
+    profiles: [https]
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      CREWROOM_DOMAIN: ${CREWROOM_DOMAIN:-localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [outbound]
+    pids_limit: 128
+    stop_grace_period: 30s
+
+networks:
+  database:
+    internal: true
+  outbound:
+
+volumes:
+  postgres:
+  appdata:
+  caddy_data:
+  caddy_config:

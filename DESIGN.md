@@ -989,3 +989,17 @@ a visible Reload page action. Keep the character inline and embed the marked
 `offline-recovery` section from `ui/src/index.css` at build time so the page needs
 no network requests or cached assets. Preserve the supplied character palette
 through the offline tokens.
+
+## Crewroom product surface (2026-10-28)
+
+Crewroom extends this established Operate system. It keeps Paperclip controls, semantic colors, typography, query caches and route ownership. The product entry is `/crewroom`; `/dashboard` remains the original control-plane dashboard.
+
+The desktop composition is a persistent Korean navigation, a two-column shared roster, a compact work list and a quiet context column. Department navigation filters the same real agent registry. Workrooms are stable agent-scoped views of accessible tasks; task detail remains the canonical conversation/artifact/workspace surface. Narrow widths move the context column below the roster and then use one column.
+
+The team entry starts directly with the shared roster so all eight initial colleagues remain visible at 1440×900. The original 미미 portrait remains in the default-assistant and sidebar contexts. All Crewroom geometry and palette values live in `ui/src/index.css`, sharing the single token root. Portraits and measured sprite crops come from the committed character manifest, preserving the original twelve plush identities. Agent names never select a character. 미미, 루루루 and the otter have twelve authored work scenes; the remaining colleagues keep their own portrait with simple activity props. Fresh live runs select work poses, and observed queued/paused states select waiting/rest. Tool activity does not establish completion. The explicit sample gallery is labeled separately from execution. Reduced motion, the motion switch, hidden documents and offscreen visibility stop loops. Missing character metadata uses the existing avatar renderer.
+
+Each read distinguishes loading, empty and error; telemetry failure is unknown, not idle. Configuration uses `agents.metadata.crewroom` schemaVersion 1 and fixed departments direct/development/operations/qa. Unknown values stay visible as unclassified agents. Primary assistant preference and department labels never imply additional access. Task creation/assignment uses scoped server capabilities and remains disabled while capability reads are pending or failed.
+
+The primary request action is **대화로 요청하기**, opening the selected colleague or default assistant through existing Agent Chat. **새 업무** remains a secondary direct form. Workroom task links expose **의견 · 수정 요청** and lead to the existing task thread, retaining task identity and ordinary comment/reopen controls.
+
+Completed or cancelled tasks keep feedback on the same task. The ordinary composer saves an opinion by default; the explicit **수정 요청 · 같은 업무 다시 시작** choice sends the existing reopen flag. A thank-you comment does not restart completed work. Blocked-task resume and paused-task gates retain upstream behavior.

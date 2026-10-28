@@ -127,3 +127,7 @@ remaining operations before qualifying the whole capability.
 Gaps: Not callable through generic REST tooling: protocol and deployment constraints
 apply. This route is not guarded by assertBoard, so its intended agent policy needs
 clarification.
+
+## Crewroom private conversation delta (2026-10-28)
+
+The personal chat entry points create private issues using canonical issue/project access. Legacy open conversations return a migration-required 409 at ensure/send/upload and are omitted from personal discovery; direct historical task access retains its existing visibility until explicitly changed. The identity lock prevents a concurrent open conversation being reused by a private creator. The focused `server/src/__tests__/agent-conversations.test.ts` suite passed 41 tests on disposable PostgreSQL. This delta does not qualify live agent inference, private agent home/memory isolation or the broader capability map.

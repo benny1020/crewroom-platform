@@ -72,7 +72,7 @@ export function assertInstanceAdmin(req: Request) {
   throw forbidden("Instance admin access required");
 }
 
-export function assertCompanyAccess(req: Request, companyId: string) {
+export function assertCompanyAccess(req: Request, companyId: string, options: { mutation?: boolean } = {}) {
   assertAuthenticated(req);
   if (req.actor.type === "agent" && req.actor.companyId !== companyId) {
     throw forbidden("Agent key cannot access another company");
@@ -90,7 +90,7 @@ export function assertCompanyAccess(req: Request, companyId: string) {
       );
       return;
     }
-    const method = typeof req.method === "string" ? req.method.toUpperCase() : "GET";
+    const method = options.mutation ? "POST" : typeof req.method === "string" ? req.method.toUpperCase() : "GET";
     const isSafeMethod = ["GET", "HEAD", "OPTIONS"].includes(method);
     if (!isSafeMethod && membership.membershipRole === "viewer") {
       throwOrShadowResponsibleUserCompanyAccessDeny(
@@ -106,7 +106,7 @@ export function assertCompanyAccess(req: Request, companyId: string) {
     if (!allowedCompanies.includes(companyId)) {
       throw forbidden("User does not have access to this company");
     }
-    const method = typeof req.method === "string" ? req.method.toUpperCase() : "GET";
+    const method = options.mutation ? "POST" : typeof req.method === "string" ? req.method.toUpperCase() : "GET";
     const isSafeMethod = ["GET", "HEAD", "OPTIONS"].includes(method);
     if (!isSafeMethod && !req.actor.isInstanceAdmin && Array.isArray(req.actor.memberships)) {
       const membership = req.actor.memberships.find((item) => item.companyId === companyId);

@@ -58,6 +58,8 @@ COPY server/src/services/copilot-connection-probe.ts server/src/services/
 RUN pnpm install --resolution-only --ignore-scripts --no-frozen-lockfile && pnpm install --frozen-lockfile
 
 FROM base AS rust-toolchain
+ARG CARGO_BUILD_JOBS=1
+ENV CARGO_BUILD_JOBS=${CARGO_BUILD_JOBS}
 WORKDIR /app
 # Debian's packaged rust lags the ecosystem (trixie ships 1.85) and the
 # runner's dependency tree now requires a newer rustc. Install rustup from a
@@ -130,6 +132,12 @@ RUN find runner protocol -type f -exec touch -d @0 {} + \
 
 FROM runner-build AS build
 WORKDIR /app
+# TypeScript 7 executes a native Go compiler; NODE_OPTIONS only limits Node.
+# Bound the build compiler's parallelism and soft GC target independently.
+ARG BUILD_GOMAXPROCS=2
+ARG BUILD_GOMEMLIMIT=3GiB
+ENV GOMAXPROCS=${BUILD_GOMAXPROCS} \
+    GOMEMLIMIT=${BUILD_GOMEMLIMIT}
 COPY --from=deps /app /app
 COPY . .
 RUN find packages/paperclip-runner/runner packages/paperclip-runner/protocol -type f -exec touch -d @0 {} + \
@@ -145,7 +153,8 @@ RUN pnpm --filter @paperclipai/plugin-sdk build
 # next RUN as an environment variable. The production stage below declares the
 # same ARG again for the runtime fallback; an ARG goes out of scope at the
 # end of its stage. Empty for local `docker build`, which then writes no stamp.
-ENV NODE_OPTIONS=--max-old-space-size=4096
+ARG BUILD_NODE_HEAP_MB=2048
+ENV NODE_OPTIONS=--max-old-space-size=${BUILD_NODE_HEAP_MB}
 RUN pnpm --filter @paperclipai/server build
 RUN test -f server/dist/index.js || (echo "ERROR: server build output missing" && exit 1)
 RUN pnpm --filter @paperclipai/server build:runtime \

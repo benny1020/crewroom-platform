@@ -435,6 +435,10 @@ async function runVitest(args, label, testShard = null) {
     const runFilters = selected.lines.map((line) => `${chatSuite}:${chatSuiteRunLine(sourceLines, line)}`);
     args = [...args.filter((arg) => arg !== chatSuite), ...runFilters, "--allowOnly=false"];
   }
+  const workerLimit = process.env.PAPERCLIP_VITEST_MAX_WORKERS;
+  if (workerLimit !== undefined && !args.some(arg => /^--maxWorkers(?:=|$)/.test(arg))) {
+    args = [...args, `--maxWorkers=${parsePositiveInteger(workerLimit, "PAPERCLIP_VITEST_MAX_WORKERS")}`];
+  }
   await new Promise((resolve, reject) => {
     const child = spawn("pnpm", ["exec", "vitest", "run", ...sourceOnlyVitestArgs, ...args], {
       cwd: repoRoot,

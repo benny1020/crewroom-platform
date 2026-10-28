@@ -1,0 +1,22 @@
+{
+  "source": "actual local browser and API; paused fixture agent; no model execution",
+  "taskId": "1a8266a1-fc46-4460-94df-0985cc3da284",
+  "identifier": "CMP-3",
+  "checks": [
+    {
+      "action": "opinion",
+      "explicitReopen": false,
+      "status": "done",
+      "sameTask": true
+    },
+    {
+      "action": "revision",
+      "explicitReopen": true,
+      "status": "todo",
+      "sameTask": true
+    }
+  ],
+  "wakeupEvidence": "Raw wakeup queue is not exposed by the public API. Wake counts are established in server route regressions, not this paused-agent browser smoke.",
+  "liveRuns": 0,
+  "fixtureRestoredTo": "done; agent remains paused"
+}

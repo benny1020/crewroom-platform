@@ -1389,6 +1389,10 @@ function invalidateActivityQueries(
       !!currentActor.agentId &&
       actorId === currentActor.agentId);
 
+  if (action?.startsWith("company_member.") || action?.startsWith("resource_membership.") || action?.startsWith("agent.")) {
+    queryClient.invalidateQueries({ queryKey: ["crewroom", "capabilities", companyId] });
+  }
+
   if (action?.startsWith("ai_connection.") || action?.startsWith("connection_grant.")) {
     queryClient.invalidateQueries({ queryKey: ["ai-connections", companyId] });
   }
@@ -1593,6 +1597,7 @@ function invalidateActivityQueries(
     });
     queryClient.invalidateQueries({ queryKey: queryKeys.org(companyId) });
     if (entityId) {
+      queryClient.invalidateQueries({ queryKey: queryKeys.agents.skills(entityId) });
       queryClient.invalidateQueries({
         queryKey: queryKeys.agents.detail(entityId),
       });

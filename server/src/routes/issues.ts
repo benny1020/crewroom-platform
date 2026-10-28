@@ -2189,7 +2189,11 @@ function shouldImplicitlyMoveCommentedIssueToTodo(input: {
   checkoutRunId: string | null | undefined;
   executionRunId: string | null | undefined;
   requestAddsExplicitBlockers?: boolean;
+  reopenIntent?: boolean;
 }) {
+  // An explicit comment-only choice suppresses legacy implicit reopening.
+  // Explicit true is handled by the normal reopen/resume gates at the caller.
+  if (input.reopenIntent !== undefined) return false;
   // A request that wires a non-empty blockedByIssueIds list is declaring that
   // the issue is waiting on other work. The implicit reopen exists for plain
   // conversational comments ("please continue"), not structured dependency
@@ -4933,6 +4937,19 @@ export function issueRoutes(
     });
     if (decision.allowed) return;
     throw forbidden(decision.explanation, authorizationDeniedDetails(decision));
+  }
+
+  async function assertCanUseConversationAgent(req: Request, companyId: string, agentId: string,
+    issue?: Pick<typeof issueRows.$inferSelect, "id" | "projectId" | "parentId">) {
+    const decision = await access.decide({
+      actor: req.actor, action: "agent:wake",
+      resource: { type: "agent", companyId, agentId },
+    });
+    if (!decision.allowed) throw forbidden(decision.explanation, authorizationDeniedDetails(decision));
+    await assertCanAssignTasks(req, companyId, {
+      issueId: issue?.id ?? null, projectId: issue?.projectId ?? null, parentIssueId: issue?.parentId ?? null,
+      assigneeAgentId: agentId, assigneeUserId: null,
+    });
   }
 
   async function assertCanReuseCreatedIssue(req: Request, issue: typeof issueRows.$inferSelect) {
@@ -14049,6 +14066,7 @@ export function issueRoutes(
               actorRunId: actor.runId,
               checkoutRunId: existing.checkoutRunId,
               executionRunId: existing.executionRunId,
+              reopenIntent: req.body.reopen,
               requestAddsExplicitBlockers:
                 Array.isArray(req.body.blockedByIssueIds) &&
                 req.body.blockedByIssueIds.length > 0,
@@ -14703,7 +14721,10 @@ export function issueRoutes(
       // issue stays terminal and the reaper then skips the leaked workspace.
       let reopenedWorkspace: Pick<ExecutionWorkspace, "id"> | null = null;
       let reopenedGeneration: number | null = null;
-      if (closedExecutionWorkspace && (commentBody || isAgentWorkUpdate)) {
+      if (closedExecutionWorkspace && (
+        (commentBody && (req.body.reopen !== false || effectiveMoveToTodoRequested ||
+          (typeof updateFields.status === "string" && !isClosedIssueStatus(updateFields.status)))) || isAgentWorkUpdate
+      )) {
         const reopenOutcome =
           await reopenClosedIssueExecutionWorkspaceOrRespond(
             req,
@@ -16525,6 +16546,7 @@ export function issueRoutes(
         if (req.actor.userId !== issue.conversationUserId) {
           throw forbidden("Only the conversation owner can interrupt a chat to send queued messages");
         }
+        await assertCanUseConversationAgent(req, issue.companyId, issue.conversationAgentId, issue);
       }
       const actor = getActorInfo(req);
       const runToInterrupt = await db.transaction(async (tx) => {
@@ -18369,7 +18391,9 @@ export function issueRoutes(
     if (req.actor.type !== "board" || !req.actor.userId) throw forbidden("Board user access required");
     if (!(await instanceSettings.getExperimental()).enableAgentChat) throw notFound("Agent Chat is disabled");
     const conversations = await svc.listConversations(companyId, req.actor.userId);
-    res.json(await filterIssuesForActor(req, conversations));
+    // Legacy open conversations remain ordinary tasks until an explicit privacy
+    // change. Do not present them as personal conversations in Crewroom.
+    res.json(await filterIssuesForActor(req, conversations.filter((issue) => issue.visibility === "private")));
   });
 
   // GET stays read-only. POST resolves the single chat on explicit add or first send/upload.
@@ -18383,13 +18407,27 @@ export function issueRoutes(
       if (resolved.ambiguous) throw conflict("Agent reference is ambiguous");
       if (!resolved.agent) throw notFound("Agent not found");
       const agent = resolved.agent;
+      const agentRead = await access.decide({
+        actor: req.actor, action: "agent:read",
+        resource: { type: "agent", companyId, agentId: agent.id },
+      });
+      if (!agentRead.allowed) throw notFound("Agent not found");
+      // The chat's private assignment grant must only be created after the
+      // caller is authorized to select this agent through the ordinary policy.
       const existing = await svc.getConversation(companyId, agent.id, req.actor.userId);
+      if (method === "post") await assertCanUseConversationAgent(req, companyId, agent.id, existing ?? undefined);
       if (existing && !(await assertIssueReadAllowed(req, res, existing))) return;
+      if (existing && existing.visibility !== "private") {
+        throw conflict("This conversation needs an explicit privacy change before it can be used as a personal chat", {
+          code: "chat_conversation_privacy_required",
+        });
+      }
       if (existing || method === "get") { res.json(existing); return; }
       const issue = await svc.create(companyId, {
         title: `Chat with ${agent.name}`, assigneeAgentId: agent.id,
         conversationAgentId: agent.id, conversationUserId: req.actor.userId,
         conversationState: "waiting", status: "in_review", createdByUserId: req.actor.userId,
+        visibility: "private", responsibleUserId: req.actor.userId, trustExplicitResponsibleUserId: true,
       });
       await logActivity(db, { companyId, actorType: "user", actorId: req.actor.userId,
         action: "issue.conversation_opened", entityType: "issue", entityId: issue.id,
@@ -18414,7 +18452,11 @@ export function issueRoutes(
         if (!(await instanceSettings.getExperimental()).enableAgentChat) throw notFound("Agent Chat is disabled");
         if (!req.actor.userId) throw forbidden("Board user access required");
         if (req.actor.userId !== issue.conversationUserId) throw forbidden("Only the conversation owner can send messages or start a new session");
+        if (issue.visibility !== "private") throw conflict("Make the existing public conversation private before sending personal chat messages", {
+          code: "chat_conversation_privacy_required",
+        });
         if (!req.body.clientRequestId) throw unprocessable("Chat messages require a clientRequestId for safe retries");
+        await assertCanUseConversationAgent(req, issue.companyId, issue.conversationAgentId, issue);
         if (!(await assertAgentIssueCommentAllowed(req, res, issue))) return;
         if (req.body.body.trim() !== "/new" && !(await assertBoardCommentNotPaused(req, res, issue))) return;
         const actor = getActorInfo(req);
@@ -18575,6 +18617,7 @@ export function issueRoutes(
             actorRunId: actor.runId,
             checkoutRunId: issue.checkoutRunId,
             executionRunId: issue.executionRunId,
+            reopenIntent: req.body.reopen,
           }) ||
           shouldResumeInProgressScheduledRetry);
       const hasUnresolvedFirstClassBlockers =
@@ -18607,7 +18650,7 @@ export function issueRoutes(
       // reaper then skips the leaked workspace.
       let reopenedWorkspace: Pick<ExecutionWorkspace, "id"> | null = null;
       let reopenedGeneration: number | null = null;
-      if (closedExecutionWorkspace) {
+      if (closedExecutionWorkspace && (req.body.reopen !== false || effectiveMoveToTodoRequested)) {
         const reopenOutcome =
           await reopenClosedIssueExecutionWorkspaceOrRespond(
             req,
@@ -19588,6 +19631,11 @@ export function issueRoutes(
       }
       if (issue.conversationAgentId && req.actor.type === "board" && req.actor.userId !== issue.conversationUserId) {
         throw forbidden("Only the conversation owner can upload attachments");
+      }
+      if (issue.conversationAgentId && req.actor.type === "board" && issue.visibility !== "private") {
+        throw conflict("Make the existing public conversation private before uploading personal chat files", {
+          code: "chat_conversation_privacy_required",
+        });
       }
       if (!(await assertAgentIssueMutationAllowed(req, res, issue))) return;
       if (

@@ -1,0 +1,138 @@
+{
+  "capturedAt": "2026-10-28T14:07:58.237Z",
+  "origin": "http://127.0.0.1:3117",
+  "source": "real local API; paused sample colleagues; no provider credentials or model execution",
+  "healthCommit": "fd6f7bcd284b5aa13d506aae13b13aeb13161c8c",
+  "sourceHasLocalChanges": true,
+  "companyId": "5b2a7449-4714-4c70-a4f9-453ba5cf8348",
+  "captures": [
+    {
+      "file": "team-1440.png",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "path": "/CMP/crewroom",
+      "horizontalOverflow": false
+    },
+    {
+      "file": "team-1280.png",
+      "viewport": {
+        "width": 1280,
+        "height": 1000
+      },
+      "path": "/CMP/crewroom",
+      "horizontalOverflow": false
+    },
+    {
+      "file": "team-1600.png",
+      "viewport": {
+        "width": 1600,
+        "height": 1000
+      },
+      "path": "/CMP/crewroom",
+      "horizontalOverflow": false
+    },
+    {
+      "file": "team-1440x900.png",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "path": "/CMP/crewroom",
+      "horizontalOverflow": false
+    },
+    {
+      "file": "development.png",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "path": "/CMP/crewroom?department=development",
+      "horizontalOverflow": false
+    },
+    {
+      "file": "workroom.png",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "path": "/CMP/crewroom?agent=e10da42a-c95b-4091-bee4-01fe076ebcc4",
+      "horizontalOverflow": false
+    },
+    {
+      "file": "personal.png",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "path": "/CMP/crewroom?view=personal",
+      "horizontalOverflow": false
+    },
+    {
+      "file": "skills.png",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "path": "/CMP/crewroom?view=skills",
+      "horizontalOverflow": false
+    },
+    {
+      "file": "team-reduced-motion.png",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "path": "/CMP/crewroom",
+      "horizontalOverflow": false
+    },
+    {
+      "file": "empty.fixture.png",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "path": "/CMP/crewroom",
+      "horizontalOverflow": false
+    },
+    {
+      "file": "error.fixture.png",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "path": "/CMP/crewroom",
+      "horizontalOverflow": false
+    },
+    {
+      "file": "read-only.fixture.png",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "path": "/CMP/crewroom",
+      "horizontalOverflow": false
+    }
+  ],
+  "rosterWithin900Viewport": true,
+  "reducedMotionRunningAnimations": 0,
+  "sampleGallery": "Explicit 12-scene sample; no execution or successful result implied",
+  "motionPreferenceSurvivesReload": true,
+  "primaryCtaUsesExistingChat": true,
+  "browserFixtures": [
+    {
+      "file": "empty.fixture.png",
+      "source": "browser response replacement: empty agent list"
+    },
+    {
+      "file": "error.fixture.png",
+      "source": "browser response replacement: agent API 503"
+    },
+    {
+      "file": "read-only.fixture.png",
+      "source": "browser response replacement: denied creation capabilities; server authorization tested separately"
+    }
+  ],
+  "pageErrors": []
+}

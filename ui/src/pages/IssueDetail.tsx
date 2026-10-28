@@ -5369,6 +5369,7 @@ export function TaskDetailSurface({ conversation, tasksTab }: { tasksTab?: TaskS
       issuesApi.update(issueId!, {
         comment: body,
         commentClientRequestId: clientRequestId,
+        ...(reopen === undefined ? {} : { reopen }),
         ...(attachmentIds?.length ? { attachmentIds } : {}),
         ...(reassignment ? {
           assigneeAgentId: reassignment.assigneeAgentId,

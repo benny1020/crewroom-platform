@@ -250,7 +250,7 @@ export const heartbeatsApi = {
     if (typeof options === "number") {
       searchParams.set("minCount", String(options));
     } else if (options) {
-      if (options.minCount)
+      if (options.minCount != null)
         searchParams.set("minCount", String(options.minCount));
       if (options.limit) searchParams.set("limit", String(options.limit));
       if (options.distinctTasks) searchParams.set("distinctTasks", "true");

@@ -20,6 +20,7 @@ import {
   agentWakeupRequests,
   companyMemberships,
   companies,
+  chatTaskHandoffs,
   createDb,
   heartbeatRuns,
   issueComments,
@@ -27,12 +28,14 @@ import {
   issueThreadInteractions,
   issueRecoveryActions,
   issues,
+  projects,
 } from "@paperclipai/db";
 import {
   getEmbeddedPostgresTestSupport,
   startEmbeddedPostgresTestDatabase,
 } from "./helpers/embedded-postgres.js";
 import { issueService } from "../services/issues.js";
+import { PaperclipRunnerToolAuthority } from "../services/native-runtime/paperclip-runner-tool-authority.js";
 import { documentService } from "../services/documents.js";
 import { getTaskPlanContext } from "../services/task-plan-context.js";
 import { terminalizeLegacyExecution, LEGACY_RECOVERY_CAUSE } from "../services/legacy-execution-recovery.js";
@@ -219,6 +222,9 @@ const support = await getEmbeddedPostgresTestSupport();
       expect(resolved.every((response) => response.status === 200)).toBe(true);
       expect(resolved[0].body.id).toBe(resolved[1].body.id);
       expect(resolved[0].body.conversationUserId).toBe(owner);
+      expect(resolved[0].body.visibility).toBe("private");
+      expect(resolved[0].body.responsibleUserId).toBe(owner);
+      expect(resolved[0].body.projectId).toBeTruthy();
       const listPath = `/api/companies/${companyId}/chats`;
       const owned = await request(app).get(listPath);
       expect(owned.status).toBe(200);
@@ -234,7 +240,7 @@ const support = await getEmbeddedPostgresTestSupport();
             `/api/issues/${resolved[0].body.id}`,
           )
         ).status,
-      ).toBe(200);
+      ).toBe(404);
       expect(
         (await request(appFor(randomUUID(), false)).get(path)).status,
       ).toBe(403);
@@ -299,6 +305,90 @@ const support = await getEmbeddedPostgresTestSupport();
       await instanceSettingsService(db).updateExperimental({
         enableAgentChat: true,
       });
+    });
+    it("requires an explicit privacy transition for legacy open conversations, including locked creation retries", async () => {
+      const userId = randomUUID();
+      await db.insert(companyMemberships).values({ companyId, principalType: "user", principalId: userId,
+        status: "active", membershipRole: "operator" });
+      await ensureHumanRoleDefaultGrants(db, { companyId, principalId: userId, membershipRole: "operator", grantedByUserId: null });
+      const legacy = await issueService(db).create(companyId, { title: "Existing public conversation", conversationAgentId: agentId,
+        conversationUserId: userId, assigneeAgentId: agentId, status: "in_review", conversationState: "waiting", createdByUserId: userId });
+      const app = express();
+      app.use(express.json());
+      app.use((req, _res, next) => { req.actor = { type: "board", source: "session", userId, companyIds: [companyId] }; next(); });
+      app.use("/api", issueRoutes(db, { wakeup: async () => null } as never));
+      app.use(errorHandler);
+      const path = `/api/companies/${companyId}/chats/${agentId}`;
+      for (const method of ["get", "post"] as const) {
+        const response = await request(app)[method](path);
+        expect(response.status).toBe(409);
+        expect(response.body.details.code).toBe("chat_conversation_privacy_required");
+      }
+      expect((await request(app).get(`/api/companies/${companyId}/chats`)).body).toEqual([]);
+      for (const body of ["Personal follow-up", "/new"]) {
+        expect((await request(app).post(`/api/issues/${legacy.id}/comments`)
+          .send({ body, clientRequestId: randomUUID() })).status).toBe(409);
+      }
+      expect((await request(app).post(`/api/companies/${companyId}/issues/${legacy.id}/attachments`)
+        .attach("file", Buffer.from("private file"), "note.txt")).status).toBe(409);
+      await expect(issueService(db).create(companyId, { title: "Personal chat", conversationAgentId: agentId,
+        conversationUserId: userId, assigneeAgentId: agentId, status: "in_review", conversationState: "waiting",
+        createdByUserId: userId, responsibleUserId: userId, trustExplicitResponsibleUserId: true, visibility: "private" }))
+        .rejects.toMatchObject({ status: 409, details: { code: "chat_conversation_privacy_required" } });
+      expect((await issueService(db).getById(legacy.id))?.visibility).toBe("open");
+      expect(await db.select().from(issueComments).where(eq(issueComments.issueId, legacy.id))).toHaveLength(0);
+      const changed = await issueService(db).update(legacy.id, { visibility: "private" });
+      expect(changed?.visibility).toBe("private");
+      expect(changed?.privacyRootIssueId).toBe(legacy.id);
+      expect((await request(app).get(path)).body.id).toBe(legacy.id);
+      expect((await request(app).post(path)).body.id).toBe(legacy.id);
+    });
+    it.each(["native", "http"] as const)("inherits private conversation provenance through %s handoff and deduplicates retries", async (transport) => {
+      const owner = randomUUID(), colleague = randomUUID(), handoffCompany = randomUUID(), planner = randomUUID();
+      await db.insert(companies).values({ id: handoffCompany, name: "Private handoff", issuePrefix: `H${handoffCompany.slice(0, 6)}` });
+      await db.insert(agents).values({ id: planner, companyId: handoffCompany, name: "Coordinator", role: "ceo", status: "active", adapterType: "paperclip_runner" });
+      for (const userId of [owner, colleague]) {
+        await db.insert(authUsers).values({ id: userId, name: "Member", email: `${userId}@example.test`, createdAt: new Date(), updatedAt: new Date() });
+        await db.insert(companyMemberships).values({ companyId: handoffCompany, principalType: "user", principalId: userId, status: "active", membershipRole: "operator" });
+      }
+      const chat = await issueService(db).create(handoffCompany, { title: "Private planning", conversationAgentId: planner,
+        conversationUserId: owner, assigneeAgentId: planner, status: "in_review", conversationState: "active",
+        createdByUserId: owner, responsibleUserId: owner, trustExplicitResponsibleUserId: true, visibility: "private" });
+      const [publicProject] = await db.insert(projects).values({ companyId: handoffCompany, name: "Shared engineering", visibility: "open" }).returning();
+      const [run] = await db.insert(heartbeatRuns).values({ companyId: handoffCompany, agentId: planner,
+        responsibleUserId: owner,
+        status: "running", runtimeMode: transport === "native" ? "native" : "legacy", nativeIssueId: transport === "native" ? chat.id : null,
+        contextSnapshot: { issueId: chat.id, conversationSessionGeneration: chat.conversationSessionGeneration }, invocationSource: "assignment", triggerDetail: "system" }).returning();
+      await db.update(issues).set({ executionRunId: run.id }).where(eq(issues.id, chat.id));
+      const initialPlan = "Inspect the requested change, implement it, and report verification.";
+      let taskId: string;
+      if (transport === "native") {
+        const authority = new PaperclipRunnerToolAuthority(db, { companyId: handoffCompany, agentId: planner, issueId: chat.id, runId: run.id });
+        const call = { tool: "create_task", callId: "private-handoff", arguments: {
+          title: "Execute the agreed work", projectId: publicProject.id, initialPlan, idempotencyKey: "private-handoff", status: "backlog" } };
+        const result = await authority.execute(call) as { task: { id: string } };
+        expect(await authority.execute({ ...call, callId: "private-handoff-retry" })).toEqual(result);
+        taskId = result.task.id;
+      } else {
+        const app = express(); app.use(express.json());
+        app.use((req, _res, next) => { req.actor = { type: "agent", source: "agent_key", agentId: planner, companyId: handoffCompany, runId: run.id }; next(); });
+        app.use("/api", issueRoutes(db, { wakeup: async () => null } as never)); app.use(errorHandler);
+        const body = { title: "Execute the agreed work", projectId: publicProject.id, initialPlan, idempotencyKey: "private-handoff", status: "backlog", assigneeAgentId: planner };
+        const result = await request(app).post(`/api/companies/${handoffCompany}/issues`).send(body);
+        expect(result.status).toBe(201);
+        taskId = result.body.id;
+        expect((await request(app).post(`/api/companies/${handoffCompany}/issues`).send(body)).body.id).toBe(taskId);
+      }
+      const task = await issueService(db).getById(taskId);
+      expect(task).toMatchObject({ visibility: "private", privacyRootIssueId: chat.id, privacyParentIssueId: chat.id,
+        responsibleUserId: owner, originRunId: run.id, parentId: null, projectId: publicProject.id });
+      expect(await documentService(db).getIssueDocumentByKey(taskId, "plan")).toMatchObject({ body: initialPlan });
+      expect(await documentService(db).listIssueDocumentRevisions(taskId, "plan")).toHaveLength(1);
+      expect(await db.select().from(chatTaskHandoffs).where(eq(chatTaskHandoffs.taskId, taskId))).toHaveLength(1);
+      const viewer = express();
+      viewer.use((req, _res, next) => { req.actor = { type: "board", source: "session", userId: colleague, companyIds: [handoffCompany] }; next(); });
+      viewer.use("/api", issueRoutes(db, { wakeup: async () => null } as never)); viewer.use(errorHandler);
+      expect((await request(viewer).get(`/api/issues/${taskId}`)).status).toBe(404);
     });
     it("deduplicates concurrent message retries and preserves recoverable delivery", async () => {
       const issue = await create();

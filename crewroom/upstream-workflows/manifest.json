@@ -1,0 +1,94 @@
+[
+  {
+    "original": ".github/workflows/agent-runtime-images.yml",
+    "retained": "crewroom/upstream-workflows/agent-runtime-images.yml"
+  },
+  {
+    "original": ".github/workflows/ci-profile.yml",
+    "retained": "crewroom/upstream-workflows/ci-profile.yml"
+  },
+  {
+    "original": ".github/workflows/ci-routing.yml",
+    "retained": "crewroom/upstream-workflows/ci-routing.yml"
+  },
+  {
+    "original": ".github/workflows/ci-work-benchmark.yml",
+    "retained": "crewroom/upstream-workflows/ci-work-benchmark.yml"
+  },
+  {
+    "original": ".github/workflows/cloud-migrator-artifacts.yml",
+    "retained": "crewroom/upstream-workflows/cloud-migrator-artifacts.yml"
+  },
+  {
+    "original": ".github/workflows/cloud-readiness.yml",
+    "retained": "crewroom/upstream-workflows/cloud-readiness.yml"
+  },
+  {
+    "original": ".github/workflows/commitperclip-review.yml",
+    "retained": "crewroom/upstream-workflows/commitperclip-review.yml"
+  },
+  {
+    "original": ".github/workflows/docker-runner-check.yml",
+    "retained": "crewroom/upstream-workflows/docker-runner-check.yml"
+  },
+  {
+    "original": ".github/workflows/docker.yml",
+    "retained": "crewroom/upstream-workflows/docker.yml"
+  },
+  {
+    "original": ".github/workflows/e2e.yml",
+    "retained": "crewroom/upstream-workflows/e2e.yml"
+  },
+  {
+    "original": ".github/workflows/pr-trusted.yml",
+    "retained": "crewroom/upstream-workflows/pr-trusted.yml"
+  },
+  {
+    "original": ".github/workflows/pr.yml",
+    "retained": "crewroom/upstream-workflows/pr.yml"
+  },
+  {
+    "original": ".github/workflows/refresh-lockfile.yml",
+    "retained": "crewroom/upstream-workflows/refresh-lockfile.yml"
+  },
+  {
+    "original": ".github/workflows/release-smoke.yml",
+    "retained": "crewroom/upstream-workflows/release-smoke.yml"
+  },
+  {
+    "original": ".github/workflows/release-verify.yml",
+    "retained": "crewroom/upstream-workflows/release-verify.yml"
+  },
+  {
+    "original": ".github/workflows/release.yml",
+    "retained": "crewroom/upstream-workflows/release.yml"
+  },
+  {
+    "original": ".github/workflows/runner-chaos-evals.yml",
+    "retained": "crewroom/upstream-workflows/runner-chaos-evals.yml"
+  },
+  {
+    "original": ".github/workflows/runner-full-stack-e2e.yml",
+    "retained": "crewroom/upstream-workflows/runner-full-stack-e2e.yml"
+  },
+  {
+    "original": ".github/workflows/runner-live-evals.yml",
+    "retained": "crewroom/upstream-workflows/runner-live-evals.yml"
+  },
+  {
+    "original": ".github/workflows/runner-protocol-live-evals.yml",
+    "retained": "crewroom/upstream-workflows/runner-protocol-live-evals.yml"
+  },
+  {
+    "original": ".github/workflows/sentry-contract.yml",
+    "retained": "crewroom/upstream-workflows/sentry-contract.yml"
+  },
+  {
+    "original": ".github/workflows/storybook-deploy.yml",
+    "retained": "crewroom/upstream-workflows/storybook-deploy.yml"
+  },
+  {
+    "original": ".github/workflows/storybook-visual.yml",
+    "retained": "crewroom/upstream-workflows/storybook-visual.yml"
+  }
+]

@@ -1,3 +1,4 @@
+import { Checkbox } from "@/components/ui/checkbox";
 import { AgentAvatar } from "../AgentAvatar";
 import {
   useEffect,
@@ -335,14 +336,11 @@ type QueuedEditBackup = {
 };
 
 /** Local duplicate of IssueChatThread's module-private helper (same rule). */
-function shouldImplicitlyReopenComment(
+function canRequestTaskRevision(
   issueStatus: string | undefined,
   assigneeValue: string,
 ) {
-  const resumesToTodo =
-    issueStatus === "done" ||
-    issueStatus === "cancelled" ||
-    issueStatus === "blocked";
+  const resumesToTodo = issueStatus === "done" || issueStatus === "cancelled";
   return resumesToTodo && assigneeValue.startsWith("agent:");
 }
 
@@ -419,6 +417,8 @@ export function TaskChatComposer({
   const [localBody, setBody] = useState(() => (draftKey ? loadDraft(draftKey) : ""));
   const body = creation ? creation.value : localBody;
   const [submitting, setSubmitting] = useState(false);
+  const [requestRevision, setRequestRevision] = useState(false);
+  useEffect(() => setRequestRevision(false), [draftKey, issueStatus]);
   const [reviewError, setReviewError] = useState(false);
   const [uncertainSubmission, setUncertainSubmission] =
     useState<ComposerDraftSubmission | null>(() =>
@@ -641,13 +641,14 @@ export function TaskChatComposer({
     enableReassign && reassignOptions && reassignOptions.length > 0,
   );
   const assigneeValue = creation ? currentAssigneeValue : pendingAssignee ?? suggestedAssigneeValue ?? currentAssigneeValue;
+  const canRequestRevision = !creation && !queuedEdit && canRequestTaskRevision(issueStatus, assigneeValue);
   const assigneeLabel =
     reassignOptions?.find((o) => o.id === assigneeValue)?.label ?? "Unassigned";
   const assigneeName =
     assigneeLabel === "Unassigned" ? "the agent" : assigneeLabel;
   const effectivePlaceholder = queuedEdit
     ? "Edit queued message…"
-    : (placeholder ?? modePlaceholder(pendingMode, assigneeName, mobile));
+    : (placeholder ?? (canRequestRevision ? "의견이나 수정할 내용을 남겨주세요" : modePlaceholder(pendingMode, assigneeName, mobile)));
   const goalUnavailable = runnerGoalCapability?.availability !== "available";
   const goalCommandOption: ActionCommandOption = {
     id: "action:goal",
@@ -998,9 +999,8 @@ export function TaskChatComposer({
     const reassignment = hasReassignment
       ? parseAssigneeValue(assigneeValue)
       : undefined;
-    const reopen = shouldImplicitlyReopenComment(issueStatus, assigneeValue)
-      ? true
-      : undefined;
+    const reopen = canRequestRevision ? requestRevision :
+      issueStatus === "blocked" && assigneeValue.startsWith("agent:") ? true : undefined;
 
     // The thread renders the outgoing comment optimistically, so remove its
     // text from the composer at the same time. The editor remains writable for
@@ -1081,6 +1081,7 @@ export function TaskChatComposer({
         updatePendingAssignee(null);
       }
       setRunSettings(null);
+      setRequestRevision(false);
     } catch (error) {
       if (mountedTaskKey.current !== draftKey) return;
       const nextDraft = bodyRef.current;
@@ -1349,6 +1350,17 @@ export function TaskChatComposer({
               <p className="text-xs text-muted-foreground">Send /new to start a fresh session and resume this conversation.</p>
             </div>
           ) : null}
+          {canRequestRevision ? (
+            <label className="mb-3 flex items-start gap-2 text-sm">
+              <Checkbox checked={requestRevision}
+                disabled={submitting || !!uncertainSubmission}
+                onCheckedChange={checked => setRequestRevision(checked === true)} />
+              <span className="flex flex-col gap-1">
+                <span>수정 요청 · 같은 업무 다시 시작</span>
+                <span className="text-xs text-muted-foreground">선택하지 않으면 의견만 저장해요.</span>
+              </span>
+            </label>
+          ) : null}
           <div data-testid="task-chat-composer-input">
             <MarkdownEditor
               ref={editorRef}
@@ -1610,7 +1622,7 @@ export function TaskChatComposer({
                     ? queuedEdit.stale
                       ? "Queue as new message"
                       : "Save queued message"
-                    : creation?.submitLabel ?? "Send"
+                    : creation?.submitLabel ?? (requestRevision && canRequestRevision ? "수정 요청 보내기" : "보내기")
               }
               aria-busy={submitting}
               className={cn(

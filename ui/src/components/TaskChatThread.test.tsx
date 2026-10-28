@@ -476,7 +476,7 @@ it.each((["task", "legacy"] as const).flatMap(surface =>
   await act(async () => { editorCallbacks.change("Save this note."); });
   const send = surface === "task"
     ? container.querySelector<HTMLButtonElement>('[data-testid="task-chat-composer-send"]')
-    : [...container.querySelectorAll("button")].find(button => button.textContent === "Send");
+    : [...container.querySelectorAll("button")].find(button => (button.textContent === "Send" || button.textContent === "보내기"));
   expect(send).toBeDefined();
   vi.useFakeTimers();
   try {
@@ -517,7 +517,7 @@ it.each((["task", "legacy"] as const).flatMap(surface =>
   render(<Component {...props} />);
   await act(async () => { editorCallbacks.change("Please check again."); });
   const send = surface === "task" ? container.querySelector<HTMLButtonElement>('[data-testid="task-chat-composer-send"]')
-    : [...container.querySelectorAll<HTMLButtonElement>('[data-testid="issue-chat-composer"] button')].find(button => button.textContent === "Send");
+    : [...container.querySelectorAll<HTMLButtonElement>('[data-testid="issue-chat-composer"] button')].find(button => (button.textContent === "Send" || button.textContent === "보내기"));
   await act(async () => { send!.click(); });
   expect(onAdd).toHaveBeenCalledTimes(1);
   const identity = container.querySelectorAll('[data-testid="task-chat-agent-identity"]');
@@ -553,7 +553,7 @@ it.each((["task", "legacy"] as const).flatMap(surface => [
   render(<Component {...props} />);
   await act(async () => { editorCallbacks.change("Save a note for later."); });
   const send = surface === "task" ? container.querySelector<HTMLButtonElement>('[data-testid="task-chat-composer-send"]')
-    : [...container.querySelectorAll<HTMLButtonElement>('[data-testid="issue-chat-composer"] button')].find(button => button.textContent === "Send");
+    : [...container.querySelectorAll<HTMLButtonElement>('[data-testid="issue-chat-composer"] button')].find(button => (button.textContent === "Send" || button.textContent === "보내기"));
   await act(async () => { send!.click(); });
   expect(onAdd).toHaveBeenCalledTimes(1);
   expect(container.querySelector('[data-testid="task-chat-agent-identity"]')).toBeNull();

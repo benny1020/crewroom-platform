@@ -1,3 +1,4 @@
+import { CrewroomSidebar } from "./crewroom/CrewroomSidebar";
 import {
   Inbox,
   ListChecks,
@@ -51,6 +52,10 @@ import { SidebarCompanyMenu } from "./SidebarCompanyMenu";
 import { primarySidebarStyles } from "./primary-sidebar-styles";
 
 export function Sidebar({ children }: { children?: ReactNode }) {
+  return <><CrewroomSidebar />{children}</>;
+}
+
+export function PaperclipSidebar({ children }: { children?: ReactNode }) {
   const { openNewIssue } = useDialogActions();
   const { enabled: agentChatEnabled } = useAgentChatEnabled();
   // Every labeled section is collapsible (session-scoped, default open) —

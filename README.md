@@ -1,600 +1,74 @@
-<p align="center">
-  <img src="doc/assets/banner.jpg" alt="Paperclip is the app people use to manage AI agents for work." width="720" />
-</p>
+# Crewroom
 
-<p align="center">
-  <a href="#quickstart"><strong>Quickstart</strong></a> &middot;
-  <a href="https://docs.paperclip.ing"><strong>Docs</strong></a> &middot;
-  <a href="https://github.com/paperclipai/paperclip"><strong>GitHub</strong></a> &middot;
-  <a href="https://discord.gg/paperclipai"><strong>Discord</strong></a> &middot;
-  <a href="https://x.com/papercliping"><strong>Twitter</strong></a> &middot;
-  <a href="https://paperclip.ing"><strong>Website</strong></a>
-</p>
+Crewroom은 [Paperclip](https://github.com/paperclipai/paperclip) 전체 소스를 기반으로 만든 한국어 팀 에이전트 작업 공간입니다. 팀 명부, 개인 대화, 업무, 실행 기록, 승인, 파일과 스킬은 하나의 Paperclip 실행 체계를 사용합니다.
 
-<p align="center">
-  <a href="https://github.com/paperclipai/paperclip/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT License" /></a>
-  <a href="https://github.com/paperclipai/paperclip/stargazers"><img src="https://img.shields.io/github/stars/paperclipai/paperclip?style=flat" alt="Stars" /></a>
-  <a href="https://discord.gg/paperclipai"><img src="https://img.shields.io/badge/discord-join-7289da" alt="Discord" /></a>
-  <a href="https://superagent.sh"><picture><source media="(prefers-color-scheme: dark)" srcset="https://www.superagent.sh/api/badge/paperclipai/paperclip/shield.svg?theme=dark&accent=teal&variant=scanned" /><img src="https://www.superagent.sh/api/badge/paperclipai/paperclip/shield.svg?theme=light&accent=teal&variant=scanned" alt="Security posture verified by Superagent" /></picture></a>
-</p>
+![Crewroom 팀 공간](doc/crewroom/media/team-1440.png)
 
-<p align="center">
-  <a href="https://www.star-history.com/paperclipai/paperclip"><img src="https://api.star-history.com/badge?repo=paperclipai/paperclip" alt="Star History Rank" /></a>
-</p>
+격리된 로컬 API를 읽은 실제 화면입니다. 초기 동료는 연결 준비를 위해 일시 정지한 상태이며 실제 모델 실행 결과가 아닙니다. [작업방](doc/crewroom/media/workroom.png) · [내 기본 비서](doc/crewroom/media/personal.png) · [스킬](doc/crewroom/media/skills.png) · [화면·샘플 구분과 캡처 기록](doc/crewroom/MEDIA.ko.md)
 
-<br/>
+[아키텍처와 구현 경계](doc/crewroom/ARCHITECTURE.ko.md) · [리뷰 및 검증 기록](doc/crewroom/REVIEW.ko.md) · [EC2 배포 안내](doc/crewroom/DEPLOYMENT.ko.md)
 
-<div align="center">
-  <video src="https://github.com/user-attachments/assets/773bdfb2-6d1e-4e30-8c5f-3487d5b70c8f" width="600" controls></video>
-</div>
+## 제품에서 할 수 있는 일
 
-<p align="center">
-  <a href="https://paperclip.ing/waitlist/"><strong>Sign up for the Paperclip Cloud waitlist →</strong></a>
-</p>
+- 팀장·개발·운영·QA 명부에서 담당자를 찾고, 실제 업무와 실행 상태를 확인합니다.
+- 팀장 보기와 팀원 보기, 사용자별 기본 비서를 선택합니다. 이 선택은 화면과 개인 선호이며 권한을 부여하지 않습니다.
+- 같은 에이전트와 대화를 이어갑니다. 대화 지침은 명확한 실행 요청을 기존 담당 업무로 인계하고, 질문과 아이디어는 대화로 다루도록 구성합니다. 실제 모델의 의도 해석·실행 품질은 연결 후 별도로 검증해야 합니다.
+- 업무별 댓글과 작업방에서 결과 확인·피드백·수정 요청을 이어갑니다. 완료한 업무는 의견만 저장하거나 같은 업무에 수정을 요청하는 흐름으로 구분합니다.
+- 업무·파일·팀 스킬을 기존 API로 조회하고, 권한이 허용된 담당자에게 업무를 생성·배정합니다. 스킬 요청은 일반 업무와 버전 참조를 남깁니다.
+- 12종 캐릭터와 상태별 작업 모션, 동작 감소 설정을 제공합니다. 실행 애니메이션은 관측된 실제 실행 상태를 따릅니다.
 
-<br/>
+개인 대화는 인증 사용자에게 귀속된 private issue로 생성합니다. 공개된 과거 대화는 명시적으로 비공개 전환하기 전 개인 대화로 계속 사용할 수 없습니다. 부서 명칭과 기본 비서 설정은 ACL이나 독립된 개인 메모리 경계가 아닙니다. 원본 관리 화면과 실행·승인·감사 기능도 유지합니다. 전체 upstream 화면을 한국어로 번역한 제품은 아닙니다.
 
-# Paperclip is the app people use to manage AI agents for work.
+명시적인 미미 동작 샘플입니다. 실제 동료의 업무 실행을 나타내지 않습니다.
 
-Open-source orchestration for teams of AI agents.
+![미미의 상태별 동작 샘플](doc/crewroom/media/mimi-motion-preview.gif)
 
-**If OpenClaw is an _employee_, Paperclip is the _company_.**
+## 아키텍처
 
-Paperclip is a Node.js server and React UI that orchestrates a team of AI agents to run a business. Bring your own agents, assign goals, and track work and costs from one dashboard. Choose models and harnesses per agent while keeping your team's tasks, skills, permissions, and history in one place.
+![Crewroom architecture](doc/crewroom/architecture.png)
 
-It looks like a task manager. Under the hood: org charts, budgets, governance, goal alignment, and agent coordination.
+## 격리된 로컬 실행
 
-**Manage business goals, not pull requests.**
+Node.js 24.11+, pnpm 9+, Git이 필요합니다. 전체 빌드에는 `packages/paperclip-runner/rust-toolchain.toml`에 고정한 Rust toolchain도 사용합니다.
 
-|        | Step            | Example                                                            |
-| ------ | --------------- | ------------------------------------------------------------------ |
-| **01** | Define the goal | _"Build the #1 AI note-taking app to $1M MRR."_                    |
-| **02** | Hire the team   | CEO, CTO, engineers, designers, marketers — any bot, any provider. |
-| **03** | Approve and run | Review strategy. Set budgets. Hit go. Monitor from the dashboard.  |
-
-<br/>
-
-<div align="center">
-<table>
-  <tr>
-    <td align="center" rowspan="2"><strong>Works<br/>with</strong></td>
-    <td align="center" valign="top"><img src="doc/assets/logos/openclaw.svg" width="32" height="32" alt="OpenClaw" /><br/><sub>OpenClaw</sub></td>
-    <td align="center" valign="top"><img src="doc/assets/logos/claude.svg" width="32" height="32" alt="Claude Code" /><br/><sub>Claude Code</sub></td>
-    <td align="center" valign="top"><img src="ui/public/brands/codex-color.svg" width="32" height="32" alt="Codex" /><br/><sub>Codex</sub></td>
-    <td align="center" valign="top"><picture><source media="(prefers-color-scheme: dark)" srcset="ui/public/brands/adapters/cursor-dark.svg" /><img src="ui/public/brands/adapters/cursor.svg" width="32" height="32" alt="Cursor and Cursor Cloud" /></picture><br/><sub>Cursor<br/>+ Cloud</sub></td>
-    <td align="center" valign="top"><img src="ui/public/brands/adapters/gemini-color.svg" width="32" height="32" alt="Gemini CLI" /><br/><sub>Gemini CLI</sub></td>
-  </tr>
-  <tr>
-    <td align="center" valign="top"><picture><source media="(prefers-color-scheme: dark)" srcset="ui/public/brands/opencode-logo-dark-square.svg" /><img src="ui/public/brands/opencode-logo-light-square.svg" width="32" height="32" alt="OpenCode" /></picture><br/><sub>OpenCode</sub></td>
-    <td align="center" valign="top"><picture><source media="(prefers-color-scheme: dark)" srcset="ui/public/brands/adapters/pi-dark.svg" /><img src="ui/public/brands/adapters/pi.svg" width="32" height="32" alt="Pi" /></picture><br/><sub>Pi</sub></td>
-    <td align="center" valign="top"><picture><source media="(prefers-color-scheme: dark)" srcset="ui/public/brands/adapters/hermesagent-dark.svg" /><img src="ui/public/brands/adapters/hermesagent.svg" width="32" height="32" alt="Hermes and Hermes Gateway" /></picture><br/><sub>Hermes<br/>+ Gateway</sub></td>
-    <td align="center" valign="top"><picture><source media="(prefers-color-scheme: dark)" srcset="ui/public/brands/adapters/grok-dark.svg" /><img src="ui/public/brands/adapters/grok.svg" width="32" height="32" alt="Grok Build" /></picture><br/><sub>Grok Build</sub></td>
-    <td align="center" valign="top"><picture><source media="(prefers-color-scheme: dark)" srcset="ui/public/brands/adapters/kimi-color.svg" /><img src="ui/public/brands/adapters/kimi-color-light.svg" width="32" height="32" alt="Kimi Code" /></picture><br/><sub>Kimi Code</sub></td>
-  </tr>
-</table>
-
-<em>If it can receive a heartbeat, it's hired.</em>
-
-</div>
-
-Custom processes, HTTP endpoints, and external adapter packages extend the roster. See the [adapter overview](https://docs.paperclip.ing/reference/adapters/overview/) for setup and capabilities.
-
-<br/>
-
-## Paperclip is right for you if
-
-- ✅ You want to build **autonomous AI organizations**
-- ✅ You **coordinate many different agents** (OpenClaw, Codex, Claude, Cursor) toward a common goal
-- ✅ You have **20 simultaneous Claude Code terminals** open and lose track of what everyone is doing
-- ✅ You want agents running **autonomously 24/7**, but still want to audit work and chime in when needed
-- ✅ You want to **monitor costs** and enforce budgets
-- ✅ You want a process for managing agents that **feels like using a task manager**
-- ✅ You want to manage your autonomous businesses **from your phone**
-
-<br/>
-
-## The four pillars
-
-Four things have to work for an organization of AI agents to actually produce: the tasks, the org, the training, and the infrastructure. Paperclip is built around exactly those four pillars.
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/paperclipai/paperclip/1ec33ffd8b597f7e36aac3e2fbb4665b8c42dc3c/doc/assets/four-pillars-dark.png">
-  <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/paperclipai/paperclip/1ec33ffd8b597f7e36aac3e2fbb4665b8c42dc3c/doc/assets/four-pillars-light.png">
-  <img src="https://raw.githubusercontent.com/paperclipai/paperclip/1ec33ffd8b597f7e36aac3e2fbb4665b8c42dc3c/doc/assets/four-pillars-light.png" alt="The four pillars of Paperclip">
-</picture>
-
-| Pillar | Built for | What it covers |
-| --- | --- | --- |
-| **Agentic Task Manager** — Declare intent. Agents work. You verify the output. | Everyone, daily | Tasks, approvals & review gates · proactive agent coworkers · auditable routines & workflows · verify from diffs, screenshots & tests |
-| **Org Chart for Agents** — Roles, permissions & boundaries for humans and agents. | Managers | Mixed human + agent org chart · responsibilities, delegation, specialization · governance: who can do what · scoped secrets & company boundaries · connection permissions & responsible-user identities |
-| **Agent Employee Training** — Design, train & evaluate your AI employees. | Enablers | Skill Studio & shared org-wide skills · evals & saved test runs · active learning loops & quality metrics · performance reviews for agents · saved test inputs · skill version history & restore · reusable team templates |
-| **Agentic OS** — The infrastructure that makes the work run. | IT & platform | Cross-provider runtime: any model, any agent · sandboxing, integrations & MCP servers · SSO, GRC, RBAC & cost controls · data privacy, internal trace collection, compounding data value · personal & shared app connections · run history & opt-in tracing |
-
-<br/>
-
-## Features
-
-<table>
-<tr>
-<td align="center" width="33%">
-<h3>🔌 Bring Your Own Agent</h3>
-Any agent, any runtime, one org chart. If it can receive a heartbeat, it's hired.
-</td>
-<td align="center" width="33%">
-<h3>🎯 Goal Alignment</h3>
-Link tasks and projects to your organization goals. Agents receive the goal context behind their work.
-</td>
-<td align="center" width="33%">
-<h3>💓 Heartbeats</h3>
-Agents wake for assigned work, follow-up messages, or configured schedules. Delegation flows up and down the org chart.
-</td>
-</tr>
-<tr>
-<td align="center">
-<h3>💰 Cost Control</h3>
-Company, agent, and project <a href="https://docs.paperclip.ing/guides/day-to-day/costs/">budgets</a>. Track reported spend, get threshold alerts, and pause work at configured limits.
-</td>
-<td align="center">
-<h3>🏢 Multi-Organization</h3>
-One deployment, many organizations. Separate tasks, agents, permissions, and activity histories for each.
-</td>
-<td align="center">
-<h3>🎫 Task Threads</h3>
-Keep conversations, plans, blockers, files, and run history attached to the work. Assign tasks to agents or people.
-</td>
-</tr>
-<tr>
-<td align="center">
-<h3>🛡️ Governance</h3>
-Configure <a href="https://docs.paperclip.ing/guides/day-to-day/approvals/">review and approval stages</a>, approve hires, and pause, reassign, or stop work when needed.
-</td>
-<td align="center">
-<h3>📊 Org Chart</h3>
-Hierarchies, roles, reporting lines. Your agents have a boss, a title, and a job description.
-</td>
-<td align="center">
-<h3>📱 Mobile Ready</h3>
-Monitor and manage your autonomous businesses from anywhere.
-</td>
-</tr>
-<tr>
-<td align="center">
-<h3>🔗 Apps & Connections</h3>
-<a href="https://docs.paperclip.ing/connectors/">Connect services</a> such as GitHub, Notion, and Railway, or your own MCP server. Set gateway actions to Allowed, Ask first, or Off.
-</td>
-<td align="center">
-<h3>👥 Shared Agents, Personal Accounts</h3>
-Choose <a href="https://docs.paperclip.ing/connectors/access-model/">who can use a connection and which agents can access it</a>. Managed GitHub operations can use the account of the person directing the work.
-</td>
-<td align="center">
-<h3>🧠 Skills & Skill Studio</h3>
-Install or write <a href="https://docs.paperclip.ing/guides/org/skills/">shared skills</a>, test them with saved inputs, inspect results, and restore earlier versions.
-</td>
-</tr>
-<tr>
-<td align="center">
-<h3>📅 Scheduled Routines</h3>
-Run <a href="https://docs.paperclip.ing/guides/projects-workflow/routines/">recurring work</a> on a schedule or trigger it through an API or webhook. Each run has a task, an owner, and a history.
-</td>
-<td align="center">
-<h3>📎 Artifacts & Feedback</h3>
-Find the <a href="https://docs.paperclip.ing/guides/day-to-day/artifacts/">files and documents agents produce</a>. Preview supported formats and leave comments on specific passages in documents.
-</td>
-<td align="center">
-<h3>📦 Ready-Made Teams</h3>
-Preview and install <a href="https://docs.paperclip.ing/guides/org/team-catalog/">teams</a> with roles, skills, projects, and routines. Choose their runtimes and make the setup your own.
-</td>
-</tr>
-</table>
-
-Experimental **Agent Chat** and **chat/email connectors** add conversations with agents in Paperclip and through configured services such as Slack, Discord, Telegram, and AgentMail. Enable the relevant instance settings to try them.
-
-<br/>
-
-## Problems Paperclip solves
-
-| Without Paperclip                                                                                                                     | With Paperclip                                                                                                                         |
-| ------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| ❌ You have 20 Claude Code tabs open and can't track which one does what. On reboot you lose everything.                              | ✅ Tasks are ticket-based, conversations are threaded, sessions persist across reboots.                                                |
-| ❌ You manually gather context from several places to remind your bot what you're actually doing.                                     | ✅ Context flows from the task up through the project and company goals — your agent always knows what to do and why.                  |
-| ❌ Folders of agent configs are disorganized and you're re-inventing task management, communication, and coordination between agents. | ✅ Paperclip gives you org charts, ticketing, delegation, and governance out of the box — so you run a company, not a pile of scripts. |
-| ❌ Runaway loops waste hundreds of dollars of tokens and max your quota before you even know what happened.                           | ✅ Spend tracking, budget alerts, and automatic pauses help you control the cost of ongoing work.                                       |
-| ❌ You have recurring jobs (customer support, social, reports) and have to remember to manually kick them off.                        | ✅ Routines create assigned tasks on a schedule, with outputs and run history you can inspect.                                         |
-| ❌ You have an idea, you have to find your repo, fire up Claude Code, keep a tab open, and babysit it.                                | ✅ Add a task in Paperclip. Your coding agent works on it until it's done. Management reviews their work.                              |
-
-<br/>
-
-## Why Paperclip is special
-
-Paperclip handles the hard orchestration details correctly.
-
-|                                   |                                                                                                               |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| **Atomic task checkout.**         | A single assignee and execution locks prevent competing runs from claiming the same task.                    |
-| **Persistent work context.**      | Tasks, comments, and documents stay in Paperclip. Supporting adapters resume saved sessions across runs.       |
-| **Runtime skill injection.**      | Agents can learn Paperclip workflows and project context at runtime, without retraining.                      |
-| **Governance with rollback.**     | Approval gates are enforced, config changes are revisioned, and bad changes can be rolled back safely.        |
-| **Accountable connections.**      | Human access, agent eligibility, and gateway action permissions are separate controls. Approve a call once or save a revocable rule. |
-| **Goal-aware execution.**         | Linked tasks and projects carry goal ancestry so agents see the "why," not just a title.                      |
-| **Portable company templates.**   | Export/import orgs, agents, and skills with secret scrubbing and collision handling.                          |
-| **Organization boundaries.**      | Company-scoped access checks keep each organization's work, agents, and activity separate within one deployment. |
-
-<br/>
-
-## What's Under the Hood
-
-Paperclip is a full control plane, not a wrapper. Before you build any of this yourself, know that it already exists:
-
-```
-┌──────────────────────────────────────────────────────────────┐
-│                       PAPERCLIP SERVER                       │
-│                                                              │
-│  ┌───────────┐  ┌───────────┐  ┌───────────┐  ┌───────────┐  │
-│  │Identity & │  │  Work &   │  │ Heartbeat │  │Governance │  │
-│  │  Access   │  │   Tasks   │  │ Execution │  │& Approvals│  │
-│  └───────────┘  └───────────┘  └───────────┘  └───────────┘  │
-│                                                              │
-│  ┌───────────┐  ┌───────────┐  ┌───────────┐  ┌───────────┐  │
-│  │ Org Chart │  │Workspaces │  │  Plugins  │  │  Budget   │  │
-│  │ & Agents  │  │ & Runtime │  │           │  │ & Costs   │  │
-│  └───────────┘  └───────────┘  └───────────┘  └───────────┘  │
-│                                                              │
-│  ┌───────────┐  ┌───────────┐  ┌───────────┐  ┌───────────┐  │
-│  │ Routines  │  │ Secrets & │  │ Activity  │  │  Company  │  │
-│  │& Schedules│  │  Storage  │  │ & Events  │  │Portability│  │
-│  └───────────┘  └───────────┘  └───────────┘  └───────────┘  │
-└──────────────────────────────────────────────────────────────┘
-         ▲              ▲              ▲              ▲
-   ┌─────┴─────┐  ┌─────┴─────┐  ┌─────┴─────┐  ┌─────┴─────┐
-   │  Claude   │  │   Codex   │  │   CLI     │  │ HTTP/web  │
-   │   Code    │  │           │  │  agents   │  │   bots    │
-   └───────────┘  └───────────┘  └───────────┘  └───────────┘
+```sh
+pnpm install --frozen-lockfile
+node scripts/crewroom-dev.mjs
 ```
 
-### The Systems
+`http://127.0.0.1:3117`에서 엽니다. wrapper는 checkout 안의 무시된 `.paperclip/crewroom-home`에 설정과 embedded PostgreSQL을 만들고 전용 DB 포트 `55447`을 사용합니다. 이전 앱의 데이터·환경·secret을 복사하지 않으며 외부 DB 환경 상속과 telemetry, announcement fetching을 끕니다. `node scripts/crewroom-dev.mjs --prepare`는 설정만 준비합니다. foreground 프로세스의 Ctrl+C로 종료합니다.
 
-<table>
-<tr>
-<td width="50%">
+로컬 trusted 모드는 한 명의 운영자를 위한 개발 구성입니다. 여러 사용자는 authenticated 배포와 서버의 membership·grant 정책을 사용해야 합니다. 모델 자격증명을 넣지 않은 설치에서는 대화 화면이 열려도 모델 응답이나 실제 업무 실행이 검증된 상태가 아닙니다.
 
-**Identity & Access** — Two deployment modes (trusted local or authenticated), human roles and permissions, agent API keys, short-lived run JWTs, company memberships, and invite flows. Responsible-user attribution follows work through delegation and supported managed connections.
+## EC2 한 대와 Docker PostgreSQL
 
-</td>
-<td width="50%">
-
-**Org Chart & Agents** — Agents have roles, titles, reporting lines, permissions, and budgets. Adapter examples match the diagram: Claude Code, Codex, CLI agents such as Cursor/Gemini/bash, HTTP/webhook bots such as OpenClaw, and external adapter plugins. If it can receive a heartbeat, it's hired.
-
-</td>
-</tr>
-<tr>
-<td>
-
-**Work & Task System** — Issues carry company/project/goal/parent links, atomic checkout with execution locks, first-class blocker dependencies, comments, documents, attachments, work products, labels, and inbox state. Search across work, review document revisions, and leave anchored feedback.
-
-</td>
-<td>
-
-**Heartbeat Execution** — DB-backed wakeup queue with coalescing, budget checks, workspace resolution, secret injection, skill loading, and adapter invocation. Runs produce logs, usage records, and adapter-specific session state. Bounded recovery handles supported failures and surfaces cases that need human action.
-
-</td>
-</tr>
-<tr>
-<td>
-
-**Workspaces & Runtime** — Project repositories and workspaces, optional isolated execution workspaces (git worktrees, operator branches), and runtime services (dev servers, preview URLs). Sandbox providers extend execution beyond the local host; availability depends on the configured environment and adapter.
-
-</td>
-<td>
-
-**Governance & Approvals** — Board approval workflows, execution policies with review/approval stages, decision tracking, budget hard-stops, and agent pause/resume/terminate. Configured task reviews govern completion; connection action approvals govern calls through the tool gateway.
-
-</td>
-</tr>
-<tr>
-<td>
-
-**Budget & Cost Control** — Token and cost tracking by company, agent, project, goal, issue, provider, and model. Scoped budget policies with warning thresholds and hard stops. Enforcement uses recorded spend; usage reporting and in-flight work can delay a stop.
-
-</td>
-<td>
-
-**Routines & Schedules** — Recurring tasks with cron, webhook, and API triggers. Concurrency and catch-up policies. Each routine execution creates a tracked issue and wakes the assigned agent — no manual kick-offs needed.
-
-</td>
-</tr>
-<tr>
-<td>
-
-**[Plugins](https://docs.paperclip.ing/administration/plugins/)** — Instance-wide plugin system with out-of-process workers, capability-gated host services, job scheduling, tool exposure, and UI contributions. Extend Paperclip without forking it.
-
-</td>
-<td>
-
-**Secrets & Storage** — Company secrets and per-person secret values, encrypted credential storage, local or S3-compatible file storage, attachments, and work products. Secret references supply credentials to authorized runs without copying values into ordinary agent configuration.
-
-</td>
-</tr>
-<tr>
-<td>
-
-**Activity & Events** — Mutating actions, heartbeat state changes, cost events, approvals, comments, and work products are recorded as durable activity so operators can audit what happened and why.
-
-</td>
-<td>
-
-**[Company Portability](https://docs.paperclip.ing/guides/power/export-import/)** — Preview, export, and import organization packages with agents, skills, and optional projects, routines, tasks, and attachments. Referenced secret values are omitted; review packages before sharing because plain environment values and local paths can remain. Packages share an operating setup; full-instance recovery uses backups.
-
-</td>
-</tr>
-</table>
-
-<br/>
-
-## What Paperclip is not
-
-|                              |                                                                                                                      |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| **Not just a chatbot.**      | Conversations stay attached to tasks, plans, decisions, and outputs. Experimental Agent Chat can hand work off to assigned tasks.    |
-| **Not an agent framework.**  | We don't tell you how to build agents. We tell you how to run a company made of them.                                |
-| **Not just a workflow builder.** | Routines operate within an organization, with roles, goals, budgets, and governance.                  |
-| **Not a prompt manager.**    | Agents bring their own prompts, models, and runtimes. Paperclip manages the organization they work in.               |
-| **Not limited to one agent.** | Start with one agent and grow into a team with shared skills, delegation, and review.                                              |
-| **Not only for code review.** | Coding and PR review fit alongside research, operations, content, and other work.                                                  |
-
-<br/>
-
-## Quickstart
-
-Open source. Self-hosted. No Paperclip account required. Follow the [guided quickstart](https://docs.paperclip.ing/guides/getting-started/five-minute-path/) to set up your first agent.
-
-### Just ask your agent to install Paperclip
-
-Share the [installation guide](https://docs.paperclip.ing/reference/cli/installation/) with your agent.
-
-### Or install it yourself
-
-With **Node.js 24.11 or newer** installed:
-
-```bash
-npx paperclipai@latest onboard --yes
+```sh
+python3 deploy/crewroom/setup.py
+docker compose --env-file deploy/crewroom/.env -f deploy/crewroom/compose.yaml config --quiet
+docker compose --env-file deploy/crewroom/.env -f deploy/crewroom/compose.yaml build --build-arg BUILD_NODE_HEAP_MB=4096 app
+docker compose --env-file deploy/crewroom/.env -f deploy/crewroom/compose.yaml up -d --wait app
 ```
 
-The CLI runs from npm's cache; your instance configuration and data persist locally.
+기본 프로젝트는 `crewroom-next`, 앱은 loopback `3118`입니다. PostgreSQL에는 host port가 없습니다. 앱 데이터와 DB는 각각 지속 볼륨에 저장하고, 선택적 Caddy profile이 HTTPS를 제공합니다. 생성된 `.env`는 owner-only이며 Docker build context와 Git에서 제외됩니다. 최초 관리자 설정, 초대, 도메인, 정상 종료, DB+파일의 일관된 snapshot 및 새 프로젝트 복원은 [배포 안내](doc/crewroom/DEPLOYMENT.ko.md)를 따릅니다.
 
-See the [installation guide](https://docs.paperclip.ing/reference/cli/installation/) for managed installs, pinned versions, canary and git-ref installs, updates, rollback, service management, and uninstalling.
+현재 local CLI adapter는 앱 컨테이너 안에서 실행합니다. 사용자별 또는 작업별 sandbox, 독립 비서 메모리, 실제 GitLab 발행, EC2·도메인 실배포는 별도의 구현·운영 검증이 필요합니다. upstream 이미지의 이동하는 CLI 패키지와 OS 의존성이 있으므로 동일 소스만으로 bit-for-bit 재현 가능하다고 주장하지 않습니다. 운영자는 빌드한 이미지 digest와 CLI 버전을 함께 보존해야 합니다.
 
-For an isolated manual test instance that is already initialized with a CEO
-agent, use `test-drive`. It stays in the foreground, never installs a service
-or creates a first task, and opens the browser only after setup succeeds:
+## 개발과 검증
 
-```bash
-ANTHROPIC_API_KEY=... npx paperclipai test-drive
-OPENAI_API_KEY=... npx paperclipai test-drive --harness codex
-OPENROUTER_API_KEY=... npx paperclipai test-drive \
-  --harness opencode \
-  --model openrouter/anthropic/claude-sonnet-4.5
+```sh
+# 바뀐 대화·권한 경계: disposable PostgreSQL 사용
+pnpm --dir server exec vitest run src/__tests__/agent-conversations.test.ts src/__tests__/crewroom-capabilities.test.ts
+
+# 전체 저장소의 PR 준비 검사
+pnpm -r typecheck
+pnpm test:run
+pnpm build
 ```
 
-Each run without `--data-dir` gets a unique, retained temporary directory; its
-absolute path is printed at startup. Pass `--data-dir` to reuse one, or
-`--no-browser` to leave the initialized instance unopened. When invoked from a
-linked Git worktree, `test-drive` also enables task execution in that worktree.
-See the [test-drive guide](https://docs.paperclip.ing/reference/cli/test-drive/) for credential and
-reuse behavior.
+최신 통과 수·실패 이력·미검증 범위는 [리뷰 기록](doc/crewroom/REVIEW.ko.md)과 [foundation receipt](doc/plans/2026-10-28-crewroom-paperclip-foundation.md)에 구분해 남깁니다. fixture와 로컬 DB 검사는 실제 Claude custom endpoint의 추론·도구·중단·재개 품질 증거가 아닙니다. [Claude endpoint 안내](crewroom/CLAUDE-ENDPOINT.md)를 따라 실제 연결을 별도로 확인합니다.
 
-> **Troubleshooting: private npm registry `.npmrc`**
->
-> If this fails with an `E404` for `paperclipai` (or similar) and you use a private npm registry (for example GitHub Packages) via a global `~/.npmrc`, `npx` may be resolving `paperclipai` against that private registry instead of the public npm registry.
->
-> Diagnostic:
->
-> ```bash
-> npm config get registry
-> ```
->
-> Workaround (cross-platform; force the public npm registry for this command):
->
-> ```bash
-> npx --registry https://registry.npmjs.org paperclipai@latest onboard --yes
-> ```
+[AGENTS.md](AGENTS.md), upstream `rules/`, [제품 경계](PRODUCT.md)를 먼저 읽습니다. [고정 Impeccable 설치](crewroom/IMPECCABLE.md)는 checksum 검증 후 스킬만 설치하며 자동 hook trust를 설정하지 않습니다. [upstream source receipt](crewroom/UPSTREAM.json)는 revision `cff331f6ca0a652b5e41641c68dfa5fa584c22ae`를 고정합니다. [원본 README](crewroom/UPSTREAM-README.md)와 [보존된 비활성 workflow](crewroom/upstream-workflows/README.md)도 제공합니다. 원본 Crewroom 구현은 Git history에 보존하며 두 번째 실행 체계로 사용하지 않습니다.
 
-That quickstart path now defaults to trusted local loopback mode for the fastest first run. To start in authenticated/private mode instead, choose a bind preset explicitly:
+## 라이선스
 
-```bash
-npx paperclipai@latest onboard --yes --bind lan
-# or:
-npx paperclipai@latest onboard --yes --bind tailnet
-```
-
-If you already have Paperclip configured, rerunning `onboard` keeps the existing config in place. Use `npx paperclipai configure` to edit settings.
-
-Or manually:
-
-```bash
-git clone https://github.com/paperclipai/paperclip.git
-cd paperclip
-pnpm install
-pnpm dev
-```
-
-This starts the UI and API at `http://localhost:3100`. An embedded PostgreSQL database is created automatically — no setup required.
-
-> **Requirements:** Node.js 24.11+, pnpm 9.15+
-
-Local Claude and Codex subscription sign-in also needs Python 3 and the
-corresponding provider CLI on the Paperclip host. The Docker image includes them.
-
-Source development also builds the native Paperclip Runner when enabled (the self-hosted default). Install a Rust toolchain, or set `PAPERCLIP_RUNNER_BINARY` to a compatible prebuilt runner.
-
-<br/>
-
-## FAQ
-
-**Q: Is this project maintained or just slop?**
-
-**A:** Paperclip is maintained by the [Paperclip team](https://paperclip.ing). We've merged [over 2,700 pull requests](https://github.com/paperclipai/paperclip/pulls?q=is%3Apr+is%3Amerged).
-
-<br/>
-
-**Q: What does a typical setup look like?**
-
-**A:** Locally, a single Node.js process manages an embedded Postgres and local file storage. For production, point it at your own Postgres and deploy however you like. Configure projects, agents, and goals — the agents take care of the rest.
-
-For remote access, use authenticated mode with a private-network bind such as Tailscale, or deploy the persistent server with Docker. See [deployment modes](https://docs.paperclip.ing/reference/deploy/deployment-modes/) and the [Docker guide](https://docs.paperclip.ing/reference/deploy/docker/).
-
-<br/>
-
-**Q: Can I run multiple companies?**
-
-**A:** Yes. A single deployment can host multiple organizations with company-scoped data and access checks.
-
-<br/>
-
-**Q: How is Paperclip different from agents like OpenClaw or Claude Code?**
-
-**A:** Paperclip _uses_ those agents. It orchestrates them into a company — with org charts, budgets, goals, governance, and accountability.
-
-<br/>
-
-**Q: Why should I use Paperclip instead of just pointing my OpenClaw to Asana or Trello?**
-
-**A:** Agent orchestration has subtleties in how you coordinate who has work checked out, how to maintain sessions, monitoring costs, establishing governance - Paperclip does this for you.
-
-(Bring-your-own-ticket-system is on the Roadmap)
-
-<br/>
-
-**Q: Do agents run continuously?**
-
-**A:** Agents wake for assigned work and follow-up messages. Optional timer heartbeats let them check for work periodically; routines create recurring tasks on their own schedules. You can also connect externally running agents such as OpenClaw. A mention alone does not assign work or wake another agent.
-
-<br/>
-
-## Development
-
-```bash
-pnpm dev              # Full dev (API + UI, watch mode)
-pnpm dev:once         # Full dev without file watching
-pnpm dev:server       # Server only
-pnpm dev:mobile       # Serve prebuilt UI on :3101 for phones/tablets (proxies /api → :3100)
-pnpm dev:both         # Run `pnpm dev` and `pnpm dev:mobile` together
-pnpm build            # Build all
-pnpm typecheck        # Type checking
-pnpm test             # Cheap default test run (Vitest only)
-pnpm test:watch       # Vitest watch mode
-pnpm test:e2e         # Playwright browser suite
-pnpm db:generate      # Generate DB migration
-pnpm db:migrate       # Apply migrations
-```
-
-`pnpm test` does not run Playwright. Browser suites stay separate and are typically run only when working on those flows or in CI.
-
-See [doc/DEVELOPING.md](doc/DEVELOPING.md) for the full development guide.
-
-<br/>
-
-## Roadmap
-
-- ✅ Plugin system (e.g. add a knowledge base, custom tracing, queues, etc)
-- ✅ Get OpenClaw / claw-style agent employees
-- ✅ companies.sh - import and export entire organizations
-- ✅ Easy AGENTS.md configurations
-- ✅ Skills Manager, Skill Studio & Skills Store
-- ✅ Scheduled Routines
-- ✅ Better Budgeting
-- ✅ Agent Reviews and Approvals
-- ✅ Multiple Human Users
-- ✅ Cloud / Sandbox agents (e2b, Cloudflare, Daytona, Modal, Novita, self-hosted Kubernetes)
-- ✅ Artifacts & Work Products
-- ✅ Deep Planning (planning mode, revisioned plans, plan approvals)
-- ✅ Enforced Outcomes (watchdogs, recovery actions, review gates)
-- ✅ MCP Tool Gateway & Apps (governed tool access)
-- ✅ Secrets Manager with per-agent access
-- ✅ Activity log & action attribution
-- ✅ Self-healing runs & automatic recovery
-- ✅ Agent evals & feedback
-- ✅ Connected Apps
-- ✅ Personal & Shared AI Accounts
-- ✅ Shared Agents Use Personal GitHub Identities
-- ✅ Skill Version History & Restore
-- ✅ Document Comments & Revision History
-- ✅ Company-Wide Search
-- ✅ Multi-Model & Multi-Harness Teams
-- 🟡 Memory / Knowledge
-- ⚪ MAXIMIZER MODE
-- ⚪ Work Queues
-- ⚪ Self-Organization
-- ⚪ Automatic Organizational Learning
-- 🟡 Agent Chat
-- 🟡 Cloud deployments
-- ⚪ Desktop App
-- ⚪ Bring-your-own-ticket-system (Asana / Linear / Jira as on-ramps)
-
-This is the short roadmap preview. See the full roadmap in [ROADMAP.md](ROADMAP.md).
-
-<br/>
-
-## Community & Plugins
-
-Find Plugins and more at [awesome-paperclip](https://github.com/gsxdsm/awesome-paperclip)
-
-## Observability
-
-Paperclip ships with opt-in OpenTelemetry auto-instrumentation for the server (traces only). It activates when `OTEL_EXPORTER_OTLP_ENDPOINT` is set and supports `grpc`, `http/protobuf`, and `http/json` via the standard `OTEL_EXPORTER_OTLP_PROTOCOL` env var. `@opentelemetry/api` is a normal server dependency; the SDK, auto-instrumentation, and exporter packages are optional peer dependencies — install them only if you want tracing. See [doc/observability.md](doc/observability.md) for install commands and the full env-var reference.
-
-Paperclip also ships with opt-in Sentry error monitoring for the server and the browser. Set `SENTRY_DSN_FRONTEND` to activate it for the browser and `SENTRY_DSN_BACKEND` to activate it for the server — each variable is optional, and the legacy `SENTRY_DSN` variable still works as a fallback for either component. The supported server SDK version is `@sentry/node@10.71.0`; it is an optional peer dependency for the server, so install it only if you want error monitoring. The browser SDK, `@sentry/browser`, is pinned to the same exact version. See [doc/observability.md](doc/observability.md#sentry-error-monitoring) for the install command, the privacy settings, and the full default capture set.
-
-## Telemetry
-
-Paperclip collects anonymous usage telemetry to help us understand how the product is used and improve it. No personal information, issue content, prompts, file paths, or secrets are ever collected. Private repository references are hashed with a per-install salt before being sent.
-
-Contributors changing emitted telemetry events should follow the [Telemetry Data Contract](packages/shared/src/telemetry/README.md).
-For proposed first-party events that are not in the generated contract yet, follow [Telemetry Workflow](doc/TELEMETRY_WORKFLOW.md).
-
-Telemetry is **enabled by default** and can be disabled with any of the following:
-
-| Method               | How                                                     |
-| -------------------- | ------------------------------------------------------- |
-| Environment variable | `PAPERCLIP_TELEMETRY_DISABLED=1`                        |
-| Standard convention  | `DO_NOT_TRACK=1`                                        |
-| CI environments      | Automatically disabled when `CI=true`                   |
-| Config file          | Set `telemetry.enabled: false` in your Paperclip config |
-
-## Contributing
-
-We welcome contributions. See the [contributing guide](CONTRIBUTING.md) for details.
-
-**[We're hiring](https://paperclip.ing/about/#careers)**
-
-<br/>
-
-## Community
-
-- [Discord](https://discord.gg/paperclipai) — Join the community
-- [Twitter / X](https://x.com/papercliping) — Follow updates and announcements
-- [GitHub Issues](https://github.com/paperclipai/paperclip/issues) — bugs and feature requests
-- [GitHub Discussions](https://github.com/paperclipai/paperclip/discussions) — ideas and RFC
-
-<br/>
-
-## License
-
-MIT &copy; 2026 [Paperclip Labs, Inc](https://paperclip.ing)
-
-## Star History
-
-<a href="https://www.star-history.com/?repos=paperclipai%2Fpaperclip&type=date&legend=top-left">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=paperclipai/paperclip&type=date&theme=dark&legend=top-left&sealed_token=hFjuwFq41bQD5cevvXVv5cTru2swWRZujwJYKlHhtBh6n0H5-VvJZW2SAlcQKB8u4KxhyEB9JqFg1yccJ8WLv9wPBcoWpWcak4gx0MYTWu_pOs2jKOaDluH7KsLeTKt6DHGkHiN3LsqV9s--MTDQcC6Xl7zV51W0-YezQXo-pVPgoFDFAGf2CY5fiP5Q" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=paperclipai/paperclip&type=date&legend=top-left&sealed_token=hFjuwFq41bQD5cevvXVv5cTru2swWRZujwJYKlHhtBh6n0H5-VvJZW2SAlcQKB8u4KxhyEB9JqFg1yccJ8WLv9wPBcoWpWcak4gx0MYTWu_pOs2jKOaDluH7KsLeTKt6DHGkHiN3LsqV9s--MTDQcC6Xl7zV51W0-YezQXo-pVPgoFDFAGf2CY5fiP5Q" />
-    <img src="https://api.star-history.com/chart?repos=paperclipai/paperclip&type=date&legend=top-left&sealed_token=hFjuwFq41bQD5cevvXVv5cTru2swWRZujwJYKlHhtBh6n0H5-VvJZW2SAlcQKB8u4KxhyEB9JqFg1yccJ8WLv9wPBcoWpWcak4gx0MYTWu_pOs2jKOaDluH7KsLeTKt6DHGkHiN3LsqV9s--MTDQcC6Xl7zV51W0-YezQXo-pVPgoFDFAGf2CY5fiP5Q" alt="Star History Chart" />
-  </picture>
-</a>
-
-<br/>
-
----
-
-<p align="center">
-  <sub>Open source under MIT. Built for people who want to get work done, not babysit agents.</sub>
-</p>
+Paperclip 파생 소스는 저작권 고지와 root [MIT license](LICENSE)를 유지합니다. 새로 작성한 Crewroom 코드·문서·자산은 [명시된 파일 범위](crewroom/LICENSE-SCOPE.md)에 한해 [0BSD license](crewroom/LICENSE)를 적용합니다. 기존 원본 자산은 자체 [0BSD 고지](crewroom/legacy-assets/LICENSE)를 유지합니다. Impeccable은 Apache-2.0이며 각 외부 의존성은 자체 라이선스를 유지합니다. [제3자 고지](THIRD_PARTY_NOTICES.md)를 확인하세요.

@@ -1,0 +1,10 @@
+{
+  "project": "Paperclip",
+  "repository": "https://github.com/paperclipai/paperclip.git",
+  "revision": "cff331f6ca0a652b5e41641c68dfa5fa584c22ae",
+  "sourceImport": "git archive HEAD; upstream Git metadata excluded",
+  "upstreamLicense": "MIT",
+  "upstreamLicenseSha256": "7f8a27f0979bded50e240caa8c8c29f3088ddf87032cb83e5a9732bff91d18b4",
+  "crewroomPreviousRevision": "9094868cdf0640797f9e1d72560c7143028dd94a",
+  "importDate": "2026-10-28"
+}

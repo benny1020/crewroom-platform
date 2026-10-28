@@ -1,0 +1,101 @@
+name: Crewroom production image
+
+on:
+  push:
+    branches: [main, codex/crewroom-paperclip]
+    paths:
+      - Dockerfile
+      - .dockerignore
+      - .github/workflows/crewroom-image.yml
+      - deploy/crewroom/**
+      - server/**
+      - ui/**
+      - packages/**
+      - scripts/**
+      - package.json
+      - pnpm-lock.yaml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crewroom-image-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  image-and-persistence:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      PAPERCLIP_TELEMETRY_DISABLED: '1'
+      EXPECTED_COMMIT: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Generate isolated secrets without displaying them
+        run: |
+          python3 deploy/crewroom/setup.py
+          docker compose --env-file deploy/crewroom/.env -p crewroom-ci -f deploy/crewroom/compose.yaml config --quiet
+          mkdir -p .ci-profile
+      - name: Build production target with full TypeScript checks
+        shell: bash
+        run: |
+          set -o pipefail
+          docker build --target production --progress plain \
+            --build-arg CARGO_BUILD_JOBS=1 --build-arg BUILD_NODE_HEAP_MB=4096 \
+            --build-arg PAPERCLIP_BUILD_COMMIT="${GITHUB_SHA}" \
+            -t crewroom-next:local . 2>&1 | tee .ci-profile/image-build.log
+      - name: Record image identity and public CLI versions
+        run: |
+          docker image inspect crewroom-next:local --format '{{.Id}}' > .ci-profile/image-id.txt
+          docker run --rm --entrypoint sh crewroom-next:local -c \
+            'test ! -e /app/deploy/crewroom/.env && test ! -d /app/.paperclip && test ! -d /app/.agents && npm list -g --depth=0 --json' \
+            > .ci-profile/cli-versions.json
+      - name: Start authenticated app and PostgreSQL
+        run: |
+          docker compose --env-file deploy/crewroom/.env -p crewroom-ci -f deploy/crewroom/compose.yaml up -d --wait --wait-timeout 300 app
+          python3 deploy/crewroom/smoke.py seed --state-file .paperclip/container-smoke.json
+      - name: Verify persistence across application restart
+        run: |
+          docker compose --env-file deploy/crewroom/.env -p crewroom-ci -f deploy/crewroom/compose.yaml restart app
+          docker compose --env-file deploy/crewroom/.env -p crewroom-ci -f deploy/crewroom/compose.yaml up -d --wait --wait-timeout 300 app
+          python3 deploy/crewroom/smoke.py check --state-file .paperclip/container-smoke.json
+      - name: Snapshot and restore only into a fresh project
+        run: |
+          python3 deploy/crewroom/snapshot.py backup ./backups/crewroom-ci --project crewroom-ci
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          os.umask(0o077)
+          source = Path('backups/crewroom-ci/deployment.env').read_text()
+          source = source.replace('CREWROOM_PORT=3118', 'CREWROOM_PORT=3119').replace('http://localhost:3118', 'http://localhost:3119')
+          Path('deploy/crewroom/.env.restore').write_text(source)
+          PY
+          python3 deploy/crewroom/snapshot.py restore ./backups/crewroom-ci --env-file ./deploy/crewroom/.env.restore --project crewroom-ci-restored
+          python3 deploy/crewroom/smoke.py check --base http://localhost:3119 --state-file .paperclip/container-smoke.json
+          python3 deploy/crewroom/smoke.py check --state-file .paperclip/container-smoke.json
+      - name: Record verified scope
+        run: |
+          printf '%s\n' 'PASS: production image, authenticated first admin and local invite, private conversation and file ACL, restart, consistent snapshot and fresh-project restore.' > .ci-profile/image-smoke-summary.txt
+          printf '%s\n' 'No live model inference, email delivery, GitLab publication, EC2, or TLS claim.' >> .ci-profile/image-smoke-summary.txt
+      - name: Stop only the disposable verification projects
+        if: always()
+        run: |
+          if test -f deploy/crewroom/.env; then
+            docker compose --env-file deploy/crewroom/.env -p crewroom-ci -f deploy/crewroom/compose.yaml down
+          fi
+          if test -f deploy/crewroom/.env.restore; then
+            docker compose --env-file deploy/crewroom/.env.restore -p crewroom-ci-restored -f deploy/crewroom/compose.yaml down
+          fi
+      - name: Preserve public build evidence only
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7, preserved upstream pin
+        with:
+          name: crewroom-image-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            .ci-profile/image-build.log
+            .ci-profile/image-id.txt
+            .ci-profile/cli-versions.json
+            .ci-profile/image-smoke-summary.txt
+          if-no-files-found: warn
+          retention-days: 14

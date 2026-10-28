@@ -289,6 +289,24 @@ describe("closed isolated workspace issue routes", () => {
     expect(res.status).toBe(200);
   });
 
+  it.each((["post", "patch"] as const).flatMap(method =>
+    (["done", "cancelled"] as const).map(status => ({ method, status }))))(
+    "saves comment-only feedback on $status through $method without reopening its workspace",
+    async ({ method, status }) => {
+      const issue = { ...makeIssue(), status };
+      mockIssueService.getById.mockResolvedValue(issue);
+      mockIssueService.update.mockResolvedValue(issue);
+      mockIssueService.addComment.mockResolvedValue({ id: "feedback-only", issueId, body: "고마워요" });
+      const response = method === "post"
+        ? await request(createApp()).post(`/api/issues/${issueId}/comments`).send({ body: "고마워요", reopen: false })
+        : await request(createApp()).patch(`/api/issues/${issueId}`).send({ comment: "고마워요", reopen: false });
+      expect(response.status).toBe(method === "post" ? 201 : 200);
+      expect(mockIssueService.addComment).toHaveBeenCalledTimes(1);
+      expect(mockExecutionWorkspaceService.reopenClosedIsolatedExecutionWorkspaceForIssue).not.toHaveBeenCalled();
+      expect(mockExecutionWorkspaceService.refreshReopenPendingConsumption).not.toHaveBeenCalled();
+    },
+  );
+
   it("reopens the closed isolated workspace and accepts a checkout", async () => {
     mockIssueService.checkout.mockResolvedValue({ ...makeIssue(), status: "in_progress" });
 

@@ -85,6 +85,10 @@ separate from Agent Chat's configured-agent prerequisites.
 
 Manual: Check disabled access first, enable in the disposable instance, then send and reload a conversation. Inspect the actual responding agent and persisted history; report this result separately from Agent Chat.
 
+## Crewroom privacy profile (2026-10-28)
+
+New personal conversations are private tasks, with the authenticated person as responsible user. Legacy open conversations are excluded from personal discovery and return `409` with `details.code: chat_conversation_privacy_required` at ensure, message and upload entry points. An explicit ordinary privacy update is required before reusing them; previously public history is not retroactively undisclosed. The conversation service integration suite covers private user-to-user detail denial, concurrent creation, legacy refusal and explicit transition. These are disposable PostgreSQL/API tests, not live model proof. Crewroom does not expose the separate BoardChat experiment.
+
 ## Gotchas
 
 - Idle chat is not failed execution.

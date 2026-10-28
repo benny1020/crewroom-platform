@@ -1,0 +1,410 @@
+/* The pose moves, not the surrounding label or hit target. */
+#gyeot-demo [data-plush-key] {
+  position: relative;
+  --g-plush-gesture: none;
+  --g-plush-duration: 4s;
+  --g-plush-repeat: infinite;
+}
+#gyeot-demo [data-plush-key] > :is(.g-character, .g-diary-illustration) {
+  transform-origin: 50% 88%;
+  animation: var(--g-plush-gesture) var(--g-plush-duration) ease-in-out
+    var(--g-plush-repeat) both;
+  animation-delay: var(--g-motion-offset, 0ms);
+}
+#gyeot-demo [data-plush-phase="coding"] {
+  --g-plush-gesture: plush-typing;
+  --g-plush-duration: 2.4s;
+}
+#gyeot-demo [data-plush-phase="writing"] {
+  --g-plush-gesture: plush-writing;
+  --g-plush-duration: 3.2s;
+}
+#gyeot-demo [data-plush-phase="investigating"] {
+  --g-plush-gesture: plush-curious;
+  --g-plush-duration: 5.4s;
+}
+#gyeot-demo [data-plush-phase="testing"] {
+  --g-plush-gesture: plush-checking;
+  --g-plush-duration: 3s;
+}
+#gyeot-demo [data-plush-phase="planning"] {
+  --g-plush-gesture: plush-thinking;
+  --g-plush-duration: 5.8s;
+}
+#gyeot-demo [data-plush-phase="queued"],
+#gyeot-demo [data-plush-phase="paused"] {
+  --g-plush-gesture: plush-breathing;
+  --g-plush-duration: 7.2s;
+}
+#gyeot-demo [data-plush-phase="review"],
+#gyeot-demo [data-plush-phase="question"] {
+  --g-plush-gesture: plush-request;
+  --g-plush-duration: 8s;
+}
+#gyeot-demo [data-plush-phase="celebrating"] {
+  --g-plush-gesture: plush-celebrate;
+  --g-plush-duration: 1.5s;
+  --g-plush-repeat: 1;
+}
+#gyeot-demo [data-plush-phase="blocked"] {
+  --g-plush-gesture: plush-settle;
+  --g-plush-duration: 0.9s;
+  --g-plush-repeat: 1;
+}
+#gyeot-demo .g-diary-art[data-plush-phase="ready"],
+#gyeot-demo
+  .g-plush-station:is(:hover, :focus-visible, [aria-pressed="true"])
+  [data-plush-phase="ready"] {
+  --g-plush-gesture: plush-greeting;
+  --g-plush-duration: 1s;
+  --g-plush-repeat: 1;
+}
+#gyeot-demo
+  [data-plush-phase]:is(
+    [data-plush-phase="celebrating"],
+    [data-plush-phase="blocked"],
+    [data-plush-phase="ready"]
+  )
+  > :is(.g-character, .g-diary-illustration) {
+  animation-delay: 0s;
+}
+#gyeot-demo .g-plush-station.is-waiting .g-station-bubble {
+  animation: none;
+}
+#gyeot-demo .g-plush-effects {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  color: var(--g-diary-teal);
+}
+#gyeot-demo .g-plush-effects i {
+  position: absolute;
+  display: block;
+  width: 5px;
+  height: 5px;
+  top: 25%;
+  right: 6%;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0;
+}
+#gyeot-demo .g-plush-effects i:nth-child(2) {
+  top: 19%;
+  right: 14%;
+}
+#gyeot-demo .g-plush-effects i:nth-child(3) {
+  top: 31%;
+  right: 15%;
+}
+#gyeot-demo
+  :is(
+    [data-plush-phase="coding"],
+    [data-plush-phase="testing"],
+    [data-plush-phase="writing"]
+  )
+  .g-plush-effects
+  i {
+  animation: plush-work-dot 3s ease-in-out infinite both;
+  animation-delay: var(--g-motion-offset);
+}
+#gyeot-demo
+  :is(
+    [data-plush-phase="coding"],
+    [data-plush-phase="testing"],
+    [data-plush-phase="writing"]
+  )
+  .g-plush-effects
+  i:nth-child(2) {
+  animation-delay: calc(var(--g-motion-offset) + 180ms);
+}
+#gyeot-demo
+  :is(
+    [data-plush-phase="coding"],
+    [data-plush-phase="testing"],
+    [data-plush-phase="writing"]
+  )
+  .g-plush-effects
+  i:nth-child(3) {
+  animation-delay: calc(var(--g-motion-offset) + 360ms);
+}
+#gyeot-demo [data-plush-phase="writing"] .g-plush-effects i {
+  width: 9px;
+  height: 2px;
+  border-radius: 2px;
+}
+#gyeot-demo [data-plush-phase="investigating"] .g-plush-effects i:first-child {
+  width: 13px;
+  height: 13px;
+  top: 20%;
+  background: none;
+  border: 1.5px solid currentColor;
+  animation: plush-discovery 5.4s ease-out infinite both;
+  animation-delay: var(--g-motion-offset);
+}
+#gyeot-demo
+  :is([data-plush-phase="review"], [data-plush-phase="question"])
+  .g-plush-effects {
+  color: var(--g-amber);
+}
+#gyeot-demo
+  :is([data-plush-phase="review"], [data-plush-phase="question"])
+  .g-plush-effects
+  i:first-child {
+  animation: plush-work-dot 8s ease-in-out infinite both;
+  animation-delay: var(--g-motion-offset);
+}
+#gyeot-demo [data-plush-phase="celebrating"] .g-plush-effects i,
+#gyeot-demo [data-plush-phase="planning"] .g-plush-effects i:first-child {
+  width: 10px;
+  height: 10px;
+  border-radius: 0;
+  clip-path: polygon(
+    50% 0,
+    65% 35%,
+    100% 50%,
+    65% 65%,
+    50% 100%,
+    35% 65%,
+    0 50%,
+    35% 35%
+  );
+  animation: plush-sparkle 1.5s ease-out 1 both;
+}
+#gyeot-demo [data-plush-phase="celebrating"] .g-plush-effects i:nth-child(2) {
+  left: 9%;
+  top: 30%;
+  color: #d6a84b;
+  animation-delay: 120ms;
+}
+#gyeot-demo [data-plush-phase="celebrating"] .g-plush-effects i:nth-child(3) {
+  right: 18%;
+  top: 12%;
+  animation-delay: 240ms;
+}
+#gyeot-demo [data-plush-phase="planning"] .g-plush-effects i:first-child {
+  animation-duration: 5.8s;
+  animation-iteration-count: infinite;
+  animation-delay: var(--g-motion-offset);
+}
+/* Steam belongs to the actual coffee illustration, never a custom portrait. */
+#gyeot-demo
+  [data-plush-phase="paused"]:has(> .g-diary-illustration)
+  .g-plush-effects
+  i:not(:last-child) {
+  top: 47%;
+  left: 44%;
+  width: 6px;
+  height: 16px;
+  border: 0;
+  border-left: 1.5px solid var(--g-diary-teal);
+  border-radius: 50%;
+  background: none;
+  animation: plush-steam 4.5s ease-out infinite both;
+}
+#gyeot-demo
+  [data-plush-phase="paused"]:has(> .g-diary-illustration)
+  .g-plush-effects
+  i:nth-child(2) {
+  left: 49%;
+  animation-delay: -2.2s;
+}
+@keyframes plush-typing {
+  0%,
+  14%,
+  30%,
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+  7% {
+    transform: translateY(1.5px) rotate(-0.6deg);
+  }
+  23% {
+    transform: translateY(1px) rotate(0.6deg);
+  }
+}
+@keyframes plush-writing {
+  0%,
+  40%,
+  100% {
+    transform: rotate(0);
+  }
+  12%,
+  30% {
+    transform: translateY(0.6px) rotate(-1deg);
+  }
+  22% {
+    transform: translateX(0.8px) rotate(0.5deg);
+  }
+}
+@keyframes plush-curious {
+  0%,
+  85%,
+  100% {
+    transform: rotate(0);
+  }
+  28%,
+  44% {
+    transform: rotate(-2.2deg) translateY(-1px);
+  }
+  63% {
+    transform: rotate(1deg);
+  }
+}
+@keyframes plush-checking {
+  0%,
+  38%,
+  100% {
+    transform: translateY(0);
+  }
+  14% {
+    transform: translateY(1.8px) rotate(0.5deg);
+  }
+  25% {
+    transform: translateY(-0.5px);
+  }
+}
+@keyframes plush-thinking {
+  0%,
+  70%,
+  100% {
+    transform: rotate(0);
+  }
+  30%,
+  45% {
+    transform: rotate(1.8deg) translateY(-1px);
+  }
+}
+@keyframes plush-breathing {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-0.6px) scale(1.006);
+  }
+}
+@keyframes plush-request {
+  0%,
+  28%,
+  100% {
+    transform: rotate(0);
+  }
+  9% {
+    transform: rotate(-1.8deg);
+  }
+  18% {
+    transform: rotate(0.8deg);
+  }
+}
+@keyframes plush-celebrate {
+  0%,
+  42%,
+  76%,
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+  24% {
+    transform: translateY(-6px) rotate(-2deg);
+  }
+  60% {
+    transform: translateY(-3px) rotate(1.5deg);
+  }
+}
+@keyframes plush-settle {
+  0% {
+    transform: translateY(-1px);
+  }
+  45% {
+    transform: translateY(1px) rotate(-1deg);
+  }
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+}
+@keyframes plush-greeting {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  35% {
+    transform: rotate(-2deg);
+  }
+  65% {
+    transform: rotate(1deg);
+  }
+}
+@keyframes plush-work-dot {
+  0%,
+  42%,
+  100% {
+    opacity: 0;
+    transform: translateY(1px);
+  }
+  16%,
+  27% {
+    opacity: 0.65;
+    transform: translateY(-2px);
+  }
+}
+@keyframes plush-discovery {
+  0%,
+  58%,
+  100% {
+    opacity: 0;
+    transform: scale(0.65);
+  }
+  25% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  45% {
+    opacity: 0;
+    transform: scale(1.2);
+  }
+}
+@keyframes plush-sparkle {
+  0%,
+  78%,
+  100% {
+    opacity: 0;
+    transform: translateY(2px) scale(0.5) rotate(-10deg);
+  }
+  23% {
+    opacity: 0.9;
+    transform: translateY(-3px) scale(1.1) rotate(8deg);
+  }
+  52% {
+    opacity: 0.45;
+    transform: translateY(-7px) scale(0.8) rotate(18deg);
+  }
+}
+@keyframes plush-steam {
+  0%,
+  70%,
+  100% {
+    opacity: 0;
+    transform: translateY(2px) scaleX(0.8);
+  }
+  20% {
+    opacity: 0.45;
+  }
+  55% {
+    opacity: 0;
+    transform: translateY(-12px) scaleX(1.2);
+  }
+}
+#gyeot-demo .g-office-still [data-plush-key] *,
+#gyeot-demo.cr-no-motion [data-plush-key] *,
+#gyeot-demo.g-plush-sleeping [data-plush-key] * {
+  animation-play-state: paused !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  #gyeot-demo [data-plush-key] *,
+  #gyeot-demo .g-plush-station * {
+    animation: none !important;
+  }
+  #gyeot-demo .g-plush-effects {
+    display: none;
+  }
+}

@@ -1,0 +1,103 @@
+name: Crewroom
+
+on:
+  push:
+    branches: [main, codex/crewroom-paperclip]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: crewroom-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PAPERCLIP_TELEMETRY_DISABLED: '1'
+  HEARTBEAT_SCHEDULER_ENABLED: 'false'
+
+jobs:
+  contracts:
+    name: Module, token and source contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.14.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check:module-boundaries
+      - run: pnpm check:token-gates
+      - run: node scripts/check-maps.mjs
+      - run: pnpm check:no-git-push
+
+  focused:
+    name: Crewroom, privacy and task feedback regressions
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.14.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm preflight:workspace-links
+      - run: pnpm --filter @paperclipai/plugin-sdk ensure-build-deps
+      - name: Server conversation, capability and privacy contracts
+        run: >-
+          pnpm exec vitest run --project @paperclipai/server --maxWorkers=2
+          server/src/__tests__/agent-conversations.test.ts
+          server/src/__tests__/crewroom-capabilities.test.ts
+          server/src/__tests__/issue-comment-reopen-routes.test.ts
+          server/src/__tests__/issue-closed-workspace-routes.test.ts
+          server/src/__tests__/issue-feedback-routes.test.ts
+          server/src/__tests__/heartbeat-run-privacy-routes.test.ts
+      - name: MCP explicit comment intent regression
+        run: pnpm --filter @paperclipai/mcp-server exec vitest run --maxWorkers=1 src/tools.test.ts
+      - name: UI state, navigation and private conversation regressions
+        run: >-
+          pnpm exec vitest run --project @paperclipai/ui --maxWorkers=2
+          ui/src/lib/crewroom.test.ts
+          ui/src/api/heartbeats.crewroom.test.ts
+          ui/src/components/crewroom/work-scene.test.ts
+          ui/src/hooks/useAgentChatNavigation.test.tsx
+          ui/src/components/AgentAvatar.test.tsx
+          ui/src/components/IssueChatThread.test.tsx
+          ui/src/components/task-chat/TaskChatComposer.test.tsx
+          ui/src/components/BreadcrumbBar.test.tsx
+          ui/src/context/BreadcrumbContext.test.tsx
+          ui/src/pages/AgentChat.test.tsx
+          ui/src/pages/AgentChats.test.tsx
+          ui/src/components/SidebarAgentChats.test.tsx
+          ui/src/components/AgentChatPicker.test.tsx
+
+  build:
+    name: Workspace typecheck and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.14.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install repository Rust toolchain
+        run: rustup toolchain install 1.97.1 --profile minimal --component rustfmt
+      - run: pnpm preflight:workspace-links
+      - run: pnpm --filter @paperclipai/plugin-sdk ensure-build-deps
+      - run: pnpm typecheck
+      - run: pnpm build

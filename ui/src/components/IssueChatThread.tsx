@@ -2,6 +2,7 @@ import { resolveIssueChatHumanAuthor } from "@/lib/issue-chat-human-author";
 import { useCurrentWorkspaceRetry, useWorkspaceBaseRefRecovery, useWorkspaceRetry } from "./WorkspaceBaseRefRecovery";
 import { WorkspaceBaseRefRecoveryNotice } from "./WorkspaceBaseRefRecoveryNotice";
 import { DispositionRecoveryNotice, useDispositionRecoverySnapshot } from "./DispositionRecoveryNotice";
+import { Checkbox } from "@/components/ui/checkbox";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { TaskChatRunnerTurn } from "./task-chat/TaskChatRunnerTurn";
 import { useRunnerSubmission } from "@/hooks/useRunnerSubmission";
@@ -1039,14 +1040,11 @@ function parseReassignment(
   return null;
 }
 
-function shouldImplicitlyReopenComment(
+function canRequestTaskRevision(
   issueStatus: string | undefined,
   assigneeValue: string,
 ) {
-  const resumesToTodo =
-    issueStatus === "done" ||
-    issueStatus === "cancelled" ||
-    issueStatus === "blocked";
+  const resumesToTodo = issueStatus === "done" || issueStatus === "cancelled";
   return resumesToTodo && assigneeValue.startsWith("agent:");
 }
 
@@ -2127,7 +2125,7 @@ function IssueChatUserMessage({
                 disabled={isInterruptingQueuedRun}
                 onClick={() => void onInterruptQueued(queueTargetRunId)}
               >
-                {isInterruptingQueuedRun ? "Interrupting..." : "Interrupt"}
+                {isInterruptingQueuedRun ? "반영하는 중…" : "현재 작업에 반영"}
               </Button>
             ) : null}
             {onCancelQueued ? (
@@ -4694,6 +4692,8 @@ const IssueChatComposer = forwardRef<
   // the stored draft. The effect below handles subsequent task-key changes.
   const [body, setBody] = useState(() => (draftKey ? loadDraft(draftKey) : ""));
   const [submitting, setSubmitting] = useState(false);
+  const [requestRevision, setRequestRevision] = useState(false);
+  useEffect(() => setRequestRevision(false), [draftKey, issueStatus]);
   const [reviewError, setReviewError] = useState(false);
   const [uncertainSubmission, setUncertainSubmission] =
     useState<ComposerDraftSubmission | null>(() =>
@@ -4780,6 +4780,10 @@ const IssueChatComposer = forwardRef<
   };
   const [reassignTarget, setReassignTarget] = useState(
     effectiveSuggestedAssigneeValue,
+  );
+  const canRequestRevision = canRequestTaskRevision(
+    issueStatus,
+    enableReassign && reassignTarget !== currentAssigneeValue ? reassignTarget : currentAssigneeValue,
   );
   const [runSettings, setRunSettings] = useState<ComposerRunSettings | null>(null);
   useEffect(() => setRunSettings(null), [draftKey, currentAssigneeValue]);
@@ -5009,12 +5013,9 @@ const IssueChatComposer = forwardRef<
     const reassignment = hasReassignment
       ? (parseReassignment(reassignTarget) ?? undefined)
       : undefined;
-    const reopen = shouldImplicitlyReopenComment(
-      issueStatus,
-      hasReassignment ? reassignTarget : currentAssigneeValue,
-    )
-      ? true
-      : undefined;
+    const effectiveAssignee = hasReassignment ? reassignTarget : currentAssigneeValue;
+    const reopen = canRequestRevision ? requestRevision :
+      issueStatus === "blocked" && effectiveAssignee.startsWith("agent:") ? true : undefined;
     const submittedBody = [
       trimmed,
       ...attachedFiles.map(
@@ -5087,6 +5088,7 @@ const IssueChatComposer = forwardRef<
       manualAssigneeRef.current = false;
       setReassignTarget(effectiveSuggestedAssigneeValue);
       setRunSettings(null);
+      setRequestRevision(false);
     } catch (error) {
       if (mountedTaskKey.current !== draftKey) return;
       const nextDraft = bodyRef.current;
@@ -5484,12 +5486,23 @@ const IssueChatComposer = forwardRef<
           ) : null}
         </div>
       ) : null}
+      {canRequestRevision ? (
+        <label className="mb-3 flex items-start gap-2 text-sm">
+          <Checkbox checked={requestRevision}
+            disabled={submitting || !!uncertainSubmission}
+            onCheckedChange={checked => setRequestRevision(checked === true)} />
+          <span className="flex flex-col gap-1">
+            <span>수정 요청 · 같은 업무 다시 시작</span>
+            <span className="text-xs text-muted-foreground">선택하지 않으면 의견만 저장해요.</span>
+          </span>
+        </label>
+      ) : null}
       <MarkdownEditor
         ref={editorRef}
         readOnly={!!uncertainSubmission}
         value={body}
         onChange={changeBody}
-        placeholder="Reply"
+        placeholder="의견이나 수정할 내용을 남겨주세요"
         mentions={mentions}
         onSubmit={handleSubmit}
         imageUploadHandler={
@@ -5701,7 +5714,7 @@ const IssueChatComposer = forwardRef<
             disabled={!canSubmit}
             onClick={() => void handleSubmit()}
           >
-            {submitting ? "Posting..." : "Send"}
+            {submitting ? "보내는 중…" : requestRevision && canRequestRevision ? "수정 요청 보내기" : "보내기"}
           </Button>
         )}
       </div>

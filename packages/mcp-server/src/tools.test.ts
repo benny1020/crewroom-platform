@@ -52,6 +52,17 @@ describe("paperclip MCP tools", () => {
     );
   });
 
+  it.each(["paperclipAddComment", "paperclipUpdateIssue"])("preserves comment-only intent in %s", async (name) => {
+    const fetchMock = vi.fn().mockResolvedValue(mockJsonResponse({ id: "comment-1" }));
+    vi.stubGlobal("fetch", fetchMock);
+    const field = name === "paperclipAddComment" ? "body" : "comment";
+    await getTool(name).execute({ issueId: "PAP-1135", [field]: "고마워요", reopen: false });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(String(url)).toBe("http://localhost:3100/api/issues/PAP-1135" + (name === "paperclipAddComment" ? "/comments" : ""));
+    expect(JSON.parse(String(init.body))).toMatchObject({ [field]: "고마워요", reopen: false });
+  });
+
   it("lists the company skill library with the default company id", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       mockJsonResponse([{ key: "paperclipai/bundled/product/wireframe", name: "wireframe" }]),

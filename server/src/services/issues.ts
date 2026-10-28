@@ -10059,6 +10059,13 @@ export function issueService(db: Db) {
           const [existing] = await tx.select().from(issues).where(and(eq(issues.companyId, companyId),
             eq(issues.conversationAgentId, issueData.conversationAgentId), eq(issues.conversationUserId, issueData.conversationUserId)));
           if (existing) {
+            // A concurrent legacy creator may have won the identity lock after
+            // the route's initial read. Never return its open task as private.
+            if (issueData.visibility === "private" && existing.visibility !== "private") {
+              throw conflict("This conversation needs an explicit privacy change before it can be used as a personal chat", {
+                code: "chat_conversation_privacy_required",
+              });
+            }
             const [enriched] = await withIssueLabels(tx, [existing]);
             const [withRelations] = await withIssueRelationSummaries(companyId, [enriched], tx);
             return withRelations;

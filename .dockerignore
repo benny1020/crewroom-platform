@@ -1,6 +1,15 @@
 .git
 .github
 .paperclip
+.agents
+.impeccable
+.ci-profile
+**/.env
+**/.env.*
+**/__pycache__
+# Deployment credentials and private snapshots never enter an image context.
+deploy/crewroom/.env*
+backups
 .pnpm-store
 node_modules
 **/node_modules

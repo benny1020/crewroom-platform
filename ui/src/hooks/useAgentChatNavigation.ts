@@ -42,12 +42,14 @@ export function useOpenAgentChat(companyId: string | null, userId: string | null
     if (!companyId || agent.companyId !== companyId) throw new Error("Choose an agent from this company.");
     const current = scope.current;
     const chat = await agentChatsApi.ensure(companyId, agent.id);
+    // A completed request belongs only to the actor/company that opened it.
+    // Do not repopulate private caches after a logout, company change or unmount.
+    if (!current.mounted || scope.current !== current || signal?.aborted) return;
     client.setQueryData(queryKeys.agentChats.detail(companyId, userId, agent.id), chat);
     client.setQueryData(queryKeys.issues.detail(chat.id), chat);
     client.setQueryData<Issue[]>(queryKeys.agentChats.list(companyId, userId), previous =>
       [chat, ...(previous ?? []).filter(item => item.id !== chat.id)]
         .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime() || b.id.localeCompare(a.id)));
-    if (!current.mounted || scope.current !== current || signal?.aborted) return;
     navigate(`/chats/${encodeURIComponent(agentRouteRef(agent))}`);
     if (isMobile) setSidebarOpen(false);
   }, [client, companyId, userId, navigate, isMobile, setSidebarOpen]);

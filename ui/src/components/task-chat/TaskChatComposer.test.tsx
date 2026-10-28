@@ -1063,7 +1063,7 @@ describe("TaskChatComposer", () => {
     expect(send.classList).toContain("disabled:opacity-100");
   });
 
-  it("passes reopen=true when the issue resumes-to-todo and the assignee is an agent", async () => {
+  it.each([false, true])("requires explicit revision intent on a completed task (%s)", async requestRevision => {
     const onAdd = vi.fn().mockResolvedValue(undefined);
     renderComposer({
       onAdd: onAdd,
@@ -1072,11 +1072,12 @@ describe("TaskChatComposer", () => {
       currentAssigneeValue: "agent:a1",
     });
 
-    typeText("wake up");
+    typeText(requestRevision ? "wake up" : "고마워");
+    if (requestRevision) act(() => (container.querySelector('[role="checkbox"]') as HTMLButtonElement).click());
     pressKey("Enter", { metaKey: true });
     await flushAsync();
 
-    expect(onAdd).toHaveBeenCalledWith("wake up", true, undefined, undefined, expect.any(String));
+    expect(onAdd).toHaveBeenCalledWith(requestRevision ? "wake up" : "고마워", requestRevision, undefined, undefined, expect.any(String));
   });
 
   it("shows the add menu only when at least one action is available", () => {
