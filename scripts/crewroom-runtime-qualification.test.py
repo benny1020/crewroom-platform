@@ -4,6 +4,8 @@ import importlib.util
 import json
 import os
 import signal
+import subprocess
+import sys
 import tempfile
 from pathlib import Path
 from types import SimpleNamespace
@@ -97,6 +99,61 @@ class PassivePhaseTests(unittest.TestCase):
             self.assertNotIn("chdir", text)
             self.assertTrue(receipt["diagnosticOnly"])
             self.assertEqual(receipt["configSha256"], qualification.digest(config))
+
+
+class InspectorCaptureTests(unittest.TestCase):
+    def capture(self):
+        return {"version": 1, "nonce": "a" * 32, "diagnosticOnly": True, "coordinateSpace": "runtime_transformed", "phase": "close_idle",
+                "title": qualification.REMOTE_CASES[0], "invocation": 1, "status": "captured", "reason": "frames_captured",
+                "paused": True, "resumeConfirmed": True, "disconnectConfirmed": True,
+                "frames": [{"file": qualification.STACK_FILES[0], "line": 5, "column": 2, "private": "SYNTHETIC_PRIVATE_STACK"}]}
+
+    def test_capture_requires_exact_nonce_resume_disconnect_and_current_invocation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            filename, phases = Path(directory) / "capture.json", Path(directory) / "phases.json"
+            phase = PassivePhaseTests().snapshot()
+            phase["active"][0]["phase"] = "close_idle"
+            phases.write_text(json.dumps(phase))
+            value = self.capture()
+            filename.write_text(json.dumps(value))
+            self.assertTrue(qualification.diagnostic_capture_ready(filename, "a" * 32, phases))
+            self.assertNotIn("SYNTHETIC_PRIVATE_STACK", json.dumps(qualification.stack_diagnostics(filename, "a" * 32)))
+            for key, invalid in [("nonce", "b" * 32), ("resumeConfirmed", False), ("disconnectConfirmed", False), ("frames", []), ("invocation", 2)]:
+                changed = {**value, key: invalid}
+                filename.write_text(json.dumps(changed))
+                self.assertFalse(qualification.diagnostic_capture_ready(filename, "a" * 32, phases))
+
+    def test_capture_rejects_private_source_and_invalid_coordinates(self):
+        with tempfile.TemporaryDirectory() as directory:
+            filename = Path(directory) / "capture.json"
+            for frame in [{"file": "/private/key", "line": 1, "column": 1}, {"file": qualification.STACK_FILES[0], "line": True, "column": 1}]:
+                value = self.capture()
+                value["frames"] = [frame]
+                filename.write_text(json.dumps(value))
+                self.assertEqual(qualification.stack_diagnostics(filename, "a" * 32)["status"], "unavailable")
+
+    def test_polling_stops_only_on_confirmed_capture_and_keeps_original_deadline(self):
+        process = Mock(args=["synthetic"])
+        process.communicate.side_effect = subprocess.TimeoutExpired("synthetic", 0.25)
+        with self.assertRaises(qualification.DiagnosticCaptureComplete):
+            qualification.communicate_with_diagnostic_capture(process, 1200, lambda: True)
+        with patch.object(qualification.time, "monotonic", side_effect=[0, 0, 1200]):
+            with self.assertRaises(subprocess.TimeoutExpired):
+                qualification.communicate_with_diagnostic_capture(process, 1200, lambda: False)
+
+    def test_actual_early_stop_reaps_only_its_owned_process(self):
+        child = subprocess.Popen([sys.executable, "-c", "import time;time.sleep(30)"], start_new_session=True)
+        try:
+            with self.assertRaises(qualification.DiagnosticCaptureComplete):
+                qualification.communicate_with_diagnostic_capture(child, 5, lambda: True)
+            self.assertEqual(os.getpgid(child.pid), child.pid)
+            os.killpg(child.pid, signal.SIGTERM)
+            child.wait(timeout=3)
+            self.assertIsNotNone(child.returncode)
+        finally:
+            if child.poll() is None:
+                os.killpg(child.pid, signal.SIGKILL)
+                child.wait(timeout=3)
 
 
 class SafeDiagnosticsTests(unittest.TestCase):

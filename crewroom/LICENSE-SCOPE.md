@@ -10,6 +10,7 @@ The [BSD Zero Clause license](LICENSE) applies to original Crewroom contribution
 - `scripts/crewroom-bootstrap.mjs`, `scripts/crewroom-dev.mjs`, `scripts/crewroom-capture.mjs`, `scripts/setup-impeccable.py`, `scripts/crewroom-runtime-qualification.py`, `scripts/crewroom-runtime-qualification.test.py`, `scripts/crewroom-runtime-reaper-proof.py`, `scripts/crewroom-runtime-cause-reporter.mjs`, `scripts/crewroom-runtime-cause-reporter.test.mjs`, `scripts/crewroom-runtime-cause-reporter-smoke.mjs`
 - `ui/src/pages/Crewroom.tsx`
 - `scripts/crewroom-runtime-phase-core.mjs`, `scripts/crewroom-runtime-phase-core.test.mjs`, `scripts/crewroom-runtime-phase-setup.mjs`, `scripts/crewroom-runtime-phase-smoke.mjs`
+- `scripts/crewroom-runtime-stack-worker.mjs`, `scripts/crewroom-runtime-stack-worker.test.mjs`, `scripts/crewroom-runtime-stack-smoke.mjs`, `scripts/crewroom-runtime-export-binaries.py`, `scripts/crewroom-runtime-export-binaries.test.py`
 - `ui/src/components/crewroom/**`
 - `ui/src/api/crewroom.ts`, `ui/src/api/heartbeats.crewroom.test.ts`
 - `ui/src/hooks/useCrewroomCapabilities.ts`

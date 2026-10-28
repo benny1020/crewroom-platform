@@ -10,6 +10,10 @@ on:
         description: Passive phase overlay for diagnosis; never a stock qualification pass
         type: boolean
         default: false
+      export_diagnostic_binaries:
+        description: Export only the two public test binaries and manifest (requires diagnostic phases)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -26,6 +30,7 @@ jobs:
       PRODUCT_REVISION: ${{ inputs.source_revision }}
       HELPER_REVISION: ${{ github.sha }}
       CREWROOM_QUALIFICATION_PHASE_DIAGNOSTICS: ${{ inputs.diagnostic_phases && '1' || '0' }}
+      CREWROOM_QUALIFICATION_EXPORT_BINARIES: ${{ inputs.export_diagnostic_binaries && '1' || '0' }}
       PAPERCLIP_TELEMETRY_DISABLED: '1'
       HEARTBEAT_SCHEDULER_ENABLED: 'false'
       CARGO_BUILD_JOBS: '2'
@@ -42,7 +47,9 @@ jobs:
       - name: Validate the immutable product revision
         run: python3 qualification-infra/scripts/crewroom-runtime-qualification.py validate
       - name: Check qualification receipt gates and cleanup guards offline
-        run: PYTHONDONTWRITEBYTECODE=1 python3 qualification-infra/scripts/crewroom-runtime-qualification.test.py
+        run: |
+          PYTHONDONTWRITEBYTECODE=1 python3 qualification-infra/scripts/crewroom-runtime-qualification.test.py
+          PYTHONDONTWRITEBYTECODE=1 python3 qualification-infra/scripts/crewroom-runtime-export-binaries.test.py
       - name: Prove command-scoped Linux child reaping
         run: PYTHONDONTWRITEBYTECODE=1 python3 qualification-infra/scripts/crewroom-runtime-reaper-proof.py
       - name: Checkout the exact product snapshot separately
@@ -63,6 +70,7 @@ jobs:
           node --test --test-concurrency=1
           qualification-infra/scripts/crewroom-runtime-cause-reporter.test.mjs
           qualification-infra/scripts/crewroom-runtime-phase-core.test.mjs
+          qualification-infra/scripts/crewroom-runtime-stack-worker.test.mjs
       - name: Install the product-owned Rust toolchain
         run: rustup toolchain install 1.97.1 --profile minimal --component rustfmt
       - name: Cache public Rust dependencies
@@ -91,3 +99,21 @@ jobs:
           path: qualification-public/receipt.json
           if-no-files-found: error
           retention-days: 14
+      - name: Recheck optional public test binary hashes before export
+        id: verify_binaries
+        if: always() && inputs.diagnostic_phases && inputs.export_diagnostic_binaries
+        run: >-
+          python3 qualification-infra/scripts/crewroom-runtime-export-binaries.py verify
+          --source qualification-product --output qualification-binaries
+          --receipt qualification-public/receipt.json
+      - name: Preserve optional public test binaries separately
+        if: always() && inputs.diagnostic_phases && inputs.export_diagnostic_binaries && steps.verify_binaries.outcome == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7, preserved upstream pin
+        with:
+          name: crewroom-public-test-binaries-${{ inputs.source_revision }}-${{ github.run_attempt }}
+          path: |
+            qualification-binaries/paperclip-runnerd
+            qualification-binaries/fake-codex-app-server
+            qualification-binaries/manifest.json
+          if-no-files-found: error
+          retention-days: 3

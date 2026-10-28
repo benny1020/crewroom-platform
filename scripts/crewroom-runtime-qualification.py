@@ -38,6 +38,67 @@ CAUSE_SOURCE_FILES = ['server/src/services/native-runtime/native-runner-restart-
 CAUSE_ERROR_CODES = ['runner_remote_directory_staging_failed', 'runner_remote_staging_failed', 'runner_remote_artifact_verification_failed', 'runner_remote_artifact_metadata_invalid', 'runner_remote_artifact_contract_incompatible', 'runner_remote_codex_artifact_verification_failed', 'runner_remote_codex_artifact_unavailable', 'runner_remote_codex_install_failed', 'runner_remote_provider_artifact_incompatible', 'runner_remote_session_capability_missing', 'runner_remote_preinstalled_link_failed', 'runner_remote_codex_source_conflict', 'runner_harness_state_mismatch', 'runner_state_identity_mismatch', 'runner_state_directory_unsafe', 'runner_local_connect_failed', 'provider_transport_failed', 'native_provider_terminal_failed', 'native_event_replay_conflict']
 
 PHASES = ['tls', 'asset', 'execution_input', 'prepare_run', 'finalize_run', 'execute_session', 'close_idle', 'tunnel_close', 'docker_execute', 'sync_tar', 'sync_ps']
+STACK_FILES = ['server/src/services/native-runtime/native-session-executor.ts', 'server/src/realtime/runner-prp-outbound.ts', 'server/src/realtime/runner-prp-ws.ts', 'server/src/redaction.ts', 'packages/paperclip-runner/src/live/runnerd-codex-transport.ts', 'packages/paperclip-runner/src/control-plane/durable-prp-control-plane.ts', 'packages/paperclip-runner/src/drivers/codex/codex-harness-session.ts', 'packages/paperclip-runner/src/native-session-runtime.ts']
+
+
+class DiagnosticCaptureComplete(Exception):
+    pass
+
+
+def stack_diagnostics(filename, nonce):
+    try:
+        if filename.stat().st_size > 20_000:
+            raise ValueError()
+        raw = json.loads(filename.read_text())
+        if (raw.get("version") != 1 or raw.get("nonce") != nonce or raw.get("diagnosticOnly") is not True
+                or raw.get("coordinateSpace") != "runtime_transformed" or raw.get("phase") != "close_idle"
+                or raw.get("title") not in REMOTE_CASES or type(raw.get("invocation")) is not int or not 1 <= raw["invocation"] <= 9_999_999
+                or raw.get("status") not in ["captured", "unavailable"] or raw.get("reason") not in ["not_captured", "frames_captured", "no_allowed_frames", "capture_unconfirmed"]):
+            raise ValueError()
+        safe = {key: raw[key] for key in ["diagnosticOnly", "coordinateSpace", "phase", "title", "invocation", "status", "reason"]}
+        for key in ["paused", "resumeConfirmed", "disconnectConfirmed"]:
+            if type(raw.get(key)) is not bool:
+                raise ValueError()
+            safe[key] = raw[key]
+        frames = raw.get("frames")
+        if not isinstance(frames, list) or len(frames) > 8:
+            raise ValueError()
+        safe["frames"] = []
+        for frame in frames:
+            if (not isinstance(frame, dict) or frame.get("file") not in STACK_FILES or type(frame.get("line")) is not int
+                    or type(frame.get("column")) is not int or not 1 <= frame["line"] <= 1_000_000 or not 1 <= frame["column"] <= 100_000):
+                raise ValueError()
+            safe["frames"].append({key: frame[key] for key in ["file", "line", "column"]})
+        if safe["status"] == "captured" and not (safe["paused"] and safe["resumeConfirmed"] and safe["disconnectConfirmed"] and frames and safe["reason"] == "frames_captured"):
+            raise ValueError()
+        return safe
+    except (OSError, ValueError, TypeError, AttributeError):
+        return {"status": "unavailable", "diagnosticOnly": True}
+
+
+def diagnostic_capture_ready(filename, nonce, phases):
+    capture = stack_diagnostics(filename, nonce)
+    phase = phase_diagnostics(phases)
+    return capture.get("status") == "captured" and phase.get("status") == "available" and any(
+        active.get("phase") == "close_idle" and active.get("title") == capture["title"] and active.get("invocation") == capture["invocation"]
+        for active in phase.get("active", []))
+
+
+def communicate_with_diagnostic_capture(process, timeout, capture_ready=None):
+    if capture_ready is None:
+        return process.communicate(timeout=timeout)
+    deadline = time.monotonic() + timeout
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise subprocess.TimeoutExpired(process.args, timeout)
+        try:
+            return process.communicate(timeout=min(0.25, remaining))
+        except subprocess.TimeoutExpired:
+            if capture_ready():
+                raise DiagnosticCaptureComplete() from None
+            if time.monotonic() >= deadline:
+                raise subprocess.TimeoutExpired(process.args, timeout) from None
 
 
 def phase_diagnostics(filename):
@@ -87,12 +148,14 @@ def prepare_phase_overlay(source, private):
     setup.write_text(template.replace('__PRODUCT_ROOT__', root))
     core = directory / "crewroom-runtime-phase-core.mjs"
     core.write_bytes((scripts / core.name).read_bytes())
+    worker = directory / "crewroom-runtime-stack-worker.mjs"
+    worker.write_bytes((scripts / worker.name).read_bytes())
     (directory / "node_modules").symlink_to(source / "node_modules", target_is_directory=True)
     config = directory / "vitest.config.mjs"
     config.write_text('import path from "node:path";\nimport original from ' + json.dumps(str(source / 'server/vitest.config.ts')) + ';\n'
         + 'const serverRoot=' + json.dumps(str(source / 'server')) + ';\n'
         + 'export default {root:' + json.dumps(str(source)) + ',test:{projects:[{...original,configFile:false,root:serverRoot,test:{...original.test,name:"@paperclipai/server",setupFiles:[...original.test.setupFiles.map(file=>path.resolve(serverRoot,file)),' + json.dumps(str(setup)) + ']}}]}};\n')
-    return config, {"diagnosticOnly": True, "configSha256": digest(config), "setupSha256": digest(setup), "coreSha256": digest(core)}
+    return config, {"diagnosticOnly": True, "configSha256": digest(config), "setupSha256": digest(setup), "coreSha256": digest(core), "stackWorkerSha256": digest(worker)}
 
 
 class QualificationFailure(Exception):
@@ -669,6 +732,7 @@ def run_qualification(source, output):
     partial_file = None
     partial_expected = []
     phase_file = None
+    stack_file, capture_nonce = None, None
     phase_enabled = os.environ.get("CREWROOM_QUALIFICATION_PHASE_DIAGNOSTICS") == "1"
     if phase_enabled:
         receipt.update(diagnosticOnly=True, stockQualification=False)
@@ -681,7 +745,7 @@ def run_qualification(source, output):
                      PAPERCLIP_TELEMETRY_DISABLED="1", PAPERCLIP_ANNOUNCEMENTS_ENABLED="false", HEARTBEAT_SCHEDULER_ENABLED="false",
                      PAPERCLIP_TEST_CONTROLLER_OUTAGE_MS="1000", TMPDIR=str(private))
 
-    def run(command, timeout=600, capture=False, env=None, allow_failure=False, diagnostic=None):
+    def run(command, timeout=600, capture=False, env=None, allow_failure=False, diagnostic=None, diagnostic_capture=None):
         nonlocal current, active_reaper, reaped_children, reaper_failed, last_timeout
         last_timeout = timeout
         log = private / (stage + ".log")
@@ -694,7 +758,7 @@ def run_qualification(source, output):
                 # it has stopped and joined in finally.
                 active_reaper = AdoptedZombieReaper(current.pid)
                 active_reaper.start()
-                stdout, _ = current.communicate(timeout=timeout)
+                stdout, _ = communicate_with_diagnostic_capture(current, timeout, diagnostic_capture)
                 if diagnostic is not None:
                     diagnostic["exitCode"] = current.returncode
                 if current.returncode and not allow_failure:
@@ -757,6 +821,8 @@ def run_qualification(source, output):
             stage = "phase_overlay_smoke"
             run(["node", str(Path(__file__).resolve().with_name("crewroom-runtime-phase-smoke.mjs"))],
                 timeout=60, env={**child_env, "CREWROOM_QUALIFICATION_DEPENDENCY_ROOT": str(source)})
+            run(["node", str(Path(__file__).resolve().with_name("crewroom-runtime-stack-smoke.mjs"))], timeout=60,
+                env={**child_env, "CREWROOM_QUALIFICATION_DEPENDENCY_ROOT": str(source)})
             receipt["stages"][stage] = {"status": "passed", "diagnosticOnly": True}
         stage = "debug_binaries"
         run(["cargo", "build", "--manifest-path", "packages/paperclip-runner/runner/Cargo.toml", "--locked", "-j", "2",
@@ -771,6 +837,19 @@ def run_qualification(source, output):
             raise QualificationFailure("default_runner_not_built_debug_binary")
         receipt["binaries"] = {"defaultRunner": {"path": RUNNER, "sha256": digest(runner)}, "fakeProvider": {"path": PROVIDER, "sha256": digest(provider)}}
         receipt["stages"][stage] = {"status": "passed"}
+        if os.environ.get("CREWROOM_QUALIFICATION_EXPORT_BINARIES") == "1":
+            stage = "diagnostic_binary_export"
+            binding = {"productRevision": product_revision, "helperRevision": helper_revision, "target": "linux-amd64",
+                "toolchain": {**toolchain, "cargoProfile": "dev-debug0"}, "cargoLockSha256": digest(source / "packages/paperclip-runner/runner/Cargo.lock"),
+                "binaries": {"paperclip-runnerd": {"buildSha256": receipt["binaries"]["defaultRunner"]["sha256"]},
+                    "fake-codex-app-server": {"buildSha256": receipt["binaries"]["fakeProvider"]["sha256"]}}}
+            binding_file = private / "public-binary-binding.json"
+            binding_file.write_text(json.dumps(binding))
+            binary_output = output.parent / "qualification-binaries"
+            run(["python3", str(Path(__file__).resolve().with_name("crewroom-runtime-export-binaries.py")), "stage", "--source", str(source),
+                 "--output", str(binary_output), "--binding", str(binding_file)], env={**child_env,
+                    "CREWROOM_QUALIFICATION_EXPORT_BINARIES": "1", "CREWROOM_QUALIFICATION_PHASE_DIAGNOSTICS": "1"})
+            receipt["stages"][stage] = {"status": "staged", "diagnosticOnly": True, "manifestSha256": digest(binary_output / "manifest.json")}
         stage = "local_real_processes"
         local_report = private / "local-report.json"
         local_causes = private / "local-causes.json"
@@ -879,10 +958,13 @@ def run_qualification(source, output):
             phase_config, overlay_receipt = prepare_phase_overlay(source, private)
             receipt["stages"]["phase_overlay"] = {**overlay_receipt, "helperRevision": helper_revision}
             remote_env["CREWROOM_QUALIFICATION_PHASE_OUTPUT"] = str(phase_file)
+            stack_file, capture_nonce = private / "remote-stack.json", os.urandom(16).hex()
+            remote_env.update(CREWROOM_QUALIFICATION_STACK_OUTPUT=str(stack_file), CREWROOM_QUALIFICATION_CAPTURE_NONCE=capture_nonce)
             phase_args = ["--config", str(phase_config)]
         code = run(["pnpm", "exec", "vitest", "run", *phase_args, "--project", "@paperclipai/server", RECOVERY_FILE,
                     "-t", "preserves remote warm continuity across completed turns:", "--maxWorkers=1", "--includeTaskLocation", "--reporter=json", "--reporter=" + cause_reporter, "--outputFile=" + str(remote_report)],
-                   timeout=1200, env=remote_env, allow_failure=True)
+                   timeout=1200, env=remote_env, allow_failure=True,
+                   diagnostic_capture=(lambda: diagnostic_capture_ready(stack_file, capture_nonce, phase_file)) if phase_enabled else None)
         report = read_stock_report(remote_report)
         counts = report_counts(report, REMOTE_CASES, only_selected=True)
         counts["cases"] = report_diagnostics(report, REMOTE_CASES, source)
@@ -890,6 +972,7 @@ def run_qualification(source, output):
         counts["exitCode"] = code
         if phase_file:
             counts["phaseDiagnostics"] = phase_diagnostics(phase_file)
+            counts["stackDiagnostics"] = stack_diagnostics(stack_file, capture_nonce)
         if code != 0:
             counts["status"] = "failed"
         receipt["stages"][stage] = counts
@@ -901,7 +984,7 @@ def run_qualification(source, output):
     except BaseException as error:
         failure = receipt["stages"].setdefault(stage, {})
         failure["status"] = "failed"
-        failure["stageFailureClass"] = "host_command_timeout" if isinstance(error, subprocess.TimeoutExpired) else error.classification if isinstance(error, ReportFailure) and error.classification in ["missing_report", "invalid_report_json", "invalid_report_shape"] else "other_stage_failure"
+        failure["stageFailureClass"] = "diagnostic_capture_complete" if isinstance(error, DiagnosticCaptureComplete) else "host_command_timeout" if isinstance(error, subprocess.TimeoutExpired) else error.classification if isinstance(error, ReportFailure) and error.classification in ["missing_report", "invalid_report_json", "invalid_report_shape"] else "other_stage_failure"
         if isinstance(error, subprocess.TimeoutExpired) and type(last_timeout) is int:
             failure["timeoutSeconds"] = last_timeout
         if stage in ["local_real_processes", "remote_continuity"]:
@@ -909,6 +992,7 @@ def run_qualification(source, output):
             failure["partialDiagnostics"] = partial_diagnostics(partial_file, partial_expected)
             if stage == "remote_continuity" and phase_file:
                 failure["phaseDiagnostics"] = phase_diagnostics(phase_file)
+                failure["stackDiagnostics"] = stack_diagnostics(stack_file, capture_nonce)
         receipt["status"] = "failed"
     finally:
         for event in [signal.SIGINT, signal.SIGTERM]:
@@ -1012,6 +1096,8 @@ def main():
         return cleanup_only(args.public_output.resolve())
     revision(os.environ.get("PRODUCT_REVISION"))
     revision(os.environ.get("HELPER_REVISION"))
+    if os.environ.get("CREWROOM_QUALIFICATION_EXPORT_BINARIES") == "1" and os.environ.get("CREWROOM_QUALIFICATION_PHASE_DIAGNOSTICS") != "1":
+        raise QualificationFailure("binary_export_requires_diagnostic_mode")
     if args.action == "validate":
         print("Qualification revisions: valid")
         return 0
